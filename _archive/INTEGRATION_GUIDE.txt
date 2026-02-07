@@ -1,0 +1,24 @@
+dpow.chat Core v2 - Integration Complete
+
+The chat system now uses a simplified OpenAI endpoint at /api/chat
+
+WHAT WAS CHANGED:
+1. Created new /app/api/chat/route.ts - Clean OpenAI GPT-4o-mini endpoint
+2. Updated ChatDrawer.tsx - Now calls /api/chat instead of /api/whatsapp-webhook
+3. System works with existing Excel upload functionality
+4. Persistent chat drawer remains functional
+
+CURRENT FUNCTIONALITY:
+- Upload Excel files via the landing page
+- Click chat icon to open persistent drawer
+- Ask questions and receive AI responses
+- File status tracking shows uploaded data
+
+NO CHANGES NEEDED TO:
+- Landing page design (app/page.tsx)
+- Excel upload flow
+- VoiceInput component
+- ChatBubble, ChatInput components
+- Any UI styling
+
+The system is production-ready and the build passes successfully.

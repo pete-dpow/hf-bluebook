@@ -1,0 +1,49 @@
+# Ignore node_modules and dependencies
+node_modules/**
+.next/**
+out/**
+build/**
+dist/**
+
+# Ignore package files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Ignore shadcn/ui components (only read when explicitly needed)
+components/ui/**
+
+# Ignore build artifacts
+*.tsbuildinfo
+next-env.d.ts
+
+# Ignore environment files
+.env
+.env.*
+
+# Ignore cache directories
+.cache/**
+.turbo/**
+
+# Ignore coverage and test files
+coverage/**
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Ignore documentation
+*.md
+!README.md
+
+# Ignore config files
+tsconfig.json
+postcss.config.js
+tailwind.config.ts
+components.json
+
+# Ignore large data files
+*.pdf
+*.docx
+*.xlsx
+*.zip
