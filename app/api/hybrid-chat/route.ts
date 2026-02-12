@@ -158,7 +158,7 @@ Respond with ONLY the mode name (GENERAL, PROJECT, PRODUCT, KNOWLEDGE, or FULL):
 
 // === GENERAL MODE — GPT-4o-mini, model knowledge only ===
 async function handleGeneral(question: string, history: any[], memoryContext: string) {
-  const systemPrompt = `You are Melvin, the HF.bluebook AI assistant — a knowledgeable assistant for fire protection and construction professionals.
+  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — a knowledgeable assistant for fire protection and construction professionals.
 
 ${memoryContext}
 
@@ -200,7 +200,7 @@ async function handleProject(question: string, history: any[], dataset: any, mem
     });
   }
 
-  const systemPrompt = `You are Melvin, the HF.bluebook AI assistant — analyzing the user's project data.
+  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — analyzing the user's project data.
 
 Dataset: ${dataset.rows.length} rows. Sample: ${JSON.stringify(dataset.rows.slice(0, 10), null, 2)}
 
@@ -262,7 +262,7 @@ async function handleProduct(question: string, history: any[], memoryContext: st
     }
   }
 
-  const systemPrompt = `You are Melvin, the HF.bluebook AI assistant — helping find and compare fire protection products.
+  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — helping find and compare fire protection products.
 
 ${productContext}
 ${memoryContext}
@@ -347,7 +347,7 @@ async function handleKnowledge(question: string, history: any[], memoryContext: 
     ? `\nWhen referencing information from the sources, cite them inline like [Source: filename, p.X] or [Reg: BS EN 1366-3 §4.2]. Always cite your sources.`
     : "";
 
-  const systemPrompt = `You are Melvin, the HF.bluebook AI assistant — an expert in fire protection regulations, British Standards, and building safety compliance. You use Claude for deep document reasoning.
+  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — an expert in fire protection regulations, British Standards, and building safety compliance. You use Claude for deep document reasoning.
 
 ${knowledgeContext}
 ${memoryContext}
@@ -467,7 +467,7 @@ async function handleFull(
     ? "\nCite sources inline: [Source: filename, p.X] or [Reg: reference §section]."
     : "";
 
-  const systemPrompt = `You are Melvin, the HF.bluebook AI assistant — combining all available data: project data, product catalog, technical documents, and fire safety regulations.
+  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — combining all available data: project data, product catalog, technical documents, and fire safety regulations.
 
 ${fullContext}
 ${memoryContext}

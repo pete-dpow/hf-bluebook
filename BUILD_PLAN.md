@@ -1,4 +1,4 @@
-# HF.bluebook — Build Plan
+# hf.bluebook — Build Plan
 
 > Lean sprint checklist. Reference `ARCHITECTURE.md` for technical details.
 
@@ -9,9 +9,9 @@
 No backend dependencies. Pure visual changes.
 
 - [x] **1.3** `package.json` — name `"nextjs"` → `"hf-bluebook"`
-- [x] **1.4** `app/layout.tsx` — title "HF.bluebook", description, favicon `/hf_logo.svg` (body background NOT changed — blue gradient mouse tracker must be preserved)
+- [x] **1.4** `app/layout.tsx` — title "hf.bluebook", description, favicon `/hf_logo.svg` (body background NOT changed — blue gradient mouse tracker must be preserved)
 - [x] **1.5** `public/hf_logo.svg` — add HF logo
-- [ ] **1.6** dpow → HF.bluebook text rebrand — split into subtasks below. Do NOT change Vercel URLs, email addresses, or OAuth redirects.
+- [ ] **1.6** dpow → hf.bluebook text rebrand — split into subtasks below. Do NOT change Vercel URLs, email addresses, or OAuth redirects.
   - [x] **1.6.1** `app/api/hybrid-chat/route.ts` — system prompts (CRITICAL)
   - [x] **1.6.2** `app/api/chat/route.ts` — system prompt (CRITICAL)
   - [x] **1.6.3** `app/api/freemium-chat/route.ts` — system prompt (CRITICAL)
@@ -39,7 +39,7 @@ No backend dependencies. Pure visual changes.
   - [ ] **1.6.25** `components/LegalDrawer.tsx` — product name only, NOT company/email
   - [ ] **1.6.26** `lib/twilioClient.ts` — notification title
 - [x] **1.7** `components/LeftSidebar.tsx` — update logo, alt text, sign-in text + add new nav icons (Products, Quotes, Manufacturers, Data Mining, Compliance, Golden Thread, Surveying)
-- [x] **1.8** `components/RightSidebar.tsx` — update "About dpow.chat" tooltip to "About HF.bluebook"
+- [x] **1.8** `components/RightSidebar.tsx` — update "About dpow.chat" tooltip to "About hf.bluebook"
 - [x] **1.9** `app/page.tsx` — 4 suggestion pills below chat box, rotating prompts from pool per mode (PRODUCT/KNOWLEDGE/PROJECT/GENERAL), auto-fills + opens chat drawer
 - [x] **1.10** `app/dashboard/page.tsx` — dashboard shell + LayoutDashboard icon in sidebar (full tile design deferred to Figma)
 - [x] **1.11** chat.Melvin rebrand — ChatDrawerWrapper header "Melvin", 5-mode dropdown (PRODUCT/KNOWLEDGE/FULL coming soon), ChatInput placeholder + export titles rebranded
@@ -50,7 +50,7 @@ No backend dependencies. Pure visual changes.
   - [ ] **1.12.4** Rebrand `/summary` page — HF colors, text, no logic changes
   - [ ] **1.12.5** Rebrand `/preview` page — HF colors, text, no logic changes
 
-### dpow → HF.bluebook Safe Text Changes (1.6)
+### dpow → hf.bluebook Safe Text Changes (1.6)
 
 Files to update (display text only — NOT URLs, emails, or OAuth):
 ```

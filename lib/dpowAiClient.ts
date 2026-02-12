@@ -45,7 +45,7 @@ export async function queryDpowAi(
     }).join('\n\n');
 
     const columnHeaders = fileMetadata?.column_headers || [];
-    const systemPrompt = `You are Melvin, the HF.bluebook AI assistant for project directors analyzing Excel project data.
+    const systemPrompt = `You are Melvin, the hf.bluebook AI assistant for project directors analyzing Excel project data.
 
 Your Excel file contains ${fileMetadata?.total_rows || 0} rows with columns: ${columnHeaders.join(', ')}.
 

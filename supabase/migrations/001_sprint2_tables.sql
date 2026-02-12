@@ -1,4 +1,4 @@
--- Sprint 2: HF.bluebook — 15 new tables + sequence + indexes + RLS + RPC functions + seed data
+-- Sprint 2: hf.bluebook — 15 new tables + sequence + indexes + RLS + RPC functions + seed data
 -- Run against: odhvxoelxiffhocrgtll (dpowchat project)
 
 -- ============================================================

@@ -58,7 +58,7 @@ export default function AuthPage() {
           className="text-3xl font-semibold mb-4 text-center"
           style={{ fontFamily: "var(--font-cormorant)" }}
         >
-          Sign in to HF.bluebook
+          Sign in to hf.bluebook
         </h1>
         <p
           className="text-gray-600 text-center mb-8"

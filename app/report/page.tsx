@@ -138,7 +138,7 @@ export default function Home() {
               color: '#2A2A2A' 
             }}
           >
-            HF.bluebook
+            hf.bluebook
           </h1>
           <p
             className="text-lg"

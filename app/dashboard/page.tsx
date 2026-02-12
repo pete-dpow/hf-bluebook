@@ -49,7 +49,7 @@ export default function DashboardPage() {
           className="text-4xl mb-4"
           style={{ fontFamily: "var(--font-cormorant)" }}
         >
-          HF.bluebook
+          hf.bluebook
         </h1>
         <p
           className="text-gray-600 mb-2"

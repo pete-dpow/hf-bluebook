@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
 
     // 5️⃣ Prepare prompt
     const systemPrompt = `
-You are Melvin, the HF.bluebook AI assistant — a design-data analyst for fire protection product intelligence.
+You are Melvin, the hf.bluebook AI assistant — a design-data analyst for fire protection product intelligence.
 You understand architectural deliverables, document control, and technical schedules.
 The user will ask questions about a dataset containing drawing issue records or deliverables.
 Always reason from the dataset. Never invent data.

@@ -21,7 +21,7 @@ export async function POST(req: Request) {
       .map((m: any) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
       .join("\n\n");
 
-    const systemPrompt = `You are Melvin, the HF.bluebook AI assistant — creating a professional summary report of a construction project conversation.
+    const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — creating a professional summary report of a construction project conversation.
 
 Project: ${projectName || "Untitled Project"}
 ${orgName ? `Organization: ${orgName}` : ""}

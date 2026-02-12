@@ -1,16 +1,16 @@
-# HF.bluebook — Architecture
+# hf.bluebook — Architecture
 
 > **The definitive technical specification. One source of truth.**
 > Supersedes all previous versions (v2, v3, v5, v6, v6.5). All decisions are final.
 
 ---
 
-## 1. What HF.bluebook Is
+## 1. What hf.bluebook Is
 
-**HF.bluebook makes every Harmony Fire team member instantly competent on fire protection products and UK building safety regulations.**
+**hf.bluebook makes every Harmony Fire team member instantly competent on fire protection products and UK building safety regulations.**
 
 ```
-HF.bluebook = dpow.chat (keep 100%) + Product Intelligence + Compliance + Golden Thread
+hf.bluebook = dpow.chat (keep 100%) + Product Intelligence + Compliance + Golden Thread
 ```
 
 ### Three Pillars
@@ -814,7 +814,7 @@ All 14 are scraped from live sources (gov.uk, BSI summaries, ASFP) using Playwri
 
 ### What It Is
 
-BSA 2022 (Sections 88/91) requires structured digital records of all fire safety work on higher-risk buildings. HF.bluebook already captures this data through its workflow — Golden Thread packages it for compliant handover.
+BSA 2022 (Sections 88/91) requires structured digital records of all fire safety work on higher-risk buildings. hf.bluebook already captures this data through its workflow — Golden Thread packages it for compliant handover.
 
 ### Data Flow
 

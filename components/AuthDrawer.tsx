@@ -87,7 +87,7 @@ export default function AuthDrawer({ isOpen }: AuthDrawerProps) {
               className="text-3xl mb-2"
               style={{ fontFamily: "var(--font-cormorant)", fontWeight: 600, color: "#2A2A2A" }}
             >
-              HF.bluebook
+              hf.bluebook
             </h1>
             <p
               className="text-gray-500 text-sm"

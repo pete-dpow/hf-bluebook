@@ -21,7 +21,7 @@ const ibmPlex = IBM_Plex_Sans({
 });
 
 export const metadata = {
-  title: "HF.bluebook",
+  title: "hf.bluebook",
   description: "Fire Protection Product Intelligence by Harmony Fire",
   icons: {
     icon: "/hf_logo.svg",

@@ -312,7 +312,7 @@ export default function LeftSidebar() {
             />
           )}
 
-          {/* HF.bluebook Nav Items */}
+          {/* hf.bluebook Nav Items */}
           {user && (
             <>
               <IconButton
@@ -599,7 +599,7 @@ export default function LeftSidebar() {
               marginBottom: "8px",
               color: "#2A2A2A"
             }}>
-              Sign in to HF.bluebook
+              Sign in to hf.bluebook
             </h2>
             <p style={{ fontSize: "14px", color: "#6B7280", marginBottom: "24px" }}>
               Enter your email to receive a magic link
@@ -672,7 +672,7 @@ function LogoWithTooltip() {
     >
       <Image
         src="/hf_logo.svg"
-        alt="HF.bluebook"
+        alt="hf.bluebook"
         width={24}
         height={24}
         style={{ flexShrink: 0 }}

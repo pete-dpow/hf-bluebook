@@ -58,7 +58,7 @@ export default function ChatInput({
     const doc = new jsPDF();
     doc.setFont("helvetica", "normal");
     doc.setFontSize(14);
-    doc.text("HF.bluebook — Session Report", 20, 20);
+    doc.text("hf.bluebook — Session Report", 20, 20);
     doc.setFontSize(11);
     doc.text(`Project: ${projectName}`, 20, 30);
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 38);
@@ -91,7 +91,7 @@ export default function ChatInput({
         {
           children: [
             new Paragraph({
-              children: [new TextRun({ text: "HF.bluebook — Session Report", bold: true, size: 28 })],
+              children: [new TextRun({ text: "hf.bluebook — Session Report", bold: true, size: 28 })],
             }),
             ...messages.map(
               (m) =>
