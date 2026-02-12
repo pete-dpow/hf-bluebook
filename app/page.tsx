@@ -43,6 +43,57 @@ interface SharePointLibrary {
   driveType: string;
 }
 
+// Suggestion prompt pools — one random prompt per mode on each page load
+const SUGGESTION_POOLS: { mode: string; prompts: string[] }[] = [
+  {
+    mode: "PRODUCT",
+    prompts: [
+      "Find a product with a 120-minute fire rating for a corridor doorset",
+      "What fire stopping products are suitable for a 100mm pipe penetration?",
+      "Compare intumescent strips for FD60 fire doors",
+      "Which fire dampers are approved for residential high-rise buildings?",
+      "Show me cavity barrier options for a ventilated rainscreen facade",
+    ],
+  },
+  {
+    mode: "KNOWLEDGE",
+    prompts: [
+      "What are the inspection intervals for fire dampers under BS 9999?",
+      "Explain the compartmentation requirements in Approved Document B",
+      "What does BS 8214 say about fire door maintenance intervals?",
+      "Summarise the passive fire protection requirements for means of escape",
+      "What testing standards apply to linear gap seals in fire stopping?",
+    ],
+  },
+  {
+    mode: "PROJECT",
+    prompts: [
+      "Summarise overdue deliverables from my TIDP upload",
+      "Which categories in my schedule have the most revision changes?",
+      "Generate a progress report from my uploaded project data",
+      "What percentage of my deliverables are marked as approved?",
+      "List all items with status changes in the last 30 days",
+    ],
+  },
+  {
+    mode: "GENERAL",
+    prompts: [
+      "What changed in the Building Safety Act Section 88 guidance?",
+      "Explain the role of a Principal Designer under the Building Safety Act",
+      "What is a golden thread in the context of building safety?",
+      "What are the fire safety requirements for buildings over 18 metres?",
+      "How do the new competence requirements affect fire risk assessors?",
+    ],
+  },
+];
+
+function getRandomSuggestions() {
+  return SUGGESTION_POOLS.map((pool) => ({
+    mode: pool.mode,
+    text: pool.prompts[Math.floor(Math.random() * pool.prompts.length)],
+  }));
+}
+
 export default function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -81,6 +132,9 @@ export default function Home() {
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [m365Error, setM365Error] = useState<string>("");
   const [isPersonalAccount, setIsPersonalAccount] = useState(false);
+
+  // Suggestion pills — randomized on mount
+  const [suggestions] = useState(() => getRandomSuggestions());
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -716,6 +770,30 @@ export default function Home() {
                 Send
               </button>
             </div>
+          </div>
+
+          {/* Suggestion Pills */}
+          <div
+            className="mt-4 grid grid-cols-2 gap-3"
+            style={{ fontFamily: "var(--font-ibm-plex)" }}
+          >
+            {suggestions.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  setMessage(s.text);
+                  localStorage.setItem("userMessage", s.text);
+                  setTimeout(() => {
+                    const trigger = document.getElementById("chat-trigger");
+                    if (trigger) trigger.click();
+                  }, 100);
+                }}
+                className="px-4 py-3 text-left text-sm border border-[#E5E7EB] bg-white rounded-lg hover:border-[#D1D5DB] hover:shadow-sm transition-all"
+                style={{ color: "#6B7280" }}
+              >
+                {s.text}
+              </button>
+            ))}
           </div>
 
           {error && (

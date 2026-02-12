@@ -40,7 +40,7 @@ No backend dependencies. Pure visual changes.
   - [ ] **1.6.26** `lib/twilioClient.ts` — notification title
 - [x] **1.7** `components/LeftSidebar.tsx` — update logo, alt text, sign-in text + add new nav icons (Products, Quotes, Manufacturers, Data Mining, Compliance, Golden Thread, Surveying)
 - [x] **1.8** `components/RightSidebar.tsx` — update "About dpow.chat" tooltip to "About HF.bluebook"
-- [ ] **1.9** `app/page.tsx` — redesign as Melvin chat with pill mode cards (deferred — landing page kept as-is, mode pills added to chat drawer instead)
+- [x] **1.9** `app/page.tsx` — 4 suggestion pills below chat box, rotating prompts from pool per mode (PRODUCT/KNOWLEDGE/PROJECT/GENERAL), auto-fills + opens chat drawer
 - [x] **1.10** `app/dashboard/page.tsx` — dashboard shell + LayoutDashboard icon in sidebar (full tile design deferred to Figma)
 - [x] **1.11** chat.Melvin rebrand — ChatDrawerWrapper header "Melvin", 5-mode dropdown (PRODUCT/KNOWLEDGE/FULL coming soon), ChatInput placeholder + export titles rebranded
 - [ ] **1.12** Rebrand existing pages — split into subtasks below.
