@@ -127,14 +127,16 @@ Everything else depends on this.
 
 **Depends on:** Sprint 3 (needs products)
 
-- [ ] **4.1** Quotes CRUD — API routes (`/api/quotes/...`)
-- [ ] **4.2** Quotes pages (`/quotes`, `/quotes/new`, `/quotes/[id]`)
-- [ ] **4.3** QuoteBuilder, QuoteLineItemRow, QuoteTotals components
-- [ ] **4.4** ProductSearchModal (search products to add to quote)
-- [ ] **4.5** Quote PDF generation (pdf-lib)
-- [ ] **4.6** Quote Excel generation (exceljs) — `npm install exceljs`
-- [ ] **4.7** Inngest function: `sendQuoteEmail` (Resend + PDF attachment)
-- [ ] **4.8** Quote number generation via Postgres sequence (`/api/quotes/next-number`)
+**Execution order** (critical path: 4.8 → 4.1 → 4.3/4.4 → 4.2 → 4.5/4.6 → 4.7):
+
+- [ ] **4.8** Quote number generation via Postgres sequence (`/api/quotes/next-number`) — do FIRST, no deps, calls `nextval('quote_number_seq')`
+- [ ] **4.1** Quotes CRUD — API routes (`/api/quotes/...`) — core API, pages + components depend on this
+- [ ] **4.3** QuoteBuilder, QuoteLineItemRow, QuoteTotals components — UI building blocks for pages
+- [ ] **4.4** ProductSearchModal (search products to add to quote) — used inside QuoteBuilder to add line items
+- [ ] **4.2** Quotes pages (`/quotes`, `/quotes/new`, `/quotes/[id]`) — wires together API + components
+- [ ] **4.5** Quote PDF generation (pdf-lib) — export feature, pdf-lib already installed. Can parallel with 4.6
+- [ ] **4.6** Quote Excel generation (exceljs) — `npm install exceljs`. Can parallel with 4.5
+- [ ] **4.7** Inngest function: `sendQuoteEmail` (Resend + PDF attachment) — do LAST, depends on PDF generation
 
 ---
 
