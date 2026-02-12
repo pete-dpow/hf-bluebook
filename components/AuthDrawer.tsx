@@ -15,10 +15,17 @@ export default function AuthDrawer({ isOpen }: AuthDrawerProps) {
   const [message, setMessage] = useState("");
   const [showMagicLink, setShowMagicLink] = useState(false);
 
+  // Flip to true once Harmony IT adds the Azure redirect URI
+  const ENTRA_ENABLED = false;
+
   const handleMicrosoftSignIn = () => {
+    if (!ENTRA_ENABLED) {
+      // Azure redirect URI not yet configured — nudge to magic link
+      setShowMagicLink(true);
+      setMessage("Microsoft Entra ID is being configured by Harmony IT. Please use email sign-in below.");
+      return;
+    }
     setMsLoading(true);
-    // We don't have a userId yet for fresh login — use "new" as placeholder
-    // The callback will handle creating/finding the Supabase user
     window.location.href = "/api/microsoft/auth?userId=new";
   };
 
@@ -125,7 +132,7 @@ export default function AuthDrawer({ isOpen }: AuthDrawerProps) {
             className="text-xs text-gray-400 text-center mb-6"
             style={{ fontFamily: "var(--font-ibm-plex)" }}
           >
-            Harmony Fire Microsoft Entra ID
+            {ENTRA_ENABLED ? "Harmony Fire Microsoft Entra ID" : "Coming soon — pending Harmony IT configuration"}
           </p>
 
           {/* Divider */}
