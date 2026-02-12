@@ -48,7 +48,7 @@ export default function ChatInput({
   // === Export Buttons ===
   const handleExportPDF = () => {
     const uploaded = localStorage.getItem("uploadedData");
-    let projectName = "dpow_session";
+    let projectName = "hf_bluebook_session";
     if (uploaded) {
       try {
         const data = JSON.parse(uploaded);
@@ -58,7 +58,7 @@ export default function ChatInput({
     const doc = new jsPDF();
     doc.setFont("helvetica", "normal");
     doc.setFontSize(14);
-    doc.text("DPoW.chat — Session Report", 20, 20);
+    doc.text("HF.bluebook — Session Report", 20, 20);
     doc.setFontSize(11);
     doc.text(`Project: ${projectName}`, 20, 30);
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 38);
@@ -79,7 +79,7 @@ export default function ChatInput({
 
   const handleExportDOCX = async () => {
     const uploaded = localStorage.getItem("uploadedData");
-    let projectName = "dpow_session";
+    let projectName = "hf_bluebook_session";
     if (uploaded) {
       try {
         const data = JSON.parse(uploaded);
@@ -91,7 +91,7 @@ export default function ChatInput({
         {
           children: [
             new Paragraph({
-              children: [new TextRun({ text: "DPoW.chat — Session Report", bold: true, size: 28 })],
+              children: [new TextRun({ text: "HF.bluebook — Session Report", bold: true, size: 28 })],
             }),
             ...messages.map(
               (m) =>
@@ -162,7 +162,7 @@ export default function ChatInput({
             ref={textAreaRef}
             className="flex-1 px-4 py-3 focus:outline-none transition-all"
             style={{ fontFamily: "var(--font-ibm-plex)", minHeight: "120px" }}
-            placeholder="Ask about project data, generate reports..."
+            placeholder="Ask Melvin anything on life safety, compliance or judgements..."
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {

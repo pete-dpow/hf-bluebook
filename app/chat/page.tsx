@@ -13,10 +13,10 @@ import jsPDF from "jspdf";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 
 // ⭐ Task 7: Updated message type with mode
-type Msg = { 
-  role: "user" | "assistant"; 
+type Msg = {
+  role: "user" | "assistant";
   content: string;
-  mode?: "GENERAL" | "PROJECT" | "BOTH" | null;
+  mode?: "GENERAL" | "PROJECT" | "BOTH" | "PRODUCT" | "KNOWLEDGE" | "FULL" | null;
 };
 
 interface OneDriveFile {
@@ -81,7 +81,7 @@ export default function ChatPage() {
   const [loadedFileName, setLoadedFileName] = useState<string | null>(null);
 
   // ⭐ Task 6: Mode Override State
-  const [modeOverride, setModeOverride] = useState<"AUTO" | "GENERAL" | "PROJECT" | "BOTH">("AUTO");
+  const [modeOverride, setModeOverride] = useState<"AUTO" | "GENERAL" | "PROJECT" | "BOTH" | "PRODUCT" | "KNOWLEDGE" | "FULL">("AUTO");
   const [showModeDropdown, setShowModeDropdown] = useState(false);
 
   // ⭐ Task 4: Recent Conversations State
@@ -846,16 +846,25 @@ export default function ChatPage() {
           fontSize: "12px",
           fontWeight: 500,
           fontFamily: "var(--font-ibm-plex)",
-          background: modeOverride === "AUTO" ? "#F3F4F6" : 
+          background: modeOverride === "AUTO" ? "#F3F4F6" :
                      modeOverride === "GENERAL" ? "#DBEAFE" :
-                     modeOverride === "PROJECT" ? "#D1FAE5" : "#FEF3C7",
+                     modeOverride === "PROJECT" ? "#D1FAE5" :
+                     modeOverride === "PRODUCT" ? "#EDE9FE" :
+                     modeOverride === "KNOWLEDGE" ? "#FEE2E2" :
+                     modeOverride === "FULL" ? "#F0FDFA" : "#FEF3C7",
           color: modeOverride === "AUTO" ? "#6B7280" :
                  modeOverride === "GENERAL" ? "#1D4ED8" :
-                 modeOverride === "PROJECT" ? "#059669" : "#D97706",
+                 modeOverride === "PROJECT" ? "#059669" :
+                 modeOverride === "PRODUCT" ? "#7C3AED" :
+                 modeOverride === "KNOWLEDGE" ? "#DC2626" :
+                 modeOverride === "FULL" ? "#0D9488" : "#D97706",
           border: "1px solid",
           borderColor: modeOverride === "AUTO" ? "#E5E7EB" :
                        modeOverride === "GENERAL" ? "#93C5FD" :
-                       modeOverride === "PROJECT" ? "#6EE7B7" : "#FCD34D",
+                       modeOverride === "PROJECT" ? "#6EE7B7" :
+                       modeOverride === "PRODUCT" ? "#C4B5FD" :
+                       modeOverride === "KNOWLEDGE" ? "#FCA5A5" :
+                       modeOverride === "FULL" ? "#5EEAD4" : "#FCD34D",
           borderRadius: "8px",
           cursor: "pointer",
           transition: "all 0.2s",
@@ -889,17 +898,23 @@ export default function ChatPage() {
             }}
           >
             {[
-              { value: "AUTO", label: "Auto (Smart)", desc: "AI decides best mode", color: "#6B7280" },
-              { value: "GENERAL", label: "General", desc: "Industry knowledge only", color: "#1D4ED8" },
-              { value: "PROJECT", label: "Project", desc: "Your data only", color: "#059669" },
-              { value: "BOTH", label: "Both", desc: "Knowledge + your data", color: "#D97706" },
+              { value: "AUTO", label: "Auto (Smart)", desc: "AI decides best mode", color: "#6B7280", disabled: false },
+              { value: "GENERAL", label: "General", desc: "Industry knowledge only", color: "#1D4ED8", disabled: false },
+              { value: "PROJECT", label: "Project", desc: "Your Excel data", color: "#059669", disabled: false },
+              { value: "PRODUCT", label: "Product", desc: "Product catalog search — coming soon", color: "#7C3AED", disabled: true },
+              { value: "KNOWLEDGE", label: "Knowledge", desc: "Bluebook PDFs + compliance — coming soon", color: "#DC2626", disabled: true },
+              { value: "FULL", label: "Full", desc: "Everything combined — coming soon", color: "#0D9488", disabled: true },
+              { value: "BOTH", label: "Both (Legacy)", desc: "Knowledge + your data", color: "#D97706", disabled: false },
             ].map((option) => (
               <button
                 key={option.value}
                 onClick={() => {
-                  setModeOverride(option.value as any);
-                  setShowModeDropdown(false);
+                  if (!option.disabled) {
+                    setModeOverride(option.value as any);
+                    setShowModeDropdown(false);
+                  }
                 }}
+                disabled={option.disabled}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -908,14 +923,15 @@ export default function ChatPage() {
                   background: modeOverride === option.value ? "#F9FAFB" : "white",
                   border: "none",
                   borderBottom: "1px solid #F3F4F6",
-                  cursor: "pointer",
+                  cursor: option.disabled ? "not-allowed" : "pointer",
+                  opacity: option.disabled ? 0.5 : 1,
                   textAlign: "left",
                   display: "flex",
                   flexDirection: "column",
                   gap: "2px",
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "#F9FAFB"}
-                onMouseLeave={(e) => e.currentTarget.style.background = modeOverride === option.value ? "#F9FAFB" : "white"}
+                onMouseEnter={(e) => { if (!option.disabled) e.currentTarget.style.background = "#F9FAFB"; }}
+                onMouseLeave={(e) => { if (!option.disabled) e.currentTarget.style.background = modeOverride === option.value ? "#F9FAFB" : "white"; }}
               >
                 <span style={{ fontWeight: 500, color: option.color }}>{option.label}</span>
                 <span style={{ fontSize: "11px", color: "#9CA3AF" }}>{option.desc}</span>
@@ -928,12 +944,15 @@ export default function ChatPage() {
   );
 
   // ⭐ Task 7: Mode Badge Component
-  const ModeBadge = ({ mode }: { mode: "GENERAL" | "PROJECT" | "BOTH" | null }) => {
+  const ModeBadge = ({ mode }: { mode: "GENERAL" | "PROJECT" | "BOTH" | "PRODUCT" | "KNOWLEDGE" | "FULL" | null }) => {
     if (!mode) return null;
-    
-    const config = {
+
+    const config: Record<string, { bg: string; color: string; border: string }> = {
       GENERAL: { bg: "#DBEAFE", color: "#1D4ED8", border: "#93C5FD" },
       PROJECT: { bg: "#D1FAE5", color: "#059669", border: "#6EE7B7" },
+      PRODUCT: { bg: "#EDE9FE", color: "#7C3AED", border: "#C4B5FD" },
+      KNOWLEDGE: { bg: "#FEE2E2", color: "#DC2626", border: "#FCA5A5" },
+      FULL: { bg: "#F0FDFA", color: "#0D9488", border: "#5EEAD4" },
       BOTH: { bg: "#FEF3C7", color: "#D97706", border: "#FCD34D" },
     };
     

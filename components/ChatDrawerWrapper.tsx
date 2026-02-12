@@ -140,7 +140,7 @@ export default function ChatDrawerWrapper() {
                     gap: "0.5rem",
                   }}
                 >
-                  Chat
+                  Melvin
                   {whatsappConnected && (
                     <MessageCircle size={20} color="#25D366" style={{ marginLeft: "4px" }} />
                   )}
