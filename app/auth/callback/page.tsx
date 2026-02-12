@@ -98,7 +98,7 @@ export default function AuthCallbackPage() {
               fontWeight: 500,
             }}
           >
-            Return to dpow.chat
+            Return to HF.bluebook
           </button>
         </>
       ) : success ? (
@@ -109,7 +109,7 @@ export default function AuthCallbackPage() {
               Successfully signed in!
             </p>
           </div>
-          <p className="text-sm text-gray-500 mb-4">Redirecting to dpow.chat...</p>
+          <p className="text-sm text-gray-500 mb-4">Redirecting to HF.bluebook...</p>
           <button
             onClick={() => router.replace("/")}
             style={{
@@ -124,7 +124,7 @@ export default function AuthCallbackPage() {
               fontWeight: 500,
             }}
           >
-            Continue to dpow.chat →
+            Continue to HF.bluebook →
           </button>
         </>
       ) : (

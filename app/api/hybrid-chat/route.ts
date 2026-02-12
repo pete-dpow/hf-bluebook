@@ -113,7 +113,7 @@ Classification:`;
 
     // Route based on classification
     if (queryType === "GENERAL") {
-      const systemPrompt = `You are dpow.chat — a knowledgeable assistant for construction and project management professionals.
+      const systemPrompt = `You are Melvin, the HF.bluebook AI assistant — a knowledgeable assistant for construction and project management professionals.
 
 ${memoryContext}
 
@@ -158,7 +158,7 @@ Answer like a knowledgeable colleague who respects the reader's time.`;
         });
       }
 
-      const systemPrompt = `You are dpow.chat — analyzing the user's project data.
+      const systemPrompt = `You are Melvin, the HF.bluebook AI assistant — analyzing the user's project data.
 
 Dataset: ${dataset.rows.length} rows. Sample: ${JSON.stringify(dataset.rows.slice(0, 10), null, 2)}
 
@@ -194,7 +194,7 @@ Answer like you're texting a colleague who needs fast facts.`;
 
     // BOTH - Hybrid mode
     if (!dataset?.rows || dataset.rows.length === 0) {
-      const systemPrompt = `You are dpow.chat. The user asked a question needing their project data, but none is uploaded.
+      const systemPrompt = `You are Melvin, the HF.bluebook AI assistant. The user asked a question needing their project data, but none is uploaded.
 
 ${memoryContext}
 
@@ -220,7 +220,7 @@ Give brief general guidance. Suggest they upload data for specific insights. Kee
     }
 
     // Hybrid with data
-    const systemPrompt = `You are dpow.chat — combining construction knowledge with the user's project data.
+    const systemPrompt = `You are Melvin, the HF.bluebook AI assistant — combining construction knowledge with the user's project data.
 
 Dataset: ${dataset.rows.length} rows. Sample: ${JSON.stringify(dataset.rows.slice(0, 10), null, 2)}
 

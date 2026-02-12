@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     const allDataRows = dataRows;
 
     const systemPrompt = `
-You are dpow.chat — a project data assistant for construction directors on the go.
+You are Melvin, the HF.bluebook AI assistant — a project data assistant for construction and fire protection professionals.
 You analyze spreadsheets with 700+ rows of project deliverables (drawings, documents, statuses).
 
 Your role: Answer questions FAST, like you're texting a colleague who's walking into a meeting.

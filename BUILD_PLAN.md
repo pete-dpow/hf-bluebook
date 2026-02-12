@@ -11,7 +11,33 @@ No backend dependencies. Pure visual changes.
 - [x] **1.3** `package.json` — name `"nextjs"` → `"hf-bluebook"`
 - [x] **1.4** `app/layout.tsx` — title "HF.bluebook", description, favicon `/hf_logo.svg` (body background NOT changed — blue gradient mouse tracker must be preserved)
 - [x] **1.5** `public/hf_logo.svg` — add HF logo
-- [ ] **1.6** dpow → HF.bluebook text rebrand — all SAFE changes (display text, prompts, headings, labels, tooltips). See list below. Do NOT change Vercel URLs, email addresses, or OAuth redirects.
+- [ ] **1.6** dpow → HF.bluebook text rebrand — split into subtasks below. Do NOT change Vercel URLs, email addresses, or OAuth redirects.
+  - [x] **1.6.1** `app/api/hybrid-chat/route.ts` — system prompts (CRITICAL)
+  - [x] **1.6.2** `app/api/chat/route.ts` — system prompt (CRITICAL)
+  - [x] **1.6.3** `app/api/freemium-chat/route.ts` — system prompt (CRITICAL)
+  - [x] **1.6.4** `lib/dpowAiClient.ts` — system prompt text (CRITICAL)
+  - [x] **1.6.5** `app/api/summary-report/route.ts` — system prompt (CRITICAL)
+  - [x] **1.6.6** `lib/reportGenerator.ts` — report branding (CRITICAL)
+  - [x] **1.6.7** `app/page.tsx` — main landing page text (CRITICAL)
+  - [x] **1.6.8** `app/auth/page.tsx` — sign-in page text (CRITICAL)
+  - [x] **1.6.9** `app/auth/callback/page.tsx` — auth callback text (CRITICAL)
+  - [ ] **1.6.10** `app/invite/[token]/page.tsx` — invite page text
+  - [ ] **1.6.11** `app/dashboard/page.tsx` — dashboard text
+  - [ ] **1.6.12** `app/chat/page.tsx` — chat page text
+  - [ ] **1.6.13** `app/demo/page.tsx` — demo page text
+  - [ ] **1.6.14** `app/pricing/page.tsx` — pricing page text
+  - [ ] **1.6.15** `app/scope/page.tsx` — scope page text
+  - [ ] **1.6.16** `app/report/page.tsx` — report page text
+  - [ ] **1.6.17** `app/api/whatsapp/webhook/route.ts` — message text only, NOT email
+  - [ ] **1.6.18** `components/AboutDrawer.tsx` — about text
+  - [ ] **1.6.19** `components/HelpDrawer.tsx` — help text
+  - [ ] **1.6.20** `components/ChatDrawer.tsx` — chat drawer text
+  - [ ] **1.6.21** `components/ChatDrawerProvider.tsx` — provider text
+  - [ ] **1.6.22** `components/ChatInput.tsx` — placeholder text
+  - [ ] **1.6.23** `components/ProfileDrawer.tsx` — profile text
+  - [ ] **1.6.24** `components/SettingsDrawer.tsx` — settings text
+  - [ ] **1.6.25** `components/LegalDrawer.tsx` — product name only, NOT company/email
+  - [ ] **1.6.26** `lib/twilioClient.ts` — notification title
 - [x] **1.7** `components/LeftSidebar.tsx` — update logo, alt text, sign-in text + add new nav icons (Products, Quotes, Manufacturers, Data Mining, Compliance, Golden Thread, Surveying)
 - [x] **1.8** `components/RightSidebar.tsx` — update "About dpow.chat" tooltip to "About HF.bluebook"
 - [ ] **1.9** `app/page.tsx` — redesign as Melvin chat with pill mode cards (GENERAL/PROJECT/PRODUCT/KNOWLEDGE/FULL)

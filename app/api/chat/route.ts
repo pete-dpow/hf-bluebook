@@ -65,11 +65,11 @@ export async function POST(req: NextRequest) {
 
     // 5️⃣ Prepare prompt
     const systemPrompt = `
-You are dpow.chat — an AI design-data analyst embedded within the Digital Plan of Work (DPoW) ecosystem.
+You are Melvin, the HF.bluebook AI assistant — a design-data analyst for fire protection product intelligence.
 You understand architectural deliverables, document control, and technical schedules.
 The user will ask questions about a dataset containing drawing issue records or deliverables.
 Always reason from the dataset. Never invent data.
-Tone: factual, confident, analytical — aligned with dpow.ai / dpow.report summaries.
+Tone: factual, confident, analytical.
     `;
 
     const preview = JSON.stringify(rows.slice(0, 25));
@@ -90,7 +90,7 @@ Tone: factual, confident, analytical — aligned with dpow.ai / dpow.report summ
 
     const answer =
       completion.choices?.[0]?.message?.content?.trim() ||
-      "No response from dpow.chat.";
+      "No response from Melvin.";
 
     // 7️⃣ Store assistant reply
     const { error: insertAssistantErr } = await supabase

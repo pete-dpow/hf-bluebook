@@ -573,7 +573,7 @@ export default function Home() {
                 color: "#2A2A2A",
               }}
             >
-              dpow.chat
+              HF.bluebook
             </h1>
             <p
               className="text-lg"
@@ -583,7 +583,7 @@ export default function Home() {
                 letterSpacing: "-0.01em",
               }}
             >
-              Structured Intelligence for Project Delivery
+              Fire Protection Product Intelligence
             </p>
             <p
               className="text-sm mt-2"
@@ -592,7 +592,7 @@ export default function Home() {
                 color: "#6B7280",
               }}
             >
-              Conversational AI assistant for directors — ask, reason, report
+              Melvin AI — products, compliance, quotes, golden thread
             </p>
           </div>
 
@@ -600,7 +600,7 @@ export default function Home() {
             <div className="p-6 border-b border-[#E5E7EB]">
               <div className="flex gap-2">
                 <textarea
-                  placeholder="How can dpow.chat help you today?"
+                  placeholder="How can Melvin help you today?"
                   className="w-full resize-none outline-none text-base"
                   style={{
                     fontFamily: "var(--font-ibm-plex)",

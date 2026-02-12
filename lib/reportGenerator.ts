@@ -193,7 +193,7 @@ export async function generatePdf(meta: ReportMeta, sections: ReportSection[]) {
 
   const pages = pdfDoc.getPages();
   pages.forEach((p, i) => {
-    p.drawText(`${meta.project || 'dpow.ai'}`, {
+    p.drawText(`${meta.project || 'HF.bluebook'}`, {
       x: margin,
       y: 30,
       size: 9,
