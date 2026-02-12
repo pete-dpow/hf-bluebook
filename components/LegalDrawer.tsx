@@ -58,13 +58,8 @@ export default function LegalDrawer() {
         // Invalid consent, show banner
       }
     }
-    // No valid consent - show banner after brief delay
-    setTimeout(() => {
-      setShowCookieBanner(true);
-      setIsOpen(true);
-      setForceSection("cookies");
-      setActiveSection("cookies");
-    }, 1500);
+    // Internal app — skip auto-opening cookie banner
+    // Users can still access via Settings > Legal if needed
   }
 
   // ⭐ Task 34: Save cookie consent
