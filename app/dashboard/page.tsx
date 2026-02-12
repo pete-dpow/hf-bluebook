@@ -49,14 +49,20 @@ export default function DashboardPage() {
           className="text-4xl mb-4"
           style={{ fontFamily: "var(--font-cormorant)" }}
         >
-          Welcome to DPoW
+          HF.bluebook
         </h1>
         <p
-          className="text-gray-600 mb-6"
+          className="text-gray-600 mb-2"
           style={{ fontFamily: "var(--font-ibm-plex)" }}
         >
-          You are signed in as <br />
+          Signed in as{" "}
           <span className="font-semibold text-gray-800">{user?.email}</span>
+        </p>
+        <p
+          className="text-sm text-gray-400 mb-6"
+          style={{ fontFamily: "var(--font-ibm-plex)" }}
+        >
+          Dashboard coming soon
         </p>
         <button
           onClick={handleSignOut}

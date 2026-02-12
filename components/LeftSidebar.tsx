@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Scroll,
   Ruler,
+  LayoutDashboard,
 } from "lucide-react";
 import AppSwitcherBubble from "./AppSwitcherBubble";
 
@@ -277,6 +278,16 @@ export default function LeftSidebar() {
             tooltip="Upload new file"
             onClick={() => router.push("/")}
           />
+
+          {/* Dashboard */}
+          {user && (
+            <IconButton
+              icon={<LayoutDashboard size={20} />}
+              label="Dashboard"
+              tooltip="Dashboard"
+              onClick={() => router.push("/dashboard")}
+            />
+          )}
 
           {/* ⭐ Task 2: Projects with Tooltip */}
           {user && (
