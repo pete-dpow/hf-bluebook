@@ -15,6 +15,13 @@ import {
   X,
   Building2,
   Rocket,
+  Package,
+  FileText,
+  Factory,
+  Search,
+  ShieldCheck,
+  Scroll,
+  Ruler,
 } from "lucide-react";
 import AppSwitcherBubble from "./AppSwitcherBubble";
 
@@ -292,6 +299,54 @@ export default function LeftSidebar() {
               }}
             />
           )}
+
+          {/* HF.bluebook Nav Items */}
+          {user && (
+            <>
+              <IconButton
+                icon={<Package size={20} />}
+                label="Products"
+                tooltip="Product Catalog"
+                onClick={() => router.push("/products")}
+              />
+              <IconButton
+                icon={<FileText size={20} />}
+                label="Quotes"
+                tooltip="Quotes"
+                onClick={() => router.push("/quotes")}
+              />
+              <IconButton
+                icon={<Factory size={20} />}
+                label="Manufacturers"
+                tooltip="Manufacturers"
+                onClick={() => router.push("/manufacturers")}
+              />
+              <IconButton
+                icon={<Search size={20} />}
+                label="Data Mining"
+                tooltip="Data Mining"
+                onClick={() => router.push("/data-mining")}
+              />
+              <IconButton
+                icon={<ShieldCheck size={20} />}
+                label="Compliance"
+                tooltip="Compliance Library"
+                onClick={() => router.push("/compliance")}
+              />
+              <IconButton
+                icon={<Scroll size={20} />}
+                label="Golden Thread"
+                tooltip="Golden Thread"
+                onClick={() => router.push("/golden-thread")}
+              />
+              <IconButton
+                icon={<Ruler size={20} />}
+                label="Surveying"
+                tooltip="Surveying"
+                onClick={() => router.push("/surveying")}
+              />
+            </>
+          )}
         </div>
 
         {/* Bottom Section */}
@@ -526,7 +581,7 @@ export default function LeftSidebar() {
               marginBottom: "8px",
               color: "#2A2A2A"
             }}>
-              Sign in to dpow.chat
+              Sign in to HF.bluebook
             </h2>
             <p style={{ fontSize: "14px", color: "#6B7280", marginBottom: "24px" }}>
               Enter your email to receive a magic link
@@ -598,8 +653,8 @@ function LogoWithTooltip() {
       style={{ position: "relative" }}
     >
       <Image
-        src="/dpow_logo.svg"
-        alt="DPOW Logo"
+        src="/hf_logo.svg"
+        alt="HF.bluebook"
         width={24}
         height={24}
         style={{ flexShrink: 0 }}

@@ -93,7 +93,7 @@ export default function RightSidebar() {
           onClick={handleLegalClick}
           showBadge={needsCookieConsent}
         />
-        <IconButton icon={<Info size={20} />} tooltip="About dpow.chat" onClick={handleAboutClick} />
+        <IconButton icon={<Info size={20} />} tooltip="About HF.bluebook" onClick={handleAboutClick} />
         <IconButton icon={<HelpCircle size={20} />} tooltip="Help & Support" onClick={handleHelpClick} />
       </div>
     </div>
