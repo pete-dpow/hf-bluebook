@@ -20,10 +20,10 @@ const ibmPlex = IBM_Plex_Sans({
 });
 
 export const metadata = {
-  title: "dpow.chat",
-  description: "Structured Intelligence for Project Delivery",
+  title: "HF.bluebook",
+  description: "Fire Protection Product Intelligence by Harmony Fire",
   icons: {
-    icon: "/dpow_logo.svg",
+    icon: "/hf_logo.svg",
   },
 };
 
