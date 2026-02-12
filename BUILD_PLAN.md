@@ -43,7 +43,12 @@ No backend dependencies. Pure visual changes.
 - [ ] **1.9** `app/page.tsx` — redesign as Melvin chat with pill mode cards (deferred — landing page kept as-is, mode pills added to chat drawer instead)
 - [x] **1.10** `app/dashboard/page.tsx` — dashboard shell + LayoutDashboard icon in sidebar (full tile design deferred to Figma)
 - [x] **1.11** chat.Melvin rebrand — ChatDrawerWrapper header "Melvin", 5-mode dropdown (PRODUCT/KNOWLEDGE/FULL coming soon), ChatInput placeholder + export titles rebranded
-- [ ] **1.12** Rebrand existing pages (report, scope, summary, preview) — HF colors only, no logic changes
+- [ ] **1.12** Rebrand existing pages — split into subtasks below.
+  - [x] **1.12.1** Add Report Lucide icon to LeftSidebar (route to `/report`)
+  - [x] **1.12.2** Rebrand `/report` page — HF colors, text, no logic changes
+  - [ ] **1.12.3** Rebrand `/scope` page — HF colors, text, no logic changes
+  - [ ] **1.12.4** Rebrand `/summary` page — HF colors, text, no logic changes
+  - [ ] **1.12.5** Rebrand `/preview` page — HF colors, text, no logic changes
 
 ### dpow → HF.bluebook Safe Text Changes (1.6)
 

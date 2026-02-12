@@ -138,26 +138,26 @@ export default function Home() {
               color: '#2A2A2A' 
             }}
           >
-            dpow.report
+            HF.bluebook
           </h1>
-          <p 
-            className="text-lg" 
-            style={{ 
-              fontFamily: 'var(--font-ibm-plex)', 
-              color: '#4B4B4B', 
-              letterSpacing: '-0.01em' 
+          <p
+            className="text-lg"
+            style={{
+              fontFamily: 'var(--font-ibm-plex)',
+              color: '#4B4B4B',
+              letterSpacing: '-0.01em'
             }}
           >
-            Data Analysis and Reporting Intelligence
+            Report Generator
           </p>
-          <p 
-            className="text-sm mt-2" 
-            style={{ 
-              fontFamily: 'var(--font-ibm-plex)', 
-              color: '#6B7280' 
+          <p
+            className="text-sm mt-2"
+            style={{
+              fontFamily: 'var(--font-ibm-plex)',
+              color: '#6B7280'
             }}
           >
-            Automated text summaries of progress, revisions, and project insights
+            Automated summaries of progress, revisions, and project insights
           </p>
         </div>
 

@@ -23,6 +23,7 @@ import {
   Scroll,
   Ruler,
   LayoutDashboard,
+  FileBarChart,
 } from "lucide-react";
 import AppSwitcherBubble from "./AppSwitcherBubble";
 
@@ -349,6 +350,12 @@ export default function LeftSidebar() {
                 label="Golden Thread"
                 tooltip="Golden Thread"
                 onClick={() => router.push("/golden-thread")}
+              />
+              <IconButton
+                icon={<FileBarChart size={20} />}
+                label="Report"
+                tooltip="Report Generator"
+                onClick={() => router.push("/report")}
               />
               <IconButton
                 icon={<Ruler size={20} />}
