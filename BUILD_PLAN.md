@@ -176,17 +176,17 @@ Everything else depends on this.
 
 **Depends on:** Sprint 4 (quotes) + Sprint 6 (compliance)
 
-- [ ] **7.1** Create `lib/goldenThread/compiler.ts` (data aggregation)
-- [ ] **7.2** Create `lib/goldenThread/validator.ts` (BSA Section 88/91 checks)
-- [ ] **7.3** Create `lib/goldenThread/pdfGenerator.ts` (Playwright page.pdf())
-- [ ] **7.4** Golden Thread API routes (`/api/golden-thread/...`)
-- [ ] **7.5** Inngest function: `generateGoldenThread`
-- [ ] **7.6** Golden Thread pages (`/golden-thread`, `/golden-thread/[id]`)
-- [ ] **7.7** GoldenThreadModal, GoldenThreadPackageCard components
-- [ ] **7.8** JSON export format
-- [ ] **7.9** PDF handover pack (client-branded, TOC, sections)
-- [ ] **7.10** CSV export (ZIP with multiple CSVs)
-- [ ] **7.11** Audit trail logging + view
+- [x] **7.1** Create `lib/goldenThread/compiler.ts` (data aggregation)
+- [x] **7.2** Create `lib/goldenThread/validator.ts` (BSA Section 88/91 checks)
+- [x] **7.3** Create `lib/goldenThread/pdfGenerator.ts` (pdf-lib, Playwright swap ready)
+- [x] **7.4** Golden Thread API routes (`/api/golden-thread/...`)
+- [x] **7.5** Inngest function: `generateGoldenThread`
+- [x] **7.6** Golden Thread pages (`/golden-thread`, `/golden-thread/[id]`)
+- [x] **7.7** GoldenThreadModal, GoldenThreadPackageCard components
+- [x] **7.8** JSON export format
+- [x] **7.9** PDF handover pack (client-branded, TOC, sections)
+- [x] **7.10** CSV export (multiple CSVs stored individually)
+- [x] **7.11** Audit trail logging + view
 
 ---
 
@@ -194,14 +194,14 @@ Everything else depends on this.
 
 **Depends on:** Sprint 5 (RAG) + Sprint 6 (compliance)
 
-- [ ] **8.1** Install Anthropic SDK: `npm install @anthropic-ai/sdk`
-- [ ] **8.2** Update classifier in `/api/hybrid-chat` — 5 modes (GENERAL/PROJECT/PRODUCT/KNOWLEDGE/FULL)
-- [ ] **8.3** PRODUCT mode: query product catalog via match_products RPC
-- [ ] **8.4** KNOWLEDGE mode: query bluebook_chunks + regulation_sections (Claude for generation)
-- [ ] **8.5** FULL mode: combine all data sources (Claude for generation)
-- [ ] **8.6** Citation formatting — source file, page number, regulation reference
-- [ ] **8.7** AI Normalizer (`/api/normalize`) — GPT-4o spec extraction from scraped HTML
-- [ ] **8.8** Schema validator — validate extracted specs against pillar schemas
+- [x] **8.1** Install Anthropic SDK: `npm install @anthropic-ai/sdk`
+- [x] **8.2** Update classifier in `/api/hybrid-chat` — 5 modes (GENERAL/PROJECT/PRODUCT/KNOWLEDGE/FULL)
+- [x] **8.3** PRODUCT mode: query product catalog via match_products RPC
+- [x] **8.4** KNOWLEDGE mode: query bluebook_chunks + regulation_sections (Claude for generation)
+- [x] **8.5** FULL mode: combine all data sources (Claude for generation)
+- [x] **8.6** Citation formatting — source file, page number, regulation reference
+- [x] **8.7** AI Normalizer (`/api/normalize`) — GPT-4o spec extraction from scraped HTML
+- [x] **8.8** Schema validator — validate extracted specs against pillar schemas
 
 ---
 
@@ -226,9 +226,9 @@ Sprint 2 (Database) ────────────────────
 Sprint 3 (Data Mining) ── depends on Sprint 2 ─────────────→ ✅ done
 Sprint 4 (Quotes) ─────── depends on Sprint 3 ─────────────→ ✅ done
 Sprint 5 (RAG) ────────── depends on Sprint 2 ─────────────→ ✅ done
-Sprint 6 (Compliance) ─── depends on Sprint 3 ─────────────→ in progress (6.5-6.9 remaining)
-Sprint 7 (Golden Thread) ─ depends on Sprint 4 + Sprint 6 ─→ pending
-Sprint 8 (Melvin) ──────── depends on Sprint 5 + Sprint 6 ─→ pending
+Sprint 6 (Compliance) ─── depends on Sprint 3 ─────────────→ ✅ done
+Sprint 7 (Golden Thread) ─ depends on Sprint 4 + Sprint 6 ─→ ✅ done
+Sprint 8 (Melvin) ──────── depends on Sprint 5 + Sprint 6 ─→ ✅ done
 Sprint 9 (Polish) ──────── depends on all above ───────────→ pending
 ```
 

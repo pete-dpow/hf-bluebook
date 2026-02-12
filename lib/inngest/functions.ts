@@ -7,6 +7,10 @@ import { scrapeAndStoreRegulation } from "@/lib/compliance/regulationScraper";
 import { extractPagesFromPdf, chunkPages } from "@/lib/bluebook/chunker";
 import { embedChunks } from "@/lib/bluebook/embeddings";
 import { detectPillar } from "@/lib/bluebook/pillarDetector";
+import { compileGoldenThreadData } from "@/lib/goldenThread/compiler";
+import { validateGoldenThread } from "@/lib/goldenThread/validator";
+import { generateGoldenThreadPdf } from "@/lib/goldenThread/pdfGenerator";
+import { generateGoldenThreadJson, generateGoldenThreadCsvs } from "@/lib/goldenThread/exporters";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://odhvxoelxiffhocrgtll.supabase.co",
@@ -489,4 +493,141 @@ const scrapeRegulation = inngest.createFunction(
   }
 );
 
-export const functions = [scrapeManufacturer, generateProductEmbeddings, sendQuoteEmail, ingestBluebookPDFs, scrapeRegulation];
+// 6. Generate Golden Thread package — compile, validate, export (JSON/PDF/CSV)
+const generateGoldenThread = inngest.createFunction(
+  { id: "generate-golden-thread", concurrency: [{ limit: 2 }] },
+  { event: "golden-thread/generate.requested" },
+  async ({ event, step }) => {
+    const { package_id, project_id, organization_id, building_reference } = event.data;
+
+    // Get package record
+    const pkg = await step.run("get-package", async () => {
+      const { data, error } = await supabaseAdmin
+        .from("golden_thread_packages")
+        .select("*")
+        .eq("id", package_id)
+        .single();
+      if (error || !data) throw new Error("Package not found");
+      return data;
+    });
+
+    // Compile project data
+    const compiledData = await step.run("compile-data", async () => {
+      return compileGoldenThreadData(project_id, organization_id, pkg.package_reference, building_reference);
+    });
+
+    // Validate against BSA 2022
+    const validation = await step.run("validate", async () => {
+      return validateGoldenThread(compiledData);
+    });
+
+    // Update compliance flags
+    await step.run("update-compliance", async () => {
+      await supabaseAdmin
+        .from("golden_thread_packages")
+        .update({
+          section_88_compliant: validation.section_88_compliant,
+          section_91_compliant: validation.section_91_compliant,
+          audit_trail_complete: validation.audit_trail_complete,
+        })
+        .eq("id", package_id);
+    });
+
+    const exportFiles: { format: string; file_name: string; storage_path: string; size: number }[] = [];
+    const storagePath = `${organization_id}/${pkg.package_reference}`;
+
+    // Generate JSON export
+    if (pkg.export_format === "json" || pkg.export_format === "all") {
+      await step.run("export-json", async () => {
+        const json = generateGoldenThreadJson(compiledData, validation);
+        const buffer = Buffer.from(json, "utf-8");
+        const fileName = `${pkg.package_reference}.json`;
+
+        await supabaseAdmin.storage
+          .from("golden-thread")
+          .upload(`${storagePath}/${fileName}`, buffer, {
+            contentType: "application/json",
+            upsert: true,
+          });
+
+        exportFiles.push({
+          format: "json",
+          file_name: fileName,
+          storage_path: `${storagePath}/${fileName}`,
+          size: buffer.length,
+        });
+      });
+    }
+
+    // Generate PDF export
+    if (pkg.export_format === "pdf" || pkg.export_format === "all") {
+      await step.run("export-pdf", async () => {
+        const pdfBytes = await generateGoldenThreadPdf(compiledData, validation);
+        const buffer = Buffer.from(pdfBytes);
+        const fileName = `${pkg.package_reference}.pdf`;
+
+        await supabaseAdmin.storage
+          .from("golden-thread")
+          .upload(`${storagePath}/${fileName}`, buffer, {
+            contentType: "application/pdf",
+            upsert: true,
+          });
+
+        exportFiles.push({
+          format: "pdf",
+          file_name: fileName,
+          storage_path: `${storagePath}/${fileName}`,
+          size: buffer.length,
+        });
+      });
+    }
+
+    // Generate CSV export (multiple CSVs concatenated — ZIP requires external lib)
+    if (pkg.export_format === "csv" || pkg.export_format === "all") {
+      await step.run("export-csv", async () => {
+        const csvs = generateGoldenThreadCsvs(compiledData);
+
+        for (const [csvName, csvContent] of Object.entries(csvs)) {
+          const buffer = Buffer.from(csvContent, "utf-8");
+          await supabaseAdmin.storage
+            .from("golden-thread")
+            .upload(`${storagePath}/${csvName}`, buffer, {
+              contentType: "text/csv",
+              upsert: true,
+            });
+
+          exportFiles.push({
+            format: "csv",
+            file_name: csvName,
+            storage_path: `${storagePath}/${csvName}`,
+            size: buffer.length,
+          });
+        }
+      });
+    }
+
+    // Mark complete
+    const totalSize = exportFiles.reduce((sum, f) => sum + f.size, 0);
+
+    await step.run("mark-complete", async () => {
+      await supabaseAdmin
+        .from("golden_thread_packages")
+        .update({
+          status: "complete",
+          export_files: exportFiles,
+          file_size_bytes: totalSize,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", package_id);
+    });
+
+    return {
+      package_id,
+      package_reference: pkg.package_reference,
+      exports: exportFiles.length,
+      compliance_score: validation.score,
+    };
+  }
+);
+
+export const functions = [scrapeManufacturer, generateProductEmbeddings, sendQuoteEmail, ingestBluebookPDFs, scrapeRegulation, generateGoldenThread];
