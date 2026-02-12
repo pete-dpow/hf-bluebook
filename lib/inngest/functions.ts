@@ -1,6 +1,8 @@
 import { inngest } from "./client";
 import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
 import { scrapeManufacturerProducts } from "@/lib/scrapers/playwrightScraper";
+import { generateQuotePdf } from "@/lib/quoteGenerator";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://odhvxoelxiffhocrgtll.supabase.co",
@@ -187,4 +189,133 @@ const generateProductEmbeddings = inngest.createFunction(
   }
 );
 
-export const functions = [scrapeManufacturer, generateProductEmbeddings];
+// 3. Send quote email with PDF attachment
+const sendQuoteEmail = inngest.createFunction(
+  { id: "send-quote-email", concurrency: [{ limit: 5 }] },
+  { event: "quote/send.requested" },
+  async ({ event, step }) => {
+    const { quote_id, user_id } = event.data;
+
+    // Fetch quote + line items
+    const quote = await step.run("fetch-quote", async () => {
+      const { data, error } = await supabaseAdmin
+        .from("quotes")
+        .select("*, quote_line_items(*)")
+        .eq("id", quote_id)
+        .single();
+
+      if (error || !data) throw new Error("Quote not found");
+      return data;
+    });
+
+    if (!quote.client_email) {
+      throw new Error("Quote has no client email");
+    }
+
+    // Generate PDF
+    const pdfBytes = await step.run("generate-pdf", async () => {
+      const bytes = await generateQuotePdf(quote, quote.quote_line_items || []);
+      return Buffer.from(bytes).toString("base64");
+    });
+
+    // Send email via Resend
+    await step.run("send-email", async () => {
+      const resend = new Resend(process.env.RESEND_API_KEY!);
+
+      const createdDate = new Date(quote.created_at).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
+
+      await resend.emails.send({
+        from: "HF.bluebook <noreply@dpow.co.uk>",
+        to: quote.client_email,
+        subject: `Quote ${quote.quote_number} from Harmony Fire`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #2A2A2A; margin: 0; padding: 40px 20px; background: #FCFCFA;">
+              <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid #E5E7EB;">
+
+                <div style="padding: 40px 40px 32px 40px; border-bottom: 1px solid #E5E7EB;">
+                  <h1 style="margin: 0 0 8px 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 36px; font-weight: 500; color: #0056A7;">
+                    Harmony Fire
+                  </h1>
+                  <p style="margin: 0; font-size: 14px; color: #4B4B4B;">
+                    Fire Protection Specialists
+                  </p>
+                </div>
+
+                <div style="padding: 40px;">
+                  <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 500; color: #2A2A2A;">
+                    Quote ${quote.quote_number}
+                  </h2>
+
+                  <p style="margin: 0 0 16px 0; font-size: 16px;">
+                    Dear ${quote.client_name},
+                  </p>
+
+                  <p style="margin: 0 0 16px 0; font-size: 15px; color: #4B4B4B;">
+                    Please find attached your quotation${quote.project_name ? ` for ${quote.project_name}` : ""}.
+                  </p>
+
+                  <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 20px; margin: 24px 0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                      <span style="font-size: 13px; color: #6B7280;">Quote Number</span>
+                      <span style="font-size: 13px; font-weight: 500;">${quote.quote_number}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                      <span style="font-size: 13px; color: #6B7280;">Date</span>
+                      <span style="font-size: 13px;">${createdDate}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-top: 1px solid #E5E7EB; padding-top: 8px; margin-top: 8px;">
+                      <span style="font-size: 15px; font-weight: 600; color: #0056A7;">Total</span>
+                      <span style="font-size: 15px; font-weight: 600; color: #0056A7;">£${quote.total.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <p style="margin: 24px 0 0 0; font-size: 14px; color: #6B7280;">
+                    The full quote is attached as a PDF. Please don't hesitate to get in touch if you have any questions.
+                  </p>
+                </div>
+
+                <div style="padding: 24px 40px; background: #FCFCFA; border-top: 1px solid #E5E7EB;">
+                  <p style="margin: 0; font-size: 12px; color: #9CA3AF;">
+                    Sent via HF.bluebook — Harmony Fire
+                  </p>
+                </div>
+              </div>
+            </body>
+          </html>
+        `,
+        attachments: [
+          {
+            filename: `${quote.quote_number}.pdf`,
+            content: pdfBytes,
+          },
+        ],
+      });
+    });
+
+    // Update quote status to sent
+    await step.run("update-quote-status", async () => {
+      await supabaseAdmin
+        .from("quotes")
+        .update({
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", quote_id);
+    });
+
+    return { sent: true, quote_id, to: quote.client_email };
+  }
+);
+
+export const functions = [scrapeManufacturer, generateProductEmbeddings, sendQuoteEmail];
