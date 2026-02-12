@@ -13,48 +13,43 @@ export default function AuthDrawer({ isOpen }: AuthDrawerProps) {
   const [loading, setLoading] = useState(false);
   const [msLoading, setMsLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [showMagicLink, setShowMagicLink] = useState(false);
-
   // Flip to true once Harmony IT adds the Azure redirect URI
   const ENTRA_ENABLED = false;
 
-  const handleMicrosoftSignIn = () => {
-    if (!ENTRA_ENABLED) {
-      // Azure redirect URI not yet configured — nudge to magic link
-      setShowMagicLink(true);
-      setMessage("Microsoft Entra ID is being configured by Harmony IT. Please use email sign-in below.");
-      return;
-    }
-    setMsLoading(true);
-    window.location.href = "/api/microsoft/auth?userId=new";
-  };
-
-  const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const sendMagicLink = async (setLoadingFn: (v: boolean) => void) => {
+    if (!email) return;
     setMessage("");
-    setLoading(true);
-
+    setLoadingFn(true);
     try {
       const redirectUrl = `${window.location.origin}/auth/callback`;
-
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: {
-          emailRedirectTo: redirectUrl,
-          shouldCreateUser: true,
-        },
+        options: { emailRedirectTo: redirectUrl, shouldCreateUser: true },
       });
-
       if (error) {
         setMessage(`Error: ${error.message}`);
       } else {
-        setMessage("Check your email for a magic login link");
+        setMessage("Check your email for a sign-in link");
       }
     } catch (err: any) {
-      setMessage(`Error: ${err.message || "Failed to send magic link"}`);
+      setMessage(`Error: ${err.message || "Failed to send sign-in link"}`);
     } finally {
-      setLoading(false);
+      setLoadingFn(false);
     }
+  };
+
+  const handleMicrosoftSignIn = async () => {
+    if (ENTRA_ENABLED) {
+      setMsLoading(true);
+      window.location.href = "/api/microsoft/auth?userId=new";
+      return;
+    }
+    await sendMagicLink(setMsLoading);
+  };
+
+  const handleMagicLink = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await sendMagicLink(setLoading);
   };
 
   return (
@@ -102,11 +97,21 @@ export default function AuthDrawer({ isOpen }: AuthDrawerProps) {
             </p>
           </div>
 
+          {/* Email input — always visible */}
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="name@harmonyfire.com"
+            className="w-full border border-gray-300 rounded-lg p-3.5 text-sm focus:ring-1 focus:ring-[#0056a7] outline-none mb-4"
+            style={{ fontFamily: "var(--font-ibm-plex)" }}
+          />
+
           {/* Microsoft Entra ID — Primary */}
           <button
             onClick={handleMicrosoftSignIn}
-            disabled={msLoading}
-            className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-lg font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 mb-4"
+            disabled={msLoading || !email}
+            className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-lg font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 mb-3"
             style={{
               background: "linear-gradient(135deg, #0056a7, #0078d4)",
               fontFamily: "var(--font-ibm-plex)",
@@ -129,14 +134,14 @@ export default function AuthDrawer({ isOpen }: AuthDrawerProps) {
           </button>
 
           <p
-            className="text-xs text-gray-400 text-center mb-6"
+            className="text-xs text-gray-400 text-center mb-5"
             style={{ fontFamily: "var(--font-ibm-plex)" }}
           >
-            {ENTRA_ENABLED ? "Harmony Fire Microsoft Entra ID" : "Coming soon — pending Harmony IT configuration"}
+            Harmony Fire Microsoft Entra ID
           </p>
 
           {/* Divider */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-5">
             <div className="flex-1 h-px bg-gray-200" />
             <span className="text-xs text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>
               or
@@ -145,40 +150,21 @@ export default function AuthDrawer({ isOpen }: AuthDrawerProps) {
           </div>
 
           {/* Magic Link — Secondary */}
-          {!showMagicLink ? (
-            <button
-              onClick={() => setShowMagicLink(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition"
-              style={{ fontFamily: "var(--font-ibm-plex)", fontSize: "14px" }}
-            >
-              <Mail size={16} />
-              Sign in with email (demo)
-            </button>
-          ) : (
-            <form onSubmit={handleMagicLink} className="space-y-3">
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com"
-                className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-1 focus:ring-[#0056a7] outline-none"
-                style={{ fontFamily: "var(--font-ibm-plex)" }}
-              />
-              <button
-                type="submit"
-                disabled={loading || !email}
-                className="w-full py-3 rounded-lg font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition"
-                style={{ fontFamily: "var(--font-ibm-plex)", fontSize: "14px" }}
-              >
-                {loading ? (
-                  <Loader2 className="animate-spin inline-block w-4 h-4" />
-                ) : (
-                  "Send Magic Link"
-                )}
-              </button>
-            </form>
-          )}
+          <button
+            onClick={(e) => { e.preventDefault(); handleMagicLink(e); }}
+            disabled={loading || !email}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 disabled:opacity-50 transition"
+            style={{ fontFamily: "var(--font-ibm-plex)", fontSize: "14px" }}
+          >
+            {loading ? (
+              <Loader2 className="animate-spin inline-block w-4 h-4" />
+            ) : (
+              <>
+                <Mail size={16} />
+                Send Magic Link
+              </>
+            )}
+          </button>
 
           {message && (
             <p
