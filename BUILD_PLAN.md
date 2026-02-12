@@ -103,23 +103,23 @@ Everything else depends on this.
 
 **Depends on:** Sprint 2
 
-- [ ] **3.1** Install Inngest + Playwright: `npm install inngest playwright`
-- [ ] **3.2** Create `lib/inngest/client.ts` + `lib/inngest/functions.ts`
-- [ ] **3.3** Create `app/api/inngest/route.ts` (serve endpoint)
-- [ ] **3.4** Create `lib/scrapers/playwrightScraper.ts`
-- [ ] **3.5** Manufacturers CRUD — API routes (`/api/manufacturers/...`)
-- [ ] **3.6** Manufacturers pages (`/manufacturers`, `/manufacturers/new`, `/manufacturers/[id]`)
-- [ ] **3.7** ManufacturerCard component
-- [ ] **3.8** Products CRUD — API routes (`/api/products/...`)
-- [ ] **3.9** Products pages (`/products`, `/products/new`, `/products/[id]`)
-- [ ] **3.10** ProductCard, ProductListRow, ProductFilter components
-- [ ] **3.11** Product file upload API + Supabase/SharePoint dual storage
-- [ ] **3.12** Inngest function: `scrapeManufacturer` (Playwright scrape → upsert products)
-- [ ] **3.13** Inngest function: `generateProductEmbeddings` (text-embedding-3-small)
-- [ ] **3.14** Data Mining dashboard page (`/data-mining`) — scrape jobs, status, progress
-- [ ] **3.15** ScraperProgress component
-- [ ] **3.16** Product review workflow — needs_review flag, `/api/products/[id]/review`, approval UI
-- [ ] **3.17** Supplier requests — API + page + SupplierRequestCard + RequestSupplierModal
+- [x] **3.1** Install Inngest + Playwright: `npm install inngest playwright`
+- [x] **3.2** Create `lib/inngest/client.ts` + `lib/inngest/functions.ts`
+- [x] **3.3** Create `app/api/inngest/route.ts` (serve endpoint)
+- [x] **3.4** Create `lib/scrapers/playwrightScraper.ts`
+- [x] **3.5** Manufacturers CRUD — API routes (`/api/manufacturers/...`)
+- [x] **3.6** Manufacturers pages (`/manufacturers`, `/manufacturers/new`, `/manufacturers/[id]`)
+- [x] **3.7** ManufacturerCard component
+- [x] **3.8** Products CRUD — API routes (`/api/products/...`)
+- [x] **3.9** Products pages (`/products`, `/products/new`, `/products/[id]`)
+- [x] **3.10** ProductCard, ProductListRow, ProductFilter components
+- [x] **3.11** Product file upload API + Supabase/SharePoint dual storage
+- [x] **3.12** Inngest function: `scrapeManufacturer` (Playwright scrape → upsert products)
+- [x] **3.13** Inngest function: `generateProductEmbeddings` (text-embedding-3-small)
+- [x] **3.14** Data Mining dashboard page (`/data-mining`) — scrape jobs, status, progress + supplier requests
+- [x] **3.15** ScraperProgress component
+- [x] **3.16** Product review workflow — needs_review flag, `/api/products/[id]/review`, approval UI
+- [x] **3.17** Supplier requests — API + page + SupplierRequestCard + RequestSupplierModal
 
 ---
 
@@ -219,9 +219,9 @@ Everything else depends on this.
 ## Dependencies Graph
 
 ```
-Sprint 1 (UI) ──────────────────────────────────────────────→ done
-Sprint 2 (Database) ────────────────────────────────────────→ done
-Sprint 3 (Data Mining) ── depends on Sprint 2 ─────────────→ done
+Sprint 1 (UI) ──────────────────────────────────────────────→ partial (17 cosmetic tasks remain)
+Sprint 2 (Database) ────────────────────────────────────────→ ✅ done
+Sprint 3 (Data Mining) ── depends on Sprint 2 ─────────────→ ✅ done
 Sprint 4 (Quotes) ─────── depends on Sprint 3 ─────────────→ done
 Sprint 5 (RAG) ────────── depends on Sprint 2 ─────────────→ done
 Sprint 6 (Compliance) ─── depends on Sprint 3 ─────────────→ done
