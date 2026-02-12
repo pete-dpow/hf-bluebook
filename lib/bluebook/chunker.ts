@@ -65,7 +65,6 @@ interface PageText {
  * Parse PDF buffer into per-page text using pdf-parse.
  */
 export async function extractPagesFromPdf(buffer: Buffer): Promise<PageText[]> {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const pdfParse = require("pdf-parse") as (buf: Buffer, opts?: any) => Promise<{ text: string; numpages: number }>;
 
   const pages: PageText[] = [];
