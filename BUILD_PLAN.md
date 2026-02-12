@@ -88,14 +88,14 @@ localStorage keys (dpow_cookie_consent, dpow_theme, etc.)
 
 Everything else depends on this.
 
-- [ ] **2.1** Enable pgvector extension (if not already on new Supabase project)
-- [ ] **2.2** Run ALL table migrations (15 new tables — see ARCHITECTURE.md §6)
-- [ ] **2.3** Create quote_number_seq sequence
-- [ ] **2.4** Create ALL indexes (see ARCHITECTURE.md §6.7)
-- [ ] **2.5** Create ALL RLS policies (38 policies — see ARCHITECTURE.md §6.9)
-- [ ] **2.6** Create ALL RPC functions: match_products, match_bluebook_chunks, match_regulation_sections
-- [ ] **2.7** Create `lib/authHelper.ts` (getAuthUser + isAdmin)
-- [ ] **2.8** Seed pillar_schemas with 5 pillar definitions and field specs
+- [x] **2.1** Enable pgvector extension
+- [x] **2.2** Run ALL table migrations (15 new tables — see ARCHITECTURE.md §6)
+- [x] **2.3** Create quote_number_seq sequence
+- [x] **2.4** Create ALL indexes (21 standard + 3 IVFFlat deferred until data exists)
+- [x] **2.5** Create ALL RLS policies (37 policies on new tables — RLS enabled on new tables only, existing tables untouched)
+- [x] **2.6** Create ALL RPC functions: match_products, match_bluebook_chunks, match_regulation_sections
+- [x] **2.7** Create `lib/authHelper.ts` (getAuthUser + isAdmin)
+- [x] **2.8** Seed pillar_schemas with 5 pillar definitions and field specs
 
 ---
 
