@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { ArrowLeft, Loader2, FileDown, Send, FileSpreadsheet } from "lucide-react";
 import QuoteBuilder from "@/components/QuoteBuilder";
+import ComplianceTab from "@/components/ComplianceTab";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600",
@@ -372,6 +373,11 @@ export default function QuoteDetailPage() {
             onRemoveItem={handleRemoveItem}
             onUpdateItem={handleUpdateItem}
           />
+        </div>
+
+        {/* Compliance Coverage */}
+        <div className="mb-6">
+          <ComplianceTab quoteId={params.id as string} />
         </div>
 
         {/* Notes & Terms */}

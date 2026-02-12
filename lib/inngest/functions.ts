@@ -3,6 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { scrapeManufacturerProducts } from "@/lib/scrapers/playwrightScraper";
 import { generateQuotePdf } from "@/lib/quoteGenerator";
+import { scrapeAndStoreRegulation } from "@/lib/compliance/regulationScraper";
+import { extractPagesFromPdf, chunkPages } from "@/lib/bluebook/chunker";
+import { embedChunks } from "@/lib/bluebook/embeddings";
+import { detectPillar } from "@/lib/bluebook/pillarDetector";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://odhvxoelxiffhocrgtll.supabase.co",
@@ -318,4 +322,171 @@ const sendQuoteEmail = inngest.createFunction(
   }
 );
 
-export const functions = [scrapeManufacturer, generateProductEmbeddings, sendQuoteEmail];
+// 4. Ingest bluebook PDFs — download from OneDrive, chunk, embed, store
+const ingestBluebookPDFs = inngest.createFunction(
+  { id: "ingest-bluebook-pdfs", concurrency: [{ limit: 2 }] },
+  { event: "bluebook/ingest.requested" },
+  async ({ event, step }) => {
+    const { ingestion_id, org_id, source_file, source_file_drive_id } = event.data;
+
+    // Mark as processing
+    await step.run("mark-processing", async () => {
+      await supabaseAdmin
+        .from("bluebook_ingestion_log")
+        .update({
+          status: "processing",
+          started_at: new Date().toISOString(),
+        })
+        .eq("id", ingestion_id);
+    });
+
+    // Download PDF from OneDrive via M365 Graph API
+    const pdfBuffer = await step.run("download-pdf", async () => {
+      if (!source_file_drive_id) {
+        throw new Error("No drive ID — manual upload not yet supported in this flow");
+      }
+
+      const tokenRes = await fetch(
+        `https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID}/oauth2/v2.0/token`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            client_id: process.env.MICROSOFT_CLIENT_ID || "",
+            client_secret: process.env.MICROSOFT_CLIENT_SECRET || "",
+            scope: "https://graph.microsoft.com/.default",
+            grant_type: "client_credentials",
+          }),
+        }
+      );
+
+      const tokenData = await tokenRes.json();
+      if (!tokenData.access_token) throw new Error("Failed to get M365 token");
+
+      const fileRes = await fetch(
+        `https://graph.microsoft.com/v1.0/drives/${source_file_drive_id}/root:/${source_file}:/content`,
+        {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        }
+      );
+
+      if (!fileRes.ok) throw new Error(`Failed to download file: ${fileRes.status}`);
+
+      const arrayBuffer = await fileRes.arrayBuffer();
+      return Buffer.from(arrayBuffer).toString("base64");
+    });
+
+    // Extract pages and chunk
+    const chunks = await step.run("extract-and-chunk", async () => {
+      const buffer = Buffer.from(pdfBuffer, "base64");
+      const pages = await extractPagesFromPdf(buffer);
+
+      await supabaseAdmin
+        .from("bluebook_ingestion_log")
+        .update({ pages_processed: pages.length })
+        .eq("id", ingestion_id);
+
+      return chunkPages(pages);
+    });
+
+    // Detect pillar
+    const pillar = await step.run("detect-pillar", async () => {
+      const sampleText = chunks.slice(0, 5).map((c) => c.text).join(" ");
+      return detectPillar(source_file, sampleText);
+    });
+
+    // Generate embeddings in batches
+    const BATCH_SIZE = 50;
+    let totalStored = 0;
+
+    for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+      const batchIndex = Math.floor(i / BATCH_SIZE);
+      const batch = chunks.slice(i, i + BATCH_SIZE);
+
+      await step.run(`embed-batch-${batchIndex}`, async () => {
+        const embedded = await embedChunks(batch);
+
+        const rows = embedded.map((ec) => ({
+          org_id,
+          source_file,
+          source_file_drive_id: source_file_drive_id || null,
+          page_number: ec.pageNumber,
+          chunk_index: ec.chunkIndex,
+          chunk_text: ec.text,
+          chunk_type: ec.chunkType,
+          pillar,
+          embedding: ec.embedding,
+          metadata: ec.metadata,
+          token_count: Math.ceil(ec.text.length / 4),
+        }));
+
+        const { error } = await supabaseAdmin
+          .from("bluebook_chunks")
+          .insert(rows);
+
+        if (error) throw new Error(`Insert failed: ${error.message}`);
+
+        totalStored += rows.length;
+
+        await supabaseAdmin
+          .from("bluebook_ingestion_log")
+          .update({ chunks_created: totalStored })
+          .eq("id", ingestion_id);
+      });
+    }
+
+    // Mark complete
+    await step.run("mark-complete", async () => {
+      await supabaseAdmin
+        .from("bluebook_ingestion_log")
+        .update({
+          status: "complete",
+          chunks_created: totalStored,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", ingestion_id);
+    });
+
+    return { chunks_created: totalStored, pillar, source_file };
+  }
+);
+
+// 5. Scrape regulation sections — fetch regulation config, scrape, embed, store
+const scrapeRegulation = inngest.createFunction(
+  { id: "scrape-regulation", concurrency: [{ limit: 2 }] },
+  { event: "regulation/scrape.requested" },
+  async ({ event, step }) => {
+    const { regulation_id } = event.data;
+
+    // Fetch regulation + scraper config
+    const regulation = await step.run("get-regulation", async () => {
+      const { data, error } = await supabaseAdmin
+        .from("regulations")
+        .select("id, source_url, scraper_config")
+        .eq("id", regulation_id)
+        .single();
+
+      if (error || !data) throw new Error("Regulation not found");
+      return data;
+    });
+
+    const sourceUrl = regulation.scraper_config?.source_url || regulation.source_url;
+    if (!sourceUrl) throw new Error("No source URL configured");
+
+    const config = {
+      source_url: sourceUrl,
+      section_selector: regulation.scraper_config?.section_selector || "section, article, .section",
+      content_selector: regulation.scraper_config?.content_selector || "p, li, td",
+      section_ref_selector: regulation.scraper_config?.section_ref_selector,
+    };
+
+    // Run scraper
+    const result = await step.run("scrape-and-store", async () => {
+      return scrapeAndStoreRegulation(regulation_id, config);
+    });
+
+    return result;
+  }
+);
+
+export const functions = [scrapeManufacturer, generateProductEmbeddings, sendQuoteEmail, ingestBluebookPDFs, scrapeRegulation];

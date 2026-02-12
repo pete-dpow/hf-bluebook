@@ -129,14 +129,14 @@ Everything else depends on this.
 
 **Execution order** (critical path: 4.8 → 4.1 → 4.3/4.4 → 4.2 → 4.5/4.6 → 4.7):
 
-- [ ] **4.8** Quote number generation via Postgres sequence (`/api/quotes/next-number`) — do FIRST, no deps, calls `nextval('quote_number_seq')`
-- [ ] **4.1** Quotes CRUD — API routes (`/api/quotes/...`) — core API, pages + components depend on this
-- [ ] **4.3** QuoteBuilder, QuoteLineItemRow, QuoteTotals components — UI building blocks for pages
-- [ ] **4.4** ProductSearchModal (search products to add to quote) — used inside QuoteBuilder to add line items
-- [ ] **4.2** Quotes pages (`/quotes`, `/quotes/new`, `/quotes/[id]`) — wires together API + components
-- [ ] **4.5** Quote PDF generation (pdf-lib) — export feature, pdf-lib already installed. Can parallel with 4.6
-- [ ] **4.6** Quote Excel generation (exceljs) — `npm install exceljs`. Can parallel with 4.5
-- [ ] **4.7** Inngest function: `sendQuoteEmail` (Resend + PDF attachment) — do LAST, depends on PDF generation
+- [x] **4.8** Quote number generation via Postgres sequence (`/api/quotes/next-number`) — do FIRST, no deps, calls `nextval('quote_number_seq')`
+- [x] **4.1** Quotes CRUD — API routes (`/api/quotes/...`) + `lib/quoteCalculations.ts` — core API, pages + components depend on this
+- [x] **4.3** QuoteBuilder, QuoteLineItemRow, QuoteTotals components — UI building blocks for pages
+- [x] **4.4** ProductSearchModal (search products to add to quote) — used inside QuoteBuilder to add line items
+- [x] **4.2** Quotes pages (`/quotes`, `/quotes/new`, `/quotes/[id]`) — wires together API + components
+- [x] **4.5** Quote PDF generation (pdf-lib) — `lib/quoteGenerator.ts` + `/api/quotes/[id]/generate-pdf`
+- [x] **4.6** Quote Excel generation (exceljs) — `npm install exceljs` + `/api/quotes/[id]/generate-excel`
+- [x] **4.7** Inngest function: `sendQuoteEmail` (Resend + PDF attachment) — `/api/quotes/[id]/send`
 
 ---
 
@@ -144,15 +144,15 @@ Everything else depends on this.
 
 **Depends on:** Sprint 2 (database) + existing M365 OAuth
 
-- [ ] **5.1** Install pdf-parse: `npm install pdf-parse`
-- [ ] **5.2** Create `lib/bluebook/chunker.ts` (structure-aware chunking)
-- [ ] **5.3** Create `lib/bluebook/embeddings.ts` (OpenAI embedding wrapper)
-- [ ] **5.4** Create `lib/bluebook/pillarDetector.ts` (auto-detect pillar)
-- [ ] **5.5** PDF ingestion API (`/api/bluebook/ingest`)
-- [ ] **5.6** Bluebook search API (`/api/bluebook/search`)
-- [ ] **5.7** Knowledge base status API (`/api/bluebook/status`)
-- [ ] **5.8** Inngest function: `ingestBluebookPDFs`
-- [ ] **5.9** Ingestion trigger UI + status display (admin only)
+- [x] **5.1** Install pdf-parse: `npm install pdf-parse`
+- [x] **5.2** Create `lib/bluebook/chunker.ts` (structure-aware chunking — splits on section headers/table boundaries, keeps fire test configs atomic)
+- [x] **5.3** Create `lib/bluebook/embeddings.ts` (OpenAI embedding wrapper, wraps central embeddingService + adds `embedChunks()`)
+- [x] **5.4** Create `lib/bluebook/pillarDetector.ts` (auto-detect pillar from filename + content keywords)
+- [x] **5.5** PDF ingestion API (`/api/bluebook/ingest`) — triggers Inngest job, creates ingestion log
+- [x] **5.6** Bluebook search API (`/api/bluebook/search`) — vector search via `match_bluebook_chunks` RPC
+- [x] **5.7** Knowledge base status API (`/api/bluebook/status`) — chunk counts by pillar, file counts, ingestion logs
+- [x] **5.8** Inngest function: `ingestBluebookPDFs` — downloads from OneDrive via M365 Graph, chunks, embeds, stores in `bluebook_chunks`
+- [x] **5.9** Ingestion trigger UI + status display (`/knowledge` page, admin only) — stats cards, pillar breakdown, ingest form, history table
 
 ---
 
@@ -160,15 +160,15 @@ Everything else depends on this.
 
 **Depends on:** Sprint 3 (scraper infrastructure)
 
-- [ ] **6.1** Create `lib/compliance/regulationScraper.ts`
-- [ ] **6.2** Compliance CRUD — API routes (`/api/compliance/...`)
-- [ ] **6.3** Compliance page (`/compliance`) — searchable card grid with filters (category, pillar, status)
-- [ ] **6.4** RegulationCard, RegulationDetail components
-- [ ] **6.5** Inngest function: `scrapeRegulation`
-- [ ] **6.6** Scrape all 14 starting regulations from live sources
-- [ ] **6.7** "Update" CTA on each regulation card for re-scraping
-- [ ] **6.8** Product ↔ Regulation cross-links (`product_regulations` table + UI)
-- [ ] **6.9** ComplianceTab component for quote detail page
+- [x] **6.1** Create `lib/compliance/regulationScraper.ts` — wraps playwrightScraper, adds embedding + storage for regulation_sections
+- [x] **6.2** Compliance CRUD — API routes (`/api/compliance`, `/api/compliance/[id]`, `/api/compliance/[id]/scrape`, `/api/compliance/search`)
+- [x] **6.3** Compliance pages (`/compliance`, `/compliance/[id]`) — searchable card grid with filters (category, pillar, status)
+- [x] **6.4** RegulationCard, RegulationDetail components
+- [x] **6.5** Inngest function: `scrapeRegulation`
+- [x] **6.6** Seed all 14 starting regulations from live sources
+- [x] **6.7** "Update" CTA on each regulation card for re-scraping
+- [x] **6.8** Product ↔ Regulation cross-links (`product_regulations` table + UI)
+- [x] **6.9** ComplianceTab component for quote detail page
 
 ---
 
@@ -224,12 +224,12 @@ Everything else depends on this.
 Sprint 1 (UI) ──────────────────────────────────────────────→ partial (17 cosmetic tasks remain)
 Sprint 2 (Database) ────────────────────────────────────────→ ✅ done
 Sprint 3 (Data Mining) ── depends on Sprint 2 ─────────────→ ✅ done
-Sprint 4 (Quotes) ─────── depends on Sprint 3 ─────────────→ done
-Sprint 5 (RAG) ────────── depends on Sprint 2 ─────────────→ done
-Sprint 6 (Compliance) ─── depends on Sprint 3 ─────────────→ done
-Sprint 7 (Golden Thread) ─ depends on Sprint 4 + Sprint 6 ─→ done
-Sprint 8 (Melvin) ──────── depends on Sprint 5 + Sprint 6 ─→ done
-Sprint 9 (Polish) ──────── depends on all above ───────────→ done
+Sprint 4 (Quotes) ─────── depends on Sprint 3 ─────────────→ ✅ done
+Sprint 5 (RAG) ────────── depends on Sprint 2 ─────────────→ ✅ done
+Sprint 6 (Compliance) ─── depends on Sprint 3 ─────────────→ in progress (6.5-6.9 remaining)
+Sprint 7 (Golden Thread) ─ depends on Sprint 4 + Sprint 6 ─→ pending
+Sprint 8 (Melvin) ──────── depends on Sprint 5 + Sprint 6 ─→ pending
+Sprint 9 (Polish) ──────── depends on all above ───────────→ pending
 ```
 
 **Sprints 1+2 are sequential. Sprints 3-6 have parallelism. Sprints 7-8 need earlier sprints done. Sprint 9 is last.**

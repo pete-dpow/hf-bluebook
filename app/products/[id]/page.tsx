@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Loader2, Globe, FileText, Trash2, Upload, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Loader2, Globe, FileText, Trash2, Upload, ShieldCheck, Plus } from "lucide-react";
+import RegulationLinkModal from "@/components/RegulationLinkModal";
 
 const PILLAR_LABELS: Record<string, string> = {
   fire_doors: "Fire Doors",
@@ -19,6 +20,7 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
 
   useEffect(() => {
     loadProduct();
@@ -74,6 +76,44 @@ export default function ProductDetailPage() {
     if (!session) return;
 
     const res = await fetch(`/api/product-files/${fileId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+
+    if (res.ok) {
+      await loadProduct();
+    }
+  }
+
+  async function handleLinkRegulation(regulation: { id: string; name: string; reference: string; category: string }) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const res = await fetch(`/api/products/${params.id}/regulations`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ regulation_id: regulation.id }),
+    });
+
+    if (res.ok) {
+      setShowLinkModal(false);
+      await loadProduct();
+    } else {
+      const err = await res.json();
+      alert(err.error || "Failed to link regulation");
+    }
+  }
+
+  async function handleUnlinkRegulation(regulationId: string) {
+    if (!confirm("Remove this regulation link?")) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const res = await fetch(`/api/products/${params.id}/regulations?regulation_id=${regulationId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
@@ -256,31 +296,56 @@ export default function ProductDetailPage() {
 
         {/* Linked Regulations */}
         <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-            Linked Regulations
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+              Linked Regulations ({product.product_regulations?.length || 0})
+            </h2>
+            <button
+              onClick={() => setShowLinkModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition"
+              style={{ fontFamily: "var(--font-ibm-plex)" }}
+            >
+              <Plus size={14} />
+              Link
+            </button>
+          </div>
           {product.product_regulations?.length > 0 ? (
             <div className="space-y-2">
               {product.product_regulations.map((pr: any) => (
-                <div key={pr.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <ShieldCheck size={16} className="text-blue-600" />
-                  <div>
-                    <span className="text-sm font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-                      {pr.regulations?.name}
-                    </span>
-                    {pr.regulations?.reference && (
-                      <span className="ml-2 text-xs text-gray-500">{pr.regulations.reference}</span>
-                    )}
+                <div key={pr.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck size={16} className="text-blue-600" />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+                        {pr.regulations?.name}
+                      </span>
+                      {pr.regulations?.reference && (
+                        <span className="ml-2 text-xs text-gray-500">{pr.regulations.reference}</span>
+                      )}
+                    </div>
                   </div>
+                  <button
+                    onClick={() => handleUnlinkRegulation(pr.regulation_id)}
+                    className="p-1 text-gray-400 hover:text-red-600 transition"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               ))}
             </div>
           ) : (
             <p className="text-sm text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              No linked regulations
+              No linked regulations — click Link to add
             </p>
           )}
         </div>
+
+        <RegulationLinkModal
+          open={showLinkModal}
+          onClose={() => setShowLinkModal(false)}
+          onSelect={handleLinkRegulation}
+          excludeIds={product.product_regulations?.map((pr: any) => pr.regulation_id) || []}
+        />
       </div>
     </div>
   );
