@@ -42,8 +42,8 @@ export async function POST(req: NextRequest) {
         },
       ],
       mode: "subscription",
-      success_url: `https://dpow-chat.vercel.app/pricing?success=true`,
-      cancel_url: `https://dpow-chat.vercel.app/pricing?canceled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://hf-bluebook.vercel.app"}/pricing?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://hf-bluebook.vercel.app"}/pricing?canceled=true`,
       metadata: {
         userId: user.id,
         tier: tier,

@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   }
 
   const clientId = process.env.MICROSOFT_CLIENT_ID!;
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://dpow-chat.vercel.app"}/api/microsoft/callback`;
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://hf-bluebook.vercel.app"}/api/microsoft/callback`;
 
   const state = Buffer.from(JSON.stringify({ userId })).toString('base64');
 

@@ -10,7 +10,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://odhvxoelxiffhocrgtll.supabase.co",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || "build-placeholder",
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     let userMemories = null;
     if (userId && token) {
       try {
-        const memoryRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://dpow-chat.vercel.app'}/api/memory`, {
+        const memoryRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://hf-bluebook.vercel.app'}/api/memory`, {
           headers: { "Authorization": `Bearer ${token}` },
         });
         if (memoryRes.ok) {

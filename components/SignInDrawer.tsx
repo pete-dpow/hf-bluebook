@@ -15,7 +15,7 @@ export default function SignInDrawer({ onSuccess }: { onSuccess: () => void }) {
     setLoading(true);
 
     try {
-      const redirectUrl = `https://dpow-chat.vercel.app/auth/callback`;
+      const redirectUrl = `${window.location.origin}/auth/callback`;
 
       const { error } = await supabase.auth.signInWithOtp({
         email,

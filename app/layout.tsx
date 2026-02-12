@@ -6,6 +6,7 @@ import ProfileDrawer from "@/components/ProfileDrawer";
 import HelpDrawer from "@/components/HelpDrawer";
 import AboutDrawer from "@/components/AboutDrawer";
 import ProjectsPanel from "@/components/ProjectsPanel";
+import AuthGuard from "@/components/AuthGuard";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
@@ -37,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ProfileDrawer />
         <HelpDrawer />
         <AboutDrawer />
-        {children}
+        <AuthGuard>{children}</AuthGuard>
       </body>
     </html>
   );

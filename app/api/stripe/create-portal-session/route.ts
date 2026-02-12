@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     // Create Stripe Customer Portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: userData.stripe_customer_id,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://dpow-chat.vercel.app"}/chat`,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://hf-bluebook.vercel.app"}/chat`,
     });
 
     return NextResponse.json({ url: session.url });

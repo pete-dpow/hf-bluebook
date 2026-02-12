@@ -123,7 +123,7 @@ export async function POST(req: Request) {
       .single();
 
     // Generate invite link
-    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://dpow-chat.vercel.app"}/invite/${inviteToken}`;
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://hf-bluebook.vercel.app"}/invite/${inviteToken}`;
 
     // Send invite email via Resend
     try {
