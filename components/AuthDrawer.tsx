@@ -14,7 +14,7 @@ export default function AuthDrawer({ isOpen }: AuthDrawerProps) {
   const [msLoading, setMsLoading] = useState(false);
   const [message, setMessage] = useState("");
   // Flip to true once Harmony IT adds the Azure redirect URI
-  const ENTRA_ENABLED = false;
+  const ENTRA_ENABLED = true;
 
   const sendMagicLink = async (setLoadingFn: (v: boolean) => void) => {
     if (!email) return;
