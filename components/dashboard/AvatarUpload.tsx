@@ -8,7 +8,8 @@ interface AvatarUploadProps {
   currentUrl: string | null;
   displayName: string;
   onUploaded: (url: string) => void;
-  size?: number;
+  width?: number;
+  height?: number;
 }
 
 function getInitials(name: string): string {
@@ -21,12 +22,20 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-export default function AvatarUpload({ currentUrl, displayName, onUploaded, size = 80 }: AvatarUploadProps) {
+export default function AvatarUpload({
+  currentUrl,
+  displayName,
+  onUploaded,
+  width = 180,
+  height = 220,
+}: AvatarUploadProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [processedBlob, setProcessedBlob] = useState<Blob | null>(null);
   const [processing, setProcessing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const hasImage = !!(currentUrl || preview);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -34,8 +43,6 @@ export default function AvatarUpload({ currentUrl, displayName, onUploaded, size
 
     setProcessing(true);
     try {
-      // Load @imgly/background-removal from CDN at runtime to avoid
-      // webpack bundling issues with onnxruntime-web + Next.js 13.5
       // @ts-ignore — CDN import resolved at runtime, not by webpack/tsc
       const bgLib = await import(/* webpackIgnore: true */ "https://esm.sh/@imgly/background-removal@1.5.1");
       const blob = await bgLib.removeBackground(file, {
@@ -85,10 +92,9 @@ export default function AvatarUpload({ currentUrl, displayName, onUploaded, size
   };
 
   const initials = getInitials(displayName);
-  const fontSize = size > 100 ? "text-3xl" : size > 60 ? "text-xl" : "text-base";
 
   return (
-    <div className="relative group" style={{ width: size, height: size }}>
+    <div className="relative group" style={{ width, height }}>
       <input
         ref={fileRef}
         type="file"
@@ -97,25 +103,27 @@ export default function AvatarUpload({ currentUrl, displayName, onUploaded, size
         onChange={handleFileSelect}
       />
 
-      {/* Avatar display */}
       <div
-        className="rounded-xl overflow-hidden border-2 border-[#E5E7EB] shadow-sm cursor-pointer flex items-center justify-center"
+        className="overflow-hidden flex items-end justify-center cursor-pointer"
         style={{
-          width: size,
-          height: size,
-          background: currentUrl || preview ? "#F3F4F6" : "linear-gradient(135deg, #0056a7, #0078d4)",
+          width,
+          height,
+          borderRadius: hasImage ? "16px 16px 0 0" : 16,
+          background: hasImage ? "transparent" : "linear-gradient(135deg, #0056a7, #0078d4)",
         }}
         onClick={() => !processing && !preview && fileRef.current?.click()}
       >
         {processing ? (
-          <Loader2 className="w-8 h-8 animate-spin text-white" />
+          <div className="flex items-center justify-center w-full h-full" style={{ background: "linear-gradient(135deg, #0056a7, #0078d4)" }}>
+            <Loader2 className="w-10 h-10 animate-spin text-white" />
+          </div>
         ) : preview ? (
-          <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+          <img src={preview} alt="Preview" className="w-full h-full object-cover object-top" />
         ) : currentUrl ? (
-          <img src={currentUrl} alt={displayName} className="w-full h-full object-cover" />
+          <img src={currentUrl} alt={displayName} className="w-full h-full object-cover object-top" />
         ) : (
           <span
-            className={`text-white font-semibold ${fontSize}`}
+            className="text-white text-5xl font-semibold flex items-center justify-center w-full h-full"
             style={{ fontFamily: "var(--font-cormorant)" }}
           >
             {initials}
@@ -126,16 +134,17 @@ export default function AvatarUpload({ currentUrl, displayName, onUploaded, size
       {/* Camera overlay on hover */}
       {!preview && !processing && (
         <div
-          className="absolute inset-0 rounded-xl bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+          className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+          style={{ borderRadius: hasImage ? "16px 16px 0 0" : 16 }}
           onClick={() => fileRef.current?.click()}
         >
-          <Camera className="w-6 h-6 text-white" />
+          <Camera className="w-7 h-7 text-white" />
         </div>
       )}
 
-      {/* Confirm/Cancel when preview showing */}
+      {/* Confirm/Cancel */}
       {preview && !uploading && (
-        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+        <div className="absolute top-2 right-2 flex gap-1.5">
           <button
             onClick={handleConfirm}
             className="w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center shadow-md hover:bg-green-600 transition"
@@ -152,7 +161,7 @@ export default function AvatarUpload({ currentUrl, displayName, onUploaded, size
       )}
 
       {uploading && (
-        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2">
+        <div className="absolute top-2 right-2">
           <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
         </div>
       )}
