@@ -1354,7 +1354,7 @@ export default function Preview() {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
                   a.href = url;
-                  a.download = 'dpow-ai-weekly-report.rtf';
+                  a.download = 'hf-bluebook-report.rtf';
                   a.click();
                   URL.revokeObjectURL(url);
                 }}
@@ -1379,7 +1379,7 @@ export default function Preview() {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
                   a.href = url;
-                  a.download = 'dpow-ai-weekly-report.pdf';
+                  a.download = 'hf-bluebook-report.pdf';
                   a.click();
                   URL.revokeObjectURL(url);
                 }}
@@ -1400,7 +1400,7 @@ export default function Preview() {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
                   a.href = url;
-                  a.download = 'dpow-ai-weekly-report.txt';
+                  a.download = 'hf-bluebook-report.txt';
                   a.click();
                   URL.revokeObjectURL(url);
                 }}
@@ -1513,7 +1513,7 @@ export default function Preview() {
                   fontSize: '10px',
                   color: '#4B4B4B'
                 }}>
-                  <span>{reportMeta.project || 'dpow.ai'}</span>
+                  <span>{reportMeta.project || 'hf.bluebook'}</span>
                   <span>Page 1 of 1</span>
                 </div>
               )}

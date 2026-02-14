@@ -82,7 +82,7 @@ export async function sendTeamsMessage(
         '@type': 'MessageCard',
         '@context': 'http://schema.org/extensions',
         themeColor: '2563EB',
-        title: title || 'dpow.chat Update',
+        title: title || 'hf.bluebook Update',
         text: message
       })
     });

@@ -96,10 +96,10 @@ export default function DemoPage() {
               color: "#2A2A2A",
             }}
           >
-            dpow.chat
+            hf.bluebook
           </h1>
           <p className="text-lg" style={{ fontFamily: "var(--font-ibm-plex)", color: "#4B4B4B" }}>
-            Structured Intelligence for Project Delivery
+            Fire Protection Product Intelligence
           </p>
           <p className="text-sm mt-2" style={{ fontFamily: "var(--font-ibm-plex)", color: "#6B7280" }}>
             Conversational AI assistant for directors — ask, reason, report
@@ -111,7 +111,7 @@ export default function DemoPage() {
           <div className="p-6 border-b border-[#E5E7EB]">
             <div className="flex gap-2">
               <textarea
-                placeholder="How can dpow.chat help you today?"
+                placeholder="How can hf.bluebook help you today?"
                 className="w-full resize-none outline-none text-base"
                 style={{
                   fontFamily: "var(--font-ibm-plex)",

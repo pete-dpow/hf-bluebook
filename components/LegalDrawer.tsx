@@ -158,7 +158,7 @@ export default function LegalDrawer() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `dpow_data_export_${new Date().toISOString().split("T")[0]}.json`;
+      a.download = `hf_bluebook_export_${new Date().toISOString().split("T")[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -329,7 +329,7 @@ export default function LegalDrawer() {
                 Legal & Privacy
               </h2>
               <p style={{ fontSize: "0.875rem", color: "#6B7280", margin: "0.25rem 0 0 0" }}>
-                dpow.chat by DPOW Ltd
+                hf.bluebook by DPOW Ltd
               </p>
             </div>
             {!(showCookieBanner && !cookieConsent) && (
@@ -506,7 +506,7 @@ function LegalContent({
           1. Who We Are
         </h2>
         <p style={{ lineHeight: 1.7, color: "#374151", margin: "0 0 1rem 0" }}>
-          dpow.chat is operated by <strong>DPOW Ltd</strong>, a company registered in England and Wales. 
+          hf.bluebook is operated by <strong>DPOW Ltd</strong>, a company registered in England and Wales. 
           We are committed to protecting your privacy and handling your data in an open and transparent manner.
         </p>
         <p style={{ lineHeight: 1.7, color: "#374151", margin: "0 0 1rem 0" }}>
@@ -697,7 +697,7 @@ function LegalContent({
           1. Acceptance of Terms
         </h2>
         <p style={{ lineHeight: 1.7, color: "#374151", margin: "0 0 1rem 0" }}>
-          By accessing or using dpow.chat, you agree to be bound by these Terms of Service. 
+          By accessing or using hf.bluebook, you agree to be bound by these Terms of Service. 
           If you do not agree to these terms, please do not use our service.
         </p>
 
@@ -711,7 +711,7 @@ function LegalContent({
           2. Description of Service
         </h2>
         <p style={{ lineHeight: 1.7, color: "#374151", margin: "0 0 1rem 0" }}>
-          dpow.chat is an AI-powered assistant for construction and project management professionals. 
+          hf.bluebook is an AI-powered assistant for construction and project management professionals. 
           The service allows you to upload project data (Excel files) and query it using natural language, 
           combined with construction industry knowledge.
         </p>
@@ -767,7 +767,7 @@ function LegalContent({
           5. Your Content
         </h2>
         <p style={{ lineHeight: 1.7, color: "#374151", margin: "0 0 1rem 0" }}>
-          You retain ownership of all data and content you upload to dpow.chat. 
+          You retain ownership of all data and content you upload to hf.bluebook. 
           By uploading content, you grant us a limited license to process it solely for the purpose of providing the service.
         </p>
         <p style={{ lineHeight: 1.7, color: "#374151", margin: "0 0 1rem 0" }}>
@@ -784,7 +784,7 @@ function LegalContent({
           6. AI-Generated Content
         </h2>
         <p style={{ lineHeight: 1.7, color: "#374151", margin: "0 0 1rem 0" }}>
-          dpow.chat uses artificial intelligence to generate responses. While we strive for accuracy, 
+          hf.bluebook uses artificial intelligence to generate responses. While we strive for accuracy, 
           AI-generated content may contain errors or inaccuracies. You should:
         </p>
         <ul style={{ lineHeight: 1.8, color: "#374151", margin: "0 0 1rem 0" }}>
@@ -933,7 +933,7 @@ function LegalContent({
               🍪 We use cookies
             </h3>
             <p style={{ lineHeight: 1.6, color: "#78350F", margin: "0 0 16px 0" }}>
-              We use essential cookies to make dpow.chat work. We'd also like to set optional cookies 
+              We use essential cookies to make hf.bluebook work. We'd also like to set optional cookies 
               to help us improve the service and show you relevant content.
             </p>
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
@@ -1067,7 +1067,7 @@ function LegalContent({
                 Analytics Cookies
               </h3>
               <p style={{ margin: 0, fontSize: "13px", color: "#6B7280" }}>
-                Help us understand how you use dpow.chat to improve the service
+                Help us understand how you use hf.bluebook to improve the service
               </p>
             </div>
             <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
@@ -1378,7 +1378,7 @@ function LegalContent({
           How We Process Your Data
         </h2>
         <p style={{ lineHeight: 1.7, color: "#374151", margin: "0 0 1rem 0" }}>
-          When you use dpow.chat, your data is processed as follows:
+          When you use hf.bluebook, your data is processed as follows:
         </p>
         <ul style={{ lineHeight: 1.8, color: "#374151", margin: "0 0 2rem 0" }}>
           <li><strong>Uploaded Files:</strong> Stored securely in our database, processed by AI only when you send a query</li>

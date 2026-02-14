@@ -181,7 +181,7 @@ export default function PricingPage() {
             title="Free"
             price="£0"
             period="/forever"
-            description="Try dpow.chat instantly"
+            description="Try hf.bluebook instantly"
             features={["1 project", "3 files per project", "Basic AI chat", "Excel file upload", "Web interface only"]}
             buttonText="Try Free"
             onClick={() => openModal("free")}
@@ -221,7 +221,7 @@ export default function PricingPage() {
             price="£2,598"
             period="/year"
             description="All 8 DPoW.ai apps"
-            features={["dpow.chat + 7 more", "Complete ecosystem", "Everything included", "Best value for teams", "Priority support", "Coming Q1 2026"]}
+            features={["hf.bluebook + 7 more", "Complete ecosystem", "Everything included", "Best value for teams", "Priority support", "Coming Q1 2026"]}
             buttonText="Learn More"
             onClick={() => openModal("bundle")}
             highlight
@@ -393,7 +393,7 @@ function PlanModal({
       title: "Start Free",
       subtitle: "No credit card required",
       features: [
-        { icon: "FileSpreadsheet", title: "1 Project", desc: "Perfect for testing dpow.chat" },
+        { icon: "FileSpreadsheet", title: "1 Project", desc: "Perfect for testing hf.bluebook" },
         { icon: "Upload", title: "3 Files", desc: "Upload Excel, CSV, or XLSX files" },
         { icon: "MessageSquare", title: "Basic AI Chat", desc: "Ask questions about your data" },
         { icon: "Zap", title: "Instant Insights", desc: "Get answers in seconds" },
@@ -436,7 +436,7 @@ function PlanModal({
       title: "PWA Bundle",
       subtitle: "Complete DPoW.ai Ecosystem",
       features: [
-        { icon: "MessageSquare", title: "dpow.chat", desc: "AI insights from Excel files" },
+        { icon: "MessageSquare", title: "hf.bluebook", desc: "AI insights from Excel files" },
         { icon: "List", title: "dpow.list", desc: "Equipment schedules from emails" },
         { icon: "FileText", title: "dpow.spec", desc: "Specification intelligence" },
         { icon: "Sparkles", title: "dpow.brief", desc: "AI-powered project briefs" },

@@ -194,7 +194,7 @@ export default function SettingsDrawer() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `dpow-data-export-${new Date().toISOString().split("T")[0]}.json`;
+      a.download = `hf-bluebook-export-${new Date().toISOString().split("T")[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -374,7 +374,7 @@ export default function SettingsDrawer() {
           </nav>
 
           <div style={{ padding: "1rem 1.5rem", borderTop: "1px solid #E5E7EB", fontSize: "11px", color: "#9CA3AF" }}>
-            dpow.chat v1.0
+            hf.bluebook v1.0
           </div>
         </div>
 
@@ -702,7 +702,7 @@ export default function SettingsDrawer() {
                     Integrations
                   </h1>
                   <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2rem 0" }}>
-                    Connect external services to enhance your dpow.chat experience.
+                    Connect external services to enhance your hf.bluebook experience.
                   </p>
 
                   <SharePointConfigSection />
@@ -743,7 +743,7 @@ export default function SettingsDrawer() {
                     Preferences
                   </h1>
                   <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2rem 0" }}>
-                    Customise your dpow.chat experience.
+                    Customise your hf.bluebook experience.
                   </p>
 
                   {/* Default AI Mode */}

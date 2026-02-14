@@ -283,7 +283,7 @@ export default function ProfileDrawer() {
 
   // Clear all memories
   async function handleClearMemory() {
-    if (!confirm('Clear all saved preferences and context?\n\nThis will reset dpow.chat\'s memory of your preferences. This action cannot be undone.')) {
+    if (!confirm('Clear all saved preferences and context?\n\nThis will reset hf.bluebook\'s memory of your preferences. This action cannot be undone.')) {
       return;
     }
     setClearingMemory(true);
@@ -1239,7 +1239,7 @@ export default function ProfileDrawer() {
                         )}
                       </div>
                       <p style={{ fontSize: "13px", color: "#6B7280", margin: "0 0 16px 0", lineHeight: "1.5" }}>
-                        Import files from OneDrive and SharePoint to analyze in dpow.chat
+                        Import files from OneDrive and SharePoint to analyze in hf.bluebook
                       </p>
                       {microsoftConnected ? (
                         <button
@@ -1880,7 +1880,7 @@ export default function ProfileDrawer() {
                         borderRadius: "8px",
                       }}>
                         <div style={{ fontSize: "12px", color: "#1E40AF", lineHeight: "1.6" }}>
-                          <strong>How it works:</strong> Team members can WhatsApp dpow.chat using their approved number. 
+                          <strong>How it works:</strong> Team members can WhatsApp hf.bluebook using their approved number. 
                           Only numbers in this list can access your organization&apos;s project data.
                         </div>
                       </div>
@@ -1942,7 +1942,7 @@ export default function ProfileDrawer() {
 
                     <div style={{ marginBottom: "20px" }}>
                       <p style={{ fontSize: "14px", color: "#6B7280", margin: "0 0 16px 0", lineHeight: "1.6" }}>
-                        dpow.chat remembers your preferences and commonly used terms to provide better responses. 
+                        hf.bluebook remembers your preferences and commonly used terms to provide better responses. 
                         You can clear all saved memory below.
                       </p>
                       

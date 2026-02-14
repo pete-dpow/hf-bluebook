@@ -11,7 +11,7 @@ No backend dependencies. Pure visual changes.
 - [x] **1.3** `package.json` — name `"nextjs"` → `"hf-bluebook"`
 - [x] **1.4** `app/layout.tsx` — title "hf.bluebook", description, favicon `/hf_logo.svg` (body background NOT changed — blue gradient mouse tracker must be preserved)
 - [x] **1.5** `public/hf_logo.svg` — add HF logo
-- [ ] **1.6** dpow → hf.bluebook text rebrand — split into subtasks below. Do NOT change Vercel URLs, email addresses, or OAuth redirects.
+- [x] **1.6** dpow → hf.bluebook text rebrand — split into subtasks below. Do NOT change Vercel URLs, email addresses, or OAuth redirects.
   - [x] **1.6.1** `app/api/hybrid-chat/route.ts` — system prompts (CRITICAL)
   - [x] **1.6.2** `app/api/chat/route.ts` — system prompt (CRITICAL)
   - [x] **1.6.3** `app/api/freemium-chat/route.ts` — system prompt (CRITICAL)
@@ -21,34 +21,34 @@ No backend dependencies. Pure visual changes.
   - [x] **1.6.7** `app/page.tsx` — main landing page text (CRITICAL)
   - [x] **1.6.8** `app/auth/page.tsx` — sign-in page text (CRITICAL)
   - [x] **1.6.9** `app/auth/callback/page.tsx` — auth callback text (CRITICAL)
-  - [ ] **1.6.10** `app/invite/[token]/page.tsx` — invite page text
-  - [ ] **1.6.11** `app/dashboard/page.tsx` — dashboard text
-  - [ ] **1.6.12** `app/chat/page.tsx` — chat page text
-  - [ ] **1.6.13** `app/demo/page.tsx` — demo page text
-  - [ ] **1.6.14** `app/pricing/page.tsx` — pricing page text
-  - [ ] **1.6.15** `app/scope/page.tsx` — scope page text
-  - [ ] **1.6.16** `app/report/page.tsx` — report page text
-  - [ ] **1.6.17** `app/api/whatsapp/webhook/route.ts` — message text only, NOT email
-  - [ ] **1.6.18** `components/AboutDrawer.tsx` — about text
-  - [ ] **1.6.19** `components/HelpDrawer.tsx` — help text
-  - [ ] **1.6.20** `components/ChatDrawer.tsx` — chat drawer text
-  - [ ] **1.6.21** `components/ChatDrawerProvider.tsx` — provider text
-  - [ ] **1.6.22** `components/ChatInput.tsx` — placeholder text
-  - [ ] **1.6.23** `components/ProfileDrawer.tsx` — profile text
-  - [ ] **1.6.24** `components/SettingsDrawer.tsx` — settings text
-  - [ ] **1.6.25** `components/LegalDrawer.tsx` — product name only, NOT company/email
-  - [ ] **1.6.26** `lib/twilioClient.ts` — notification title
+  - [x] **1.6.10** `app/invite/[token]/page.tsx` — invite page text
+  - [x] **1.6.11** `app/dashboard/page.tsx` — dashboard text
+  - [x] **1.6.12** `app/chat/page.tsx` — chat page text
+  - [x] **1.6.13** `app/demo/page.tsx` — demo page text
+  - [x] **1.6.14** `app/pricing/page.tsx` — pricing page text
+  - [x] **1.6.15** `app/scope/page.tsx` — scope page text
+  - [x] **1.6.16** `app/report/page.tsx` — report page text (no dpow refs found)
+  - [x] **1.6.17** `app/api/whatsapp/webhook/route.ts` — message text only, NOT email
+  - [x] **1.6.18** `components/AboutDrawer.tsx` — about text
+  - [x] **1.6.19** `components/HelpDrawer.tsx` — help text
+  - [x] **1.6.20** `components/ChatDrawer.tsx` — chat drawer text
+  - [x] **1.6.21** `components/ChatDrawerProvider.tsx` — provider text
+  - [x] **1.6.22** `components/ChatInput.tsx` — placeholder text (no dpow refs found)
+  - [x] **1.6.23** `components/ProfileDrawer.tsx` — profile text
+  - [x] **1.6.24** `components/SettingsDrawer.tsx` — settings text
+  - [x] **1.6.25** `components/LegalDrawer.tsx` — product name only, NOT company/email
+  - [x] **1.6.26** `lib/twilioClient.ts` — notification title
 - [x] **1.7** `components/LeftSidebar.tsx` — update logo, alt text, sign-in text + add new nav icons (Products, Quotes, Manufacturers, Data Mining, Compliance, Golden Thread, Surveying)
 - [x] **1.8** `components/RightSidebar.tsx` — update "About dpow.chat" tooltip to "About hf.bluebook"
 - [x] **1.9** `app/page.tsx` — 4 suggestion pills below chat box, rotating prompts from pool per mode (PRODUCT/KNOWLEDGE/PROJECT/GENERAL), auto-fills + opens chat drawer
 - [x] **1.10** `app/dashboard/page.tsx` — dashboard shell + LayoutDashboard icon in sidebar (full tile design deferred to Figma)
 - [x] **1.11** chat.Melvin rebrand — ChatDrawerWrapper header "Melvin", 5-mode dropdown (PRODUCT/KNOWLEDGE/FULL coming soon), ChatInput placeholder + export titles rebranded
-- [ ] **1.12** Rebrand existing pages — split into subtasks below.
+- [x] **1.12** Rebrand existing pages — split into subtasks below.
   - [x] **1.12.1** Add Report Lucide icon to LeftSidebar (route to `/report`)
   - [x] **1.12.2** Rebrand `/report` page — HF colors, text, no logic changes
-  - [ ] **1.12.3** Rebrand `/scope` page — HF colors, text, no logic changes
-  - [ ] **1.12.4** Rebrand `/summary` page — HF colors, text, no logic changes
-  - [ ] **1.12.5** Rebrand `/preview` page — HF colors, text, no logic changes
+  - [x] **1.12.3** Rebrand `/scope` page — HF colors, text, no logic changes
+  - [x] **1.12.4** Rebrand `/summary` page — HF colors, text, no logic changes (no dpow refs found)
+  - [x] **1.12.5** Rebrand `/preview` page — HF colors, text, no logic changes
 
 ### dpow → hf.bluebook Safe Text Changes (1.6)
 
@@ -259,7 +259,7 @@ Everything else depends on this.
 ## Dependencies Graph
 
 ```
-Sprint 1 (UI) ──────────────────────────────────────────────→ partial (17 cosmetic tasks remain)
+Sprint 1 (UI) ──────────────────────────────────────────────→ ✅ done
 Sprint 2 (Database) ────────────────────────────────────────→ ✅ done
 Sprint 3 (Data Mining) ── depends on Sprint 2 ─────────────→ ✅ done
 Sprint 4 (Quotes) ─────── depends on Sprint 3 ─────────────→ ✅ done
@@ -269,7 +269,7 @@ Sprint 7 (Golden Thread) ─ depends on Sprint 4 + Sprint 6 ─→ ✅ done
 Sprint 8 (Melvin) ──────── depends on Sprint 5 + Sprint 6 ─→ ✅ done
 Emergency Auth ─────────── no deps ────────────────────────→ ✅ done
 Phase A (SharePoint) ──── depends on Emergency Auth ───────→ pending (10 tasks)
-Phase B (Rebrand Polish) ─ no deps, parallel with Phase A ─→ pending (20 tasks)
+Phase B (Rebrand Polish) ─ no deps, parallel with Phase A ─→ ✅ done
 Sprint 9 (Polish) ──────── depends on Phase A + B ─────────→ pending (8 tasks)
 Sprint 10 (Surveying) ──── depends on Phase A ─────────────→ future (31 tasks)
 ```

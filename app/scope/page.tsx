@@ -113,11 +113,11 @@ export default function ScopePage() {
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       style={{ background: "#FCFCFA" }}
     >
-      {/* Animated gradient following mouse - Purple theme */}
+      {/* Animated gradient following mouse - HF blue theme */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(139,92,246,0.15), transparent 75%)`,
+          background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(0,86,167,0.15), transparent 75%)`,
         }}
       />
 
@@ -133,7 +133,7 @@ export default function ScopePage() {
               color: "#2A2A2A",
             }}
           >
-            dpow.scope
+            hf.scope
           </h1>
           <p
             className="text-lg"
@@ -324,7 +324,7 @@ export default function ScopePage() {
             Part of the{" "}
             <a
               href="https://www.dpow.ai"
-              style={{ color: "#8B5CF6", textDecoration: "none" }}
+              style={{ color: "#0056a7", textDecoration: "none" }}
             >
               dpow.ai
             </a>{" "}

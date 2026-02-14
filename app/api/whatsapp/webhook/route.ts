@@ -16,15 +16,15 @@ const MESSAGE_TEMPLATES = {
   notWhitelisted: (phone: string) => 
     `🔒 *Access Required*\n\nYour number isn't approved yet.\n\n_Ask your admin to add *${phone}*!_`,
   userSetupRequired: (orgName: string, adminEmail: string) =>
-    `✅ You're approved for *${orgName}*\n\nQuick setup:\n• Sign in to dpow.chat\n• Load a project\n• Try again\n\n_Need help? Contact ${adminEmail}!_`,
+    `✅ You're approved for *${orgName}*\n\nQuick setup:\n• Sign in to hf.bluebook\n• Load a project\n• Try again\n\n_Need help? Contact ${adminEmail}!_`,
   orgError: () =>
     `⚠️ Organization error.\n\n_Contact ${PRODUCTION_CONFIG.supportEmail}!_`,
   notInOrgWhitelist: (orgName: string, phone: string, adminEmail: string) =>
     `🔒 *${orgName}* - Access Denied\n\nYour number *${phone}* isn't approved.\n\n_Contact ${adminEmail} to get added!_`,
   noActiveProject: () =>
-    `📂 *No Active Project*\n\nQuick fix:\n• Open dpow.chat\n• Click a project\n• Ask again`,
+    `📂 *No Active Project*\n\nQuick fix:\n• Open hf.bluebook\n• Click a project\n• Ask again`,
   projectNotFound: () =>
-    `📂 *Project Not Found*\n\n_Your active project may have been archived or deleted._\n\nQuick fix:\n• Open dpow.chat\n• Click a project\n• Try again`,
+    `📂 *Project Not Found*\n\n_Your active project may have been archived or deleted._\n\nQuick fix:\n• Open hf.bluebook\n• Click a project\n• Try again`,
   noFiles: () =>
     `📂 *No Files Found*\n\n_The project has no files yet!_\n\n_Upload an Excel file to start!_`,
   noData: () =>
@@ -615,7 +615,7 @@ export async function GET(req: Request) {
   // Health check
   return NextResponse.json({ 
     status: "ok", 
-    service: "dpow.chat WhatsApp Webhook",
+    service: "hf.bluebook WhatsApp Webhook",
     version: "2.0.0",
     features: [
       "conversation_context",

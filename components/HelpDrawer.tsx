@@ -119,7 +119,7 @@ export default function HelpDrawer() {
               Help & Resources
             </h3>
             <p style={{ fontSize: "0.875rem", color: "#6B7280", margin: "0.25rem 0 0 0" }}>
-              Learn how to use dpow.chat
+              Learn how to use hf.bluebook
             </p>
           </div>
 
@@ -187,7 +187,7 @@ export default function HelpDrawer() {
                 Help & Resources
               </h2>
               <p style={{ fontSize: "0.875rem", color: "#6B7280", margin: "0.25rem 0 0 0" }}>
-                Get the most out of dpow.chat
+                Get the most out of hf.bluebook
               </p>
             </div>
             <button
@@ -291,7 +291,7 @@ function HelpContent() {
           Getting Started
         </h1>
         <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2.5rem 0" }}>
-          Welcome to dpow.chat - your AI-powered construction project assistant!
+          Welcome to hf.bluebook - your AI-powered construction project assistant!
         </p>
 
         <h2
@@ -312,7 +312,7 @@ function HelpContent() {
         <ul style={{ lineHeight: 1.7, color: "#6B7280", margin: "0 0 1.5rem 0" }}>
           <li>Click "Upload Excel" on the homepage</li>
           <li>Select your project file (.xlsx, .xls, or .csv)</li>
-          <li>dpow.chat automatically parses your data</li>
+          <li>hf.bluebook automatically parses your data</li>
         </ul>
 
         <h3 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#1F2937", margin: "1.5rem 0 0.5rem 0" }}>
@@ -365,7 +365,7 @@ function HelpContent() {
           Hybrid Knowledge Mode ⭐
         </h2>
         <p style={{ lineHeight: 1.7, color: "#374151", margin: "0 0 1rem 0" }}>
-          dpow.chat intelligently routes your queries:
+          hf.bluebook intelligently routes your queries:
         </p>
         <ul style={{ lineHeight: 1.8, color: "#374151", margin: "0 0 2rem 0" }}>
           <li><strong>GENERAL:</strong> "What's fire door compliance?" → Industry knowledge</li>
@@ -390,7 +390,7 @@ function HelpContent() {
           Chat with AI Guide
         </h1>
         <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2.5rem 0" }}>
-          dpow.chat uses Claude Sonnet 4.5 to understand your construction projects.
+          hf.bluebook uses Claude Sonnet 4.5 to understand your construction projects.
         </p>
 
         <h2
@@ -515,7 +515,7 @@ function HelpContent() {
           Upload & Manage Data
         </h1>
         <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2.5rem 0" }}>
-          dpow.chat works with Excel files containing your project information.
+          hf.bluebook works with Excel files containing your project information.
         </p>
 
         <h2
@@ -593,7 +593,7 @@ function HelpContent() {
           Load Project
         </h3>
         <ol style={{ lineHeight: 1.8, color: "#374151", margin: "0 0 2rem 0" }}>
-          <li>Sign in to dpow.chat</li>
+          <li>Sign in to hf.bluebook</li>
           <li>Click project name in left sidebar</li>
           <li>Project loads with full history</li>
           <li>Continue where you left off</li>
@@ -778,7 +778,7 @@ function HelpContent() {
           Prerequisites
         </h2>
         <ul style={{ lineHeight: 1.8, color: "#374151", margin: "0 0 2rem 0" }}>
-          <li>Premium dpow.chat account</li>
+          <li>Premium hf.bluebook account</li>
           <li>Active project uploaded</li>
           <li>WhatsApp Business or personal number</li>
         </ul>
@@ -844,7 +844,7 @@ function HelpContent() {
           MS365 Integration
         </h1>
         <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2.5rem 0" }}>
-          Connect dpow.chat with SharePoint, Teams, and OneDrive for seamless collaboration.
+          Connect hf.bluebook with SharePoint, Teams, and OneDrive for seamless collaboration.
         </p>
 
         <p style={{ lineHeight: 1.7, color: "#374151", margin: "0 0 2rem 0" }}>
@@ -869,14 +869,14 @@ function HelpContent() {
         <ul style={{ lineHeight: 1.7, color: "#6B7280", margin: "0 0 2rem 0" }}>
           <li>Auto-sync project files from SharePoint libraries</li>
           <li>Query documents directly without manual upload</li>
-          <li>Keep dpow.chat data in sync with SharePoint</li>
+          <li>Keep hf.bluebook data in sync with SharePoint</li>
         </ul>
 
         <h3 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#1F2937", margin: "1.5rem 0 0.5rem 0" }}>
           Teams Integration
         </h3>
         <ul style={{ lineHeight: 1.7, color: "#6B7280", margin: "0 0 2rem 0" }}>
-          <li>Chat with dpow.chat directly in Teams channels</li>
+          <li>Chat with hf.bluebook directly in Teams channels</li>
           <li>Share AI insights with team members</li>
           <li>Project notifications in Teams</li>
         </ul>

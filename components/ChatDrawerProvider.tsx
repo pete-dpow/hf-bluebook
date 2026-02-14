@@ -72,7 +72,7 @@ export default function ChatDrawerProvider() {
                   className="text-sm font-semibold"
                   style={{ fontFamily: "var(--font-cormorant)" }}
                 >
-                  dpow.chat
+                  hf.bluebook
                 </div>
                 <div
                   className="text-xs text-gray-500"
