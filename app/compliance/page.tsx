@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Loader2, ShieldCheck, AlertCircle, CheckCircle } from "lucide-react";
+import { Loader2, ShieldCheck, AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
 import RegulationCard from "@/components/RegulationCard";
 
 const CATEGORIES = [
@@ -47,6 +47,8 @@ export default function CompliancePage() {
   const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [bulkScraping, setBulkScraping] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState("");
 
   useEffect(() => {
     loadRegulations();
@@ -112,6 +114,58 @@ export default function CompliancePage() {
     setSeeding(false);
   }
 
+  async function handleUpdateAll() {
+    setBulkScraping(true);
+    setBulkProgress("Starting...");
+    setError("");
+    setSuccessMsg("");
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    try {
+      const res = await fetch("/api/compliance/scrape-all", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to start bulk update");
+        setBulkScraping(false);
+        setBulkProgress("");
+        return;
+      }
+
+      if (data.mode === "inngest") {
+        setBulkProgress(`Updating ${data.total} regulations in background...`);
+        // Inngest processes async — poll a few times then show success
+        let checks = 0;
+        const pollInterval = setInterval(async () => {
+          checks++;
+          await loadRegulations();
+          if (checks >= 3) {
+            clearInterval(pollInterval);
+            setBulkScraping(false);
+            setBulkProgress("");
+            setSuccessMsg(`Update started for ${data.total} regulations — sections will appear as processing completes`);
+          }
+        }, 10000);
+      } else {
+        // Fetch fallback — results already complete
+        const succeeded = data.results?.filter((r: any) => r.status === "ok").length || 0;
+        setSuccessMsg(`Updated ${succeeded}/${data.total} regulations successfully`);
+        setBulkScraping(false);
+        setBulkProgress("");
+        loadRegulations();
+      }
+    } catch {
+      setError("Network error — check your connection and try again");
+      setBulkScraping(false);
+      setBulkProgress("");
+    }
+  }
+
   const totalPages = Math.ceil(total / limit);
 
   return (
@@ -126,6 +180,17 @@ export default function CompliancePage() {
               {total} regulation{total !== 1 ? "s" : ""}
             </p>
           </div>
+          {regulations.length > 0 && (
+            <button
+              onClick={handleUpdateAll}
+              disabled={bulkScraping}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-[#2563EB] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50"
+              style={{ fontFamily: "var(--font-ibm-plex)" }}
+            >
+              {bulkScraping ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+              {bulkScraping ? bulkProgress || "Updating..." : "Update All"}
+            </button>
+          )}
         </div>
 
         {/* Filters */}

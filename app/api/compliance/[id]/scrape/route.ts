@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/authHelper";
 import { createClient } from "@supabase/supabase-js";
+import { inngest } from "@/lib/inngest/client";
 import { scrapeAndStoreRegulation } from "@/lib/compliance/regulationScraper";
 
 const supabaseAdmin = createClient(
@@ -9,7 +10,7 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
-export const maxDuration = 60; // Allow up to 60s on Vercel Pro
+export const maxDuration = 60; // Allow up to 60s for fetch-based fallback
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await getAuthUser(req);
@@ -32,19 +33,36 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: "No source URL configured for scraping" }, { status: 400 });
   }
 
-  // Run scrape synchronously (fetch-based, works on Vercel)
-  try {
-    const config = {
-      source_url: sourceUrl,
-      section_selector: regulation.scraper_config?.section_selector || "section, article, .section",
-      content_selector: regulation.scraper_config?.content_selector || "p, li, td",
-      section_ref_selector: regulation.scraper_config?.section_ref_selector,
-    };
+  const config = {
+    source_url: sourceUrl,
+    section_selector: regulation.scraper_config?.section_selector || "section, article, .section",
+    content_selector: regulation.scraper_config?.content_selector || "p, li, td",
+    section_ref_selector: regulation.scraper_config?.section_ref_selector,
+  };
 
+  // Primary: try Inngest + Playwright (async, runs on Inngest infrastructure)
+  try {
+    await inngest.send({
+      name: "regulation/scrape.requested",
+      data: {
+        regulation_id: params.id,
+        organization_id: auth.organizationId,
+      },
+    });
+
+    return NextResponse.json({ message: "Scraping started", mode: "inngest" }, { status: 202 });
+  } catch (inngestError) {
+    // Inngest not configured — fall back to synchronous fetch-based scraping
+    console.warn(`[scrape] Inngest unavailable, falling back to fetch-based scraping:`, inngestError);
+  }
+
+  // Fallback: synchronous fetch-based scraping (works on Vercel without Inngest)
+  try {
     const result = await scrapeAndStoreRegulation(params.id, config);
 
     return NextResponse.json({
       message: "Scraping complete",
+      mode: "fetch",
       sections_scraped: result.sections_scraped,
       sections_stored: result.sections_stored,
     });

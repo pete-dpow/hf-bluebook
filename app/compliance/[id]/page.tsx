@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -18,6 +18,9 @@ export default function ComplianceDetailPage() {
   const [scrapeStatus, setScrapeStatus] = useState<ScrapeStatus>("idle");
   const [scrapeStartTime, setScrapeStartTime] = useState<number | null>(null);
   const [scrapeError, setScrapeError] = useState("");
+  const previousScrapeAt = useRef<string | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadRegulation = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -38,6 +41,32 @@ export default function ComplianceDetailPage() {
   useEffect(() => {
     loadRegulation().then(() => setLoading(false));
   }, [loadRegulation]);
+
+  // Track last_scraped_at for Inngest polling
+  useEffect(() => {
+    if (regulation && scrapeStatus === "idle") {
+      previousScrapeAt.current = regulation.last_scraped_at || null;
+    }
+  }, [regulation, scrapeStatus]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  function stopPolling() {
+    if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null; }
+    if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+  }
+
+  function markComplete() {
+    stopPolling();
+    setScrapeStatus("complete");
+    setTimeout(() => setScrapeStatus("idle"), 8000);
+  }
 
   async function handleScrape() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -60,12 +89,31 @@ export default function ComplianceDetailPage() {
         return;
       }
 
-      // Scrape completed synchronously — reload regulation to get new sections
-      await loadRegulation();
-      setScrapeStatus("complete");
+      const data = await res.json();
 
-      // Auto-dismiss after 8 seconds
-      setTimeout(() => setScrapeStatus("idle"), 8000);
+      if (data.mode === "inngest") {
+        // Async path — poll for completion
+        pollIntervalRef.current = setInterval(async () => {
+          const updated = await loadRegulation();
+          if (updated) {
+            const newScrapeAt = updated.last_scraped_at || null;
+            if (newScrapeAt && newScrapeAt !== previousScrapeAt.current) {
+              previousScrapeAt.current = newScrapeAt;
+              markComplete();
+            }
+          }
+        }, 5000);
+
+        timeoutRef.current = setTimeout(() => {
+          stopPolling();
+          setScrapeStatus("error");
+          setScrapeError("Scraping is taking longer than expected. Check back shortly — sections will appear when processing completes.");
+        }, 180_000);
+      } else {
+        // Sync path (fetch fallback) — result is already done
+        await loadRegulation();
+        markComplete();
+      }
 
     } catch {
       setScrapeStatus("error");
@@ -74,6 +122,7 @@ export default function ComplianceDetailPage() {
   }
 
   function handleDismissError() {
+    stopPolling();
     setScrapeStatus("idle");
     setScrapeError("");
   }
