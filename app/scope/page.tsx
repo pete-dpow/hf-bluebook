@@ -3,7 +3,7 @@
 import { useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import { IfcImporter } from "@thatopen/fragments";
+// IfcImporter loaded dynamically inside handleFileUpload to avoid 3.4MB eager bundle
 
 export default function ScopePage() {
   const router = useRouter();
@@ -69,7 +69,8 @@ export default function ScopePage() {
       const arrayBuffer = await file.arrayBuffer();
 
       setUploadStatus("Converting IFC to Fragment...");
-      
+
+      const { IfcImporter } = await import("@thatopen/fragments");
       const serializer = new IfcImporter();
       serializer.wasm = {
         absolute: true,

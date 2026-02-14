@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import ViewerCanvas from "@/components/scope/ViewerCanvas";
-import Viewer2D from "@/components/scope/Viewer2D";
+import dynamic from "next/dynamic";
+
+const ViewerCanvas = dynamic(() => import("@/components/scope/ViewerCanvas"), { ssr: false });
+const Viewer2D = dynamic(() => import("@/components/scope/Viewer2D"), { ssr: false });
 import LeftSidebar from "@/components/LeftSidebar";
 import ScopeToolsPanel from "@/components/scope/ScopeToolsPanel";
 

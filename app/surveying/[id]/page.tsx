@@ -4,7 +4,9 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { ArrowLeft, GripVertical } from "lucide-react";
-import PointCloudViewer from "@/components/surveying/PointCloudViewer";
+import dynamic from "next/dynamic";
+
+const PointCloudViewer = dynamic(() => import("@/components/surveying/PointCloudViewer"), { ssr: false });
 import FloorPlanViewer from "@/components/surveying/FloorPlanViewer";
 import SurveyToolsPanel from "@/components/surveying/SurveyToolsPanel";
 import type { SurveyScan, SurveyFloor, SurveyWall } from "@/lib/surveying/types";
