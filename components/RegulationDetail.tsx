@@ -347,7 +347,13 @@ export default function RegulationDetail({
         {sections.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-sm text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              No sections scraped yet — click Update to scrape
+              {regulation.source_url?.includes("bsigroup.com")
+                ? "BSI standards are behind a paywall and cannot be scraped automatically. Content must be uploaded manually."
+                : regulation.source_url?.includes("asfp.org.uk")
+                  ? "ASFP restricts automated access. Content must be uploaded manually."
+                  : regulation.category === "approved_document"
+                    ? "Approved Documents are available as PDFs only. PDF scraping coming soon."
+                    : "No sections scraped yet — click Update to scrape"}
             </p>
           </div>
         ) : (

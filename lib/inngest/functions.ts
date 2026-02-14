@@ -485,6 +485,8 @@ const scrapeRegulation = inngest.createFunction(
       section_selector: regulation.scraper_config?.section_selector || "section, article, .section",
       content_selector: regulation.scraper_config?.content_selector || "p, li, td",
       section_ref_selector: regulation.scraper_config?.section_ref_selector,
+      type: regulation.scraper_config?.type,
+      provision_type: regulation.scraper_config?.provision_type,
     };
 
     // Run scraper

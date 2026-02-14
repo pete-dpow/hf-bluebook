@@ -2,6 +2,10 @@
  * Regulation-specific scraping logic.
  * Uses fetch() + HTML parsing by default (works on Vercel).
  * Falls back to Playwright via Inngest for complex JS-rendered pages.
+ *
+ * Site-specific parsers:
+ * - legislation.gov.uk — fetches whole-Act pages, parses section headings
+ * - Generic fallback — heading-based HTML extraction
  */
 
 import { generateEmbedding } from "@/lib/embeddingService";
@@ -20,26 +24,42 @@ interface ScrapedSection {
   page_number?: number;
 }
 
-interface RegulationScraperConfig {
+export interface RegulationScraperConfig {
   source_url: string;
   section_selector: string;
   content_selector: string;
   section_ref_selector?: string;
+  type?: string;            // e.g. "legislation_gov_uk"
+  provision_type?: string;  // e.g. "section", "regulation", "article"
 }
 
+const FETCH_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (compatible; HFBluebook/1.0; +https://hf-bluebook.vercel.app)",
+  "Accept": "text/html,application/xhtml+xml",
+};
+
+// ---------------------------------------------------------------------------
+// Main entry point
+// ---------------------------------------------------------------------------
+
 /**
- * Lightweight HTML section extractor using fetch() + regex.
- * Works on Vercel serverless — no Playwright required.
- * Extracts sections from static HTML pages (legislation.gov.uk, BSI, gov.uk, etc.)
+ * Fetch and extract sections from a regulation source URL.
+ * Routes to site-specific parsers when available.
  */
 export async function fetchRegulationSections(
   config: RegulationScraperConfig
 ): Promise<ScrapedSection[]> {
+  // Route: legislation.gov.uk
+  if (
+    config.type === "legislation_gov_uk" ||
+    config.source_url.includes("legislation.gov.uk")
+  ) {
+    return fetchLegislationSections(config);
+  }
+
+  // Generic fallback
   const res = await fetch(config.source_url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; HFBluebook/1.0; +https://hf-bluebook.vercel.app)",
-      "Accept": "text/html,application/xhtml+xml",
-    },
+    headers: FETCH_HEADERS,
     signal: AbortSignal.timeout(15000),
   });
 
@@ -50,6 +70,258 @@ export async function fetchRegulationSections(
   const html = await res.text();
   return extractSectionsFromHtml(html);
 }
+
+// ---------------------------------------------------------------------------
+// legislation.gov.uk scraper
+// ---------------------------------------------------------------------------
+
+/**
+ * Scrape legislation.gov.uk — fetches the whole-Act page and extracts
+ * each Section/Regulation/Article as a separate ScrapedSection.
+ */
+async function fetchLegislationSections(
+  config: RegulationScraperConfig
+): Promise<ScrapedSection[]> {
+  // Convert /contents/ URL to whole-Act URL
+  let url = config.source_url;
+  url = url.replace(/\/contents\//, "/");
+
+  // Determine provision type from URL or config
+  const provisionType = config.provision_type || detectProvisionType(url);
+
+  // Fetch the whole-Act page (larger page, longer timeout)
+  const res = await fetch(url, {
+    headers: FETCH_HEADERS,
+    signal: AbortSignal.timeout(30000),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
+  }
+
+  const html = await res.text();
+  return parseLegislationHtml(html, provisionType);
+}
+
+/**
+ * Detect provision type from a legislation.gov.uk URL.
+ * - /ukpga/ = Primary legislation → "Section"
+ * - /uksi/  = Statutory Instrument → "Regulation" (or "Article" for some SIs)
+ */
+function detectProvisionType(url: string): string {
+  if (url.includes("/ukpga/")) return "section";
+  if (url.includes("/uksi/")) return "regulation";
+  return "section";
+}
+
+/**
+ * Parse legislation.gov.uk HTML into sections.
+ *
+ * legislation.gov.uk uses headings where the provision number is directly
+ * concatenated with the title, e.g.:
+ *   <h3>88Keeping information about higher-risk buildings</h3>
+ *   <h3>1Citation, commencement and application</h3>
+ *
+ * Part headings look like:
+ *   <h2>Part 4Higher-Risk Buildings</h2>
+ *
+ * Schedule headings look like:
+ *   <h2>Schedule 1Amendments...</h2>
+ */
+function parseLegislationHtml(
+  html: string,
+  provisionType: string
+): ScrapedSection[] {
+  // Strip non-content elements
+  let cleaned = html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<nav[\s\S]*?<\/nav>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "");
+
+  const sections: ScrapedSection[] = [];
+  let currentPart = "";
+
+  // Find ALL headings with their positions
+  const allHeadings: {
+    index: number;
+    endIndex: number;
+    level: number;
+    rawTitle: string;
+    type: "part" | "provision" | "schedule" | "other";
+    number: string;
+    title: string;
+  }[] = [];
+
+  const headingPattern = /<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi;
+  let match;
+  while ((match = headingPattern.exec(cleaned)) !== null) {
+    const rawTitle = stripHtml(match[2]).trim();
+    if (!rawTitle || rawTitle.length < 2) continue;
+
+    const level = parseInt(match[1]);
+
+    // Check if this is a provision heading (number + title)
+    // Pattern: starts with digits, optionally followed by a letter (e.g., 88A)
+    const provisionMatch = rawTitle.match(/^(\d+[A-Z]?)\s*(.*)/);
+
+    // Check if this is a Part heading
+    const partMatch = rawTitle.match(/^Part\s+(\d+[A-Z]?)\s*(.*)/i);
+
+    // Check if this is a Schedule heading
+    const scheduleMatch = rawTitle.match(/^Schedule\s+(\d+[A-Z]?)\s*(.*)/i);
+
+    if (partMatch) {
+      allHeadings.push({
+        index: match.index,
+        endIndex: match.index + match[0].length,
+        level,
+        rawTitle,
+        type: "part",
+        number: partMatch[1],
+        title: partMatch[2] || "",
+      });
+    } else if (scheduleMatch) {
+      allHeadings.push({
+        index: match.index,
+        endIndex: match.index + match[0].length,
+        level,
+        rawTitle,
+        type: "schedule",
+        number: scheduleMatch[1],
+        title: scheduleMatch[2] || "",
+      });
+    } else if (provisionMatch && /^\d/.test(rawTitle)) {
+      allHeadings.push({
+        index: match.index,
+        endIndex: match.index + match[0].length,
+        level,
+        rawTitle,
+        type: "provision",
+        number: provisionMatch[1],
+        title: provisionMatch[2] || "",
+      });
+    } else {
+      allHeadings.push({
+        index: match.index,
+        endIndex: match.index + match[0].length,
+        level,
+        rawTitle,
+        type: "other",
+        number: "",
+        title: rawTitle,
+      });
+    }
+  }
+
+  // Extract content for each provision heading
+  for (let i = 0; i < allHeadings.length; i++) {
+    const heading = allHeadings[i];
+
+    // Track current Part for metadata
+    if (heading.type === "part") {
+      currentPart = `Part ${heading.number}${heading.title ? " — " + heading.title : ""}`;
+      continue;
+    }
+
+    // Skip non-provision headings (other, schedule for now)
+    if (heading.type !== "provision") continue;
+
+    // Get content between this heading and the next heading
+    const contentStart = heading.endIndex;
+    const contentEnd = i + 1 < allHeadings.length
+      ? allHeadings[i + 1].index
+      : cleaned.length;
+
+    const block = cleaned.substring(contentStart, contentEnd);
+    const sectionText = extractTextContent(block);
+
+    // Skip empty sections
+    if (!sectionText || sectionText.length < 10) continue;
+
+    // Build the proper label
+    const provLabel = provisionType === "regulation"
+      ? "Regulation"
+      : provisionType === "article"
+        ? "Article"
+        : "Section";
+
+    const sectionRef = `${provLabel} ${heading.number}`;
+    const sectionTitle = heading.title || heading.rawTitle;
+
+    // Handle oversized sections — split at subsection boundaries
+    if (sectionText.length > 4000) {
+      const chunks = splitAtSubsections(sectionText, 4000);
+      for (let c = 0; c < chunks.length; c++) {
+        sections.push({
+          section_ref: sectionRef + (chunks.length > 1 ? ` (${c + 1}/${chunks.length})` : ""),
+          section_title: sectionTitle,
+          section_text: chunks[c],
+        });
+      }
+    } else {
+      sections.push({
+        section_ref: sectionRef,
+        section_title: sectionTitle,
+        section_text: sectionText,
+      });
+    }
+  }
+
+  return sections;
+}
+
+/**
+ * Extract readable text content from an HTML block.
+ * Preserves subsection numbering like (1), (2), (a), (b).
+ */
+function extractTextContent(html: string): string {
+  // Extract text from paragraph-like elements
+  const parts: string[] = [];
+  const contentPattern = /<(?:p|li|td|dd|blockquote|div|span)[^>]*>([\s\S]*?)<\/(?:p|li|td|dd|blockquote|div|span)>/gi;
+  let contentMatch;
+  while ((contentMatch = contentPattern.exec(html)) !== null) {
+    const text = stripHtml(contentMatch[1]).trim();
+    if (text && text.length > 3) {
+      parts.push(text);
+    }
+  }
+
+  if (parts.length > 0) {
+    return parts.join("\n");
+  }
+
+  // Fallback: strip all HTML and return cleaned text
+  const plainText = stripHtml(html).trim();
+  return plainText.length > 10 ? plainText : "";
+}
+
+/**
+ * Split oversized section text at subsection boundaries: (1), (2), etc.
+ */
+function splitAtSubsections(text: string, maxLength: number): string[] {
+  const chunks: string[] = [];
+  // Split at subsection markers like "(1)", "(2)", "(3)"
+  const parts = text.split(/(?=\(\d+\)\s)/);
+
+  let current = "";
+  for (const part of parts) {
+    if (current.length + part.length > maxLength && current.length > 100) {
+      chunks.push(current.trim());
+      current = "";
+    }
+    current += part;
+  }
+  if (current.trim().length > 10) {
+    chunks.push(current.trim());
+  }
+
+  return chunks.length > 0 ? chunks : [text.substring(0, maxLength)];
+}
+
+// ---------------------------------------------------------------------------
+// Generic HTML scraper (fallback for non-legislation sites)
+// ---------------------------------------------------------------------------
 
 /**
  * Extract meaningful sections from raw HTML.
@@ -167,6 +439,10 @@ function extractSectionsFromHtml(html: string): ScrapedSection[] {
   return sections;
 }
 
+// ---------------------------------------------------------------------------
+// Shared utilities
+// ---------------------------------------------------------------------------
+
 /** Strip HTML tags and decode common entities */
 function stripHtml(html: string): string {
   return html
@@ -180,6 +456,10 @@ function stripHtml(html: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+// ---------------------------------------------------------------------------
+// Orchestrator — scrape, embed, store
+// ---------------------------------------------------------------------------
 
 /**
  * Scrape a regulation from its source URL, embed sections, and store in regulation_sections.
