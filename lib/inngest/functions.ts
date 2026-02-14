@@ -11,6 +11,7 @@ import { compileGoldenThreadData } from "@/lib/goldenThread/compiler";
 import { validateGoldenThread } from "@/lib/goldenThread/validator";
 import { generateGoldenThreadPdf } from "@/lib/goldenThread/pdfGenerator";
 import { generateGoldenThreadJson, generateGoldenThreadCsvs } from "@/lib/goldenThread/exporters";
+import { uploadGoldenThreadWithFallback } from "@/lib/sharepoint/uploadWithFallback";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://odhvxoelxiffhocrgtll.supabase.co",
@@ -605,6 +606,34 @@ const generateGoldenThread = inngest.createFunction(
         }
       });
     }
+
+    // Upload to SharePoint (best-effort — Supabase copies already saved above)
+    await step.run("sharepoint-upload", async () => {
+      const userId = pkg.generated_by;
+      if (!userId) return;
+
+      for (const file of exportFiles) {
+        try {
+          const { data: fileData } = await supabaseAdmin.storage
+            .from("golden-thread")
+            .download(file.storage_path);
+
+          if (fileData) {
+            const buffer = Buffer.from(await fileData.arrayBuffer());
+            const contentType = file.format === "pdf" ? "application/pdf"
+              : file.format === "json" ? "application/json"
+              : "text/csv";
+
+            await uploadGoldenThreadWithFallback(
+              userId, organization_id, pkg.package_reference,
+              file.file_name, buffer, contentType
+            );
+          }
+        } catch {
+          // Non-critical — Supabase copy exists
+        }
+      }
+    });
 
     // Mark complete
     const totalSize = exportFiles.reduce((sum, f) => sum + f.size, 0);

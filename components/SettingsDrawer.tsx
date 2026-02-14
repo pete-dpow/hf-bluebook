@@ -705,6 +705,8 @@ export default function SettingsDrawer() {
                     Connect external services to enhance your dpow.chat experience.
                   </p>
 
+                  <SharePointConfigSection />
+
                   <IntegrationCard
                     name="WhatsApp Business"
                     description="Get a dedicated WhatsApp number for your organisation"
@@ -1094,6 +1096,209 @@ function IntegrationCard({ name, description, status, color }: { name: string; d
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+function SharePointConfigSection() {
+  const [sites, setSites] = useState<{ id: string; name: string }[]>([]);
+  const [libraries, setLibraries] = useState<{ id: string; name: string }[]>([]);
+  const [selectedSite, setSelectedSite] = useState("");
+  const [selectedDrive, setSelectedDrive] = useState("");
+  const [configured, setConfigured] = useState(false);
+  const [loadingSites, setLoadingSites] = useState(false);
+  const [loadingLibs, setLoadingLibs] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadConfig();
+  }, []);
+
+  async function getToken() {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || "";
+  }
+
+  async function loadConfig() {
+    const token = await getToken();
+    const res = await fetch("/api/sharepoint/config", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setConfigured(data.configured);
+      if (data.sharepoint_site_id) setSelectedSite(data.sharepoint_site_id);
+      if (data.sharepoint_drive_id) setSelectedDrive(data.sharepoint_drive_id);
+    }
+  }
+
+  async function loadSites() {
+    setLoadingSites(true);
+    const token = await getToken();
+    const res = await fetch("/api/sharepoint/sites", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setSites(data.sites || []);
+    }
+    setLoadingSites(false);
+  }
+
+  async function loadLibraries(siteId: string) {
+    setLoadingLibs(true);
+    const token = await getToken();
+    const res = await fetch(`/api/sharepoint/libraries?siteId=${siteId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setLibraries(data.libraries || []);
+    }
+    setLoadingLibs(false);
+  }
+
+  async function handleSave() {
+    if (!selectedSite || !selectedDrive) return;
+    setSaving(true);
+    const token = await getToken();
+    const res = await fetch("/api/sharepoint/config", {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ sharepoint_site_id: selectedSite, sharepoint_drive_id: selectedDrive }),
+    });
+    if (res.ok) setConfigured(true);
+    setSaving(false);
+  }
+
+  async function handleTest() {
+    setTesting(true);
+    setTestResult(null);
+    const token = await getToken();
+    const res = await fetch("/api/sharepoint/test", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    setTestResult(data.ok ? "Connected — folders created" : data.error || "Connection failed");
+    setTesting(false);
+  }
+
+  const selectStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: "8px",
+    border: "1px solid #E5E7EB",
+    fontSize: "0.875rem",
+    fontFamily: "var(--font-ibm-plex)",
+    background: "white",
+    marginBottom: "0.75rem",
+  };
+
+  const btnStyle: React.CSSProperties = {
+    padding: "8px 16px",
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+  };
+
+  return (
+    <div
+      style={{
+        padding: "1.5rem",
+        borderRadius: "12px",
+        border: configured ? "1px solid #BBF7D0" : "1px solid #E5E7EB",
+        background: configured ? "rgba(187, 247, 208, 0.1)" : "white",
+        marginBottom: "1rem",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", marginBottom: "1rem" }}>
+        <div
+          style={{
+            width: "40px", height: "40px", borderRadius: "10px",
+            background: "rgba(0, 86, 167, 0.1)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#0056a7", fontWeight: 700, fontSize: "1rem",
+          }}
+        >
+          S
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+            <span style={{ fontSize: "1rem", fontWeight: 600, color: "#2A2A2A" }}>SharePoint</span>
+            {configured && (
+              <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "#166534", background: "#DCFCE7", padding: "2px 8px", borderRadius: "4px" }}>
+                CONNECTED
+              </span>
+            )}
+          </div>
+          <p style={{ fontSize: "0.875rem", color: "#6B7280", margin: 0 }}>
+            Store quotes, product files, and Golden Thread exports in your SharePoint document library
+          </p>
+        </div>
+      </div>
+
+      {/* Site selector */}
+      <div style={{ marginBottom: "0.5rem" }}>
+        <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "#374151", display: "block", marginBottom: "0.25rem" }}>
+          SharePoint Site
+        </label>
+        {sites.length === 0 ? (
+          <button onClick={loadSites} disabled={loadingSites} style={{ ...btnStyle, color: "#2563EB", background: "rgba(37, 99, 235, 0.1)" }}>
+            {loadingSites ? "Loading..." : "Load Sites"}
+          </button>
+        ) : (
+          <select
+            value={selectedSite}
+            onChange={(e) => { setSelectedSite(e.target.value); setSelectedDrive(""); setLibraries([]); if (e.target.value) loadLibraries(e.target.value); }}
+            style={selectStyle}
+          >
+            <option value="">Select a site...</option>
+            {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        )}
+      </div>
+
+      {/* Library selector */}
+      {selectedSite && (
+        <div style={{ marginBottom: "0.75rem" }}>
+          <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "#374151", display: "block", marginBottom: "0.25rem" }}>
+            Document Library
+          </label>
+          {loadingLibs ? (
+            <p style={{ fontSize: "0.875rem", color: "#6B7280" }}>Loading libraries...</p>
+          ) : (
+            <select value={selectedDrive} onChange={(e) => setSelectedDrive(e.target.value)} style={selectStyle}>
+              <option value="">Select a library...</option>
+              {libraries.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          )}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        {selectedSite && selectedDrive && (
+          <button onClick={handleSave} disabled={saving} style={{ ...btnStyle, color: "white", background: "#0056a7" }}>
+            {saving ? "Saving..." : "Save Config"}
+          </button>
+        )}
+        {configured && (
+          <button onClick={handleTest} disabled={testing} style={{ ...btnStyle, color: "#0056a7", background: "rgba(0, 86, 167, 0.1)" }}>
+            {testing ? "Testing..." : "Test Connection"}
+          </button>
+        )}
+      </div>
+
+      {testResult && (
+        <p style={{ fontSize: "0.875rem", marginTop: "0.5rem", color: testResult.includes("Connected") ? "#166534" : "#DC2626" }}>
+          {testResult}
+        </p>
+      )}
     </div>
   );
 }
