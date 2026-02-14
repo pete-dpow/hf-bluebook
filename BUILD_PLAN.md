@@ -229,17 +229,18 @@ Everything else depends on this.
 
 **Priority: HIGH — unlocks file storage for all other features**
 **Depends on: Emergency Auth Sprint (DONE)**
+**Status: COMPLETE**
 
-- [ ] **SP.1** SharePoint client lib — `lib/sharepoint/client.ts` (token refresh, upload file, create folder, list files)
-- [ ] **SP.2** Org SharePoint config — add `sharepoint_site_id` + `sharepoint_drive_id` to `organizations` table
-- [ ] **SP.3** Auto-create folder structure — `/hf.bluebook/Quotes/`, `/Products/`, `/Compliance/`, `/GoldenThread/`, `/Projects/`
-- [ ] **SP.4** Quote write-back — upload generated PDF/Excel to SharePoint
-- [ ] **SP.5** Scraped product files write-back — upload spec PDFs/datasheets to SharePoint
-- [ ] **SP.6** Large file upload (>10MB) — replace blocked error with SharePoint upload
-- [ ] **SP.7** Golden Thread export write-back — upload BSA packages to SharePoint
-- [ ] **SP.8** SharePoint config UI — Settings drawer section (pick site + library, test connection)
-- [ ] **SP.9** File links in UI — show SharePoint webUrl links (opens in browser/SharePoint)
-- [ ] **SP.10** Supabase fallback — if SharePoint not configured → fall back to Supabase Storage
+- [x] **SP.1** SharePoint client lib — `lib/sharepoint/client.ts` (token refresh, upload file, create folder, list files)
+- [x] **SP.2** Org SharePoint config — add `sharepoint_site_id` + `sharepoint_drive_id` to `organizations` table
+- [x] **SP.3** Auto-create folder structure — `/hf.bluebook/Quotes/`, `/Products/`, `/Compliance/`, `/GoldenThread/`, `/Projects/`
+- [x] **SP.4** Quote write-back — upload generated PDF/Excel to SharePoint
+- [x] **SP.5** Scraped product files write-back — upload spec PDFs/datasheets to SharePoint
+- [x] **SP.6** Large file upload (>10MB) — replace blocked error with SharePoint upload
+- [x] **SP.7** Golden Thread export write-back — upload BSA packages to SharePoint
+- [x] **SP.8** SharePoint config UI — Settings drawer section (pick site + library, test connection)
+- [x] **SP.9** File links in UI — show SharePoint webUrl links (opens in browser/SharePoint)
+- [x] **SP.10** Supabase fallback — if SharePoint not configured → fall back to Supabase Storage
 
 ---
 
@@ -268,13 +269,13 @@ Sprint 6 (Compliance) ─── depends on Sprint 3 ─────────�
 Sprint 7 (Golden Thread) ─ depends on Sprint 4 + Sprint 6 ─→ ✅ done
 Sprint 8 (Melvin) ──────── depends on Sprint 5 + Sprint 6 ─→ ✅ done
 Emergency Auth ─────────── no deps ────────────────────────→ ✅ done
-Phase A (SharePoint) ──── depends on Emergency Auth ───────→ pending (10 tasks)
+Phase A (SharePoint) ──── depends on Emergency Auth ───────→ ✅ done
 Phase B (Rebrand Polish) ─ no deps, parallel with Phase A ─→ ✅ done
-Sprint 9 (Polish) ──────── depends on Phase A + B ─────────→ pending (8 tasks)
+Sprint 9 (Polish) ──────── depends on Phase A + B ─────────→ pending (8 tasks) ← UNBLOCKED
 Sprint 10 (Surveying) ──── depends on Phase A ─────────────→ future (31 tasks)
 ```
 
-**Total remaining: 69 tasks. For demo: Phase A + B = 30 tasks.**
+**Total remaining: 39 tasks (Sprint 9: 8, Sprint 10: 31). Phase A + B complete.**
 
 ---
 
