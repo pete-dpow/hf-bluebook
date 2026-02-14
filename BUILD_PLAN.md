@@ -205,6 +205,44 @@ Everything else depends on this.
 
 ---
 
+## Emergency Auth Sprint — Authentication & Auto-Provisioning
+
+**Depends on:** Nothing (emergency — ran before all other work)
+**Status: COMPLETE**
+
+- [x] **EA.1** `components/AuthGuard.tsx` — client-side auth wrapper, shows AuthDrawer when not authenticated
+- [x] **EA.2** `components/AuthDrawer.tsx` — login drawer with Microsoft Entra ID + magic link
+- [x] **EA.3** `app/api/microsoft/callback/route.ts` — handle `userId=new` for fresh MS logins (creates Supabase user, generates magic link, stores MS tokens)
+- [x] **EA.4** `app/api/setup/route.ts` — auto-provision user/org/membership on first login (idempotent)
+- [x] **EA.5** `app/auth/callback/page.tsx` — fix PKCE code exchange (was using implicit flow hash parsing)
+- [x] **EA.6** `app/layout.tsx` — wrap children in AuthGuard
+- [x] **EA.7** `components/LegalDrawer.tsx` — disable auto-opening cookie banner (internal app)
+- [x] **EA.8** Lowercase rebrand — `HF.bluebook` → `hf.bluebook` across 24 active files
+- [x] **EA.9** Build-placeholder fallback — 40 API routes use `|| "build-placeholder"` for Vercel build
+- [x] **EA.10** URL migration — `dpow-chat.vercel.app` → `hf-bluebook.vercel.app` in 8 files
+- [x] **EA.11** Azure AD redirect URI configured — `https://hf-bluebook.vercel.app/api/microsoft/callback`
+- [x] **EA.12** `ENTRA_ENABLED = true` — Microsoft Entra ID live
+
+---
+
+## Phase A — SharePoint Write-Back
+
+**Priority: HIGH — unlocks file storage for all other features**
+**Depends on: Emergency Auth Sprint (DONE)**
+
+- [ ] **SP.1** SharePoint client lib — `lib/sharepoint/client.ts` (token refresh, upload file, create folder, list files)
+- [ ] **SP.2** Org SharePoint config — add `sharepoint_site_id` + `sharepoint_drive_id` to `organizations` table
+- [ ] **SP.3** Auto-create folder structure — `/hf.bluebook/Quotes/`, `/Products/`, `/Compliance/`, `/GoldenThread/`, `/Projects/`
+- [ ] **SP.4** Quote write-back — upload generated PDF/Excel to SharePoint
+- [ ] **SP.5** Scraped product files write-back — upload spec PDFs/datasheets to SharePoint
+- [ ] **SP.6** Large file upload (>10MB) — replace blocked error with SharePoint upload
+- [ ] **SP.7** Golden Thread export write-back — upload BSA packages to SharePoint
+- [ ] **SP.8** SharePoint config UI — Settings drawer section (pick site + library, test connection)
+- [ ] **SP.9** File links in UI — show SharePoint webUrl links (opens in browser/SharePoint)
+- [ ] **SP.10** Supabase fallback — if SharePoint not configured → fall back to Supabase Storage
+
+---
+
 ## Sprint 9 — Polish + Future
 
 - [ ] **9.1** PDF/DXF parsers for uploaded product files
@@ -229,10 +267,14 @@ Sprint 5 (RAG) ────────── depends on Sprint 2 ────�
 Sprint 6 (Compliance) ─── depends on Sprint 3 ─────────────→ ✅ done
 Sprint 7 (Golden Thread) ─ depends on Sprint 4 + Sprint 6 ─→ ✅ done
 Sprint 8 (Melvin) ──────── depends on Sprint 5 + Sprint 6 ─→ ✅ done
-Sprint 9 (Polish) ──────── depends on all above ───────────→ pending
+Emergency Auth ─────────── no deps ────────────────────────→ ✅ done
+Phase A (SharePoint) ──── depends on Emergency Auth ───────→ pending (10 tasks)
+Phase B (Rebrand Polish) ─ no deps, parallel with Phase A ─→ pending (20 tasks)
+Sprint 9 (Polish) ──────── depends on Phase A + B ─────────→ pending (8 tasks)
+Sprint 10 (Surveying) ──── depends on Phase A ─────────────→ future (31 tasks)
 ```
 
-**Sprints 1+2 are sequential. Sprints 3-6 have parallelism. Sprints 7-8 need earlier sprints done. Sprint 9 is last.**
+**Total remaining: 69 tasks. For demo: Phase A + B = 30 tasks.**
 
 ---
 
@@ -250,10 +292,10 @@ exceljs
 
 ## Totals
 
-- **9 sprints**, **~80 tasks**
+- **9 sprints + Emergency Auth + Phase A (SharePoint)**, **~90 tasks** (69 remaining)
 - **15 new database tables** + 3 RPC functions + 38 RLS policies
-- **~35 new API routes**
+- **~35 new API routes** (+ `/api/setup` provisioning)
 - **~16 new pages**
-- **~19 new components**
-- **~20 new lib files**
+- **~19 new components** (+ AuthGuard, AuthDrawer)
+- **~20 new lib files** (+ `lib/sharepoint/client.ts` planned)
 - **7 Inngest background functions**

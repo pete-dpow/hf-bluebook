@@ -21,7 +21,7 @@ import {
   Search,
   ShieldCheck,
   Scroll,
-  Ruler,
+  Target,
   LayoutDashboard,
   FileBarChart,
 } from "lucide-react";
@@ -301,17 +301,6 @@ export default function LeftSidebar() {
             />
           )}
 
-          {/* Chat History with WhatsApp Indicator */}
-          {user && (
-            <ChatHistoryButton
-              connected={whatsappConnected}
-              phoneNumber={whatsappPhoneNumber}
-              onClick={() => {
-                // Future: Open chat history drawer
-              }}
-            />
-          )}
-
           {/* hf.bluebook Nav Items */}
           {user && (
             <>
@@ -358,10 +347,10 @@ export default function LeftSidebar() {
                 onClick={() => router.push("/report")}
               />
               <IconButton
-                icon={<Ruler size={20} />}
-                label="Surveying"
-                tooltip="Surveying"
-                onClick={() => router.push("/surveying")}
+                icon={<Target size={20} />}
+                label="Scope"
+                tooltip="Scope — BIM Viewer"
+                onClick={() => router.push("/scope")}
               />
             </>
           )}
@@ -375,9 +364,6 @@ export default function LeftSidebar() {
           flexDirection: "column",
           gap: "4px",
         }}>
-          {/* Upgrade Button (Always Visible) */}
-          <UpgradeButton onClick={() => router.push("/pricing")} />
-
           {user ? (
             <>
               {/* ⭐ Task 2: Organizations with Tooltip */}

@@ -1013,19 +1013,52 @@ lib/inngest/functions.ts           — all 7 job definitions
 ## 18. Auth & Roles
 
 - **Login required for everything** — no freemium/anonymous paths
-- **Magic link OTP** via Supabase Auth (existing)
+- **Microsoft Entra ID** — primary login. Uses Azure AD OAuth (`/common/` endpoint, any MS tenant). Redirect URI: `https://hf-bluebook.vercel.app/api/microsoft/callback`. App registration: `crane@dpow.co.uk` Azure Portal.
+- **Magic link OTP** — secondary login via Supabase Auth (fallback if Entra not available)
+- **PKCE flow** — Supabase uses `flowType: 'pkce'` with code exchange, NOT implicit flow
+- **Auto-provisioning** — `POST /api/setup` creates `users` row, `organizations` (from email domain), `organization_members` (admin role) on first login. Called automatically by `AuthGuard` on session detect. Idempotent.
+- **AuthGuard** — client-side wrapper in `app/layout.tsx`. Checks Supabase session, shows `AuthDrawer` overlay when not authenticated, calls `/api/setup` on session detect.
 - **Roles**: `admin` (full CRUD, scraper, GT export) / `member` (read + create quotes)
 - **Multi-org**: users can belong to multiple orgs, switch via profile
+- **Azure AD scopes granted**: `User.Read`, `email`, `profile`, `openid`, `offline_access`, `Files.ReadWrite.All`, `Sites.Read.All`, `Sites.ReadWrite.All`, `Sites.Manage.All`, `Mail.Send`, `Calendars.ReadWrite`, `Contacts.Read`, `Tasks.ReadWrite`
 
 ---
 
 ## 19. File Storage
 
+### Storage Architecture: Supabase = Brain, SharePoint = File Cabinet
+
+| Layer | Purpose | What Lives Here |
+|-------|---------|-----------------|
+| **Supabase** (PostgreSQL + pgvector) | Metadata, search indexes, embeddings, app state | Product records, quote data, regulation sections, chat history, RLS-protected rows |
+| **Supabase Storage** | Small files + fallback | Files <10MB when SharePoint not configured, temporary uploads |
+| **SharePoint** (via Microsoft Graph API) | All documents (primary file store) | Scraped PDFs, datasheets, quote exports, Golden Thread packages, survey scans |
+
+### SharePoint Folder Structure
+
+```
+/hf.bluebook/
+  ├── Quotes/              HF-Q-0001.pdf, HF-Q-0001.xlsx
+  ├── Products/            {manufacturer}/spec.pdf, datasheet.pdf
+  ├── Compliance/          Regulation PDFs, scraped content
+  ├── GoldenThread/        {package_ref}/handover.pdf, audit.csv
+  └── Projects/            Project-specific files
+```
+
+### SharePoint Integration
+
+- **Graph API**: `PUT /drives/{driveId}/items/{parentId}:/{filename}:/content` for uploads
+- **Large files (>4MB)**: Use upload session API for chunked upload
+- **Config**: `sharepoint_site_id` + `sharepoint_drive_id` stored on `organizations` table
+- **Fallback**: If SharePoint not configured or token expired → Supabase Storage (no data loss)
+- **File links**: UI shows SharePoint `webUrl` links that open in browser/SharePoint
+
+### Legacy Storage (still works)
+
 | Condition | Storage | Path |
 |-----------|---------|------|
-| File < 10MB | Supabase Storage | `product-files/{org_id}/{product_id}/{filename}` |
-| File > 10MB | SharePoint via M365 Graph API | Tracked in `product_files.sharepoint_drive_id` / `sharepoint_item_id` |
-| Golden Thread exports | Supabase Storage | `golden-thread/{org_id}/{package_ref}/{filename}` |
+| File < 10MB (no SharePoint) | Supabase Storage | `product-files/{org_id}/{product_id}/{filename}` |
+| Golden Thread exports (no SharePoint) | Supabase Storage | `golden-thread/{org_id}/{package_ref}/{filename}` |
 
 ---
 
