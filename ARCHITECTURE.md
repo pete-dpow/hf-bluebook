@@ -706,17 +706,16 @@ export async function getAuthUser(req: NextRequest) {
 
 ---
 
-## 8. Inngest Functions (7)
+## 8. Inngest Functions (6)
 
 | Function | Event | What It Does |
 |----------|-------|-------------|
 | `scrapeManufacturer` | `manufacturer/scrape.requested` | Playwright scrapes product pages, upserts to DB, updates scrape_jobs status |
 | `generateProductEmbeddings` | `products/embeddings.requested` | Embeds product text with text-embedding-3-small, saves to products.embedding |
 | `sendQuoteEmail` | `quote/send.requested` | Generates PDF, sends via Resend, updates quote status to 'sent' |
-| `parseProductFile` | `product-file/uploaded` | Extracts text from PDF/DXF, saves parsed_data to product_files |
 | `ingestBluebookPDFs` | `bluebook/ingest.requested` | Downloads PDFs from OneDrive, structure-aware chunking, embeds, stores in bluebook_chunks |
 | `scrapeRegulation` | `regulation/scrape.requested` | Playwright scrapes gov.uk/BSI pages, parses sections, embeds, stores in regulation_sections |
-| `generateGoldenThread` | `golden-thread/generate.requested` | Compiles project data, validates BSA compliance, generates JSON/PDF/CSV exports |
+| `generateGoldenThread` | `golden-thread/generate.requested` | Compiles project data, validates BSA compliance, generates JSON/PDF/CSV exports + SharePoint write-back |
 
 **Setup:**
 - Client: `lib/inngest/client.ts` — `new Inngest({ id: 'hf-bluebook' })`
@@ -847,9 +846,9 @@ Uses Playwright `page.pdf()` running on Inngest infrastructure — same as scrap
 
 ---
 
-## 13. API Routes
+## 13. API Routes (86 total)
 
-### Existing (keep — 46 routes)
+### Inherited from dpow.chat (46 routes)
 
 ```
 /api/chat, /api/freemium-chat, /api/hybrid-chat, /api/debug-chat
@@ -866,30 +865,34 @@ Uses Playwright `page.pdf()` running on Inngest infrastructure — same as scrap
 /api/test-env, /api/test-supabase, /api/waitlist/submit
 ```
 
-### New Routes
+### New Routes (40 routes)
 
 | Route | Method | Purpose |
 |-------|--------|---------|
+| `/api/setup` | POST | Auto-provision user/org/membership on first login |
+| `/api/dashboard` | GET | Aggregated dashboard data (profile, stats, activity) |
+| `/api/avatar` | POST | Upload avatar with background removal |
 | `/api/manufacturers` | GET, POST | List/create manufacturers |
 | `/api/manufacturers/[id]` | GET, PATCH, DELETE | Read/update/archive manufacturer |
 | `/api/manufacturers/[id]/scrape` | POST | Trigger scrape job |
 | `/api/products` | GET, POST | List/create products |
 | `/api/products/[id]` | GET, PATCH, DELETE | Read/update/delete product |
 | `/api/products/[id]/review` | POST | Admin approve product |
+| `/api/products/[id]/regulations` | GET, POST | Product ↔ regulation links |
 | `/api/products/search` | POST | Vector + keyword search |
 | `/api/product-files` | POST | Upload product file |
 | `/api/product-files/[id]` | GET, DELETE | Download/delete file |
 | `/api/quotes` | GET, POST | List/create quotes |
 | `/api/quotes/[id]` | GET, PATCH, DELETE | Read/update/delete quote |
 | `/api/quotes/[id]/line-items` | POST, DELETE | Add/remove line items |
-| `/api/quotes/[id]/generate-excel` | POST | Generate .xlsx |
-| `/api/quotes/[id]/generate-pdf` | POST | Generate .pdf |
+| `/api/quotes/[id]/compliance` | GET | Quote compliance cross-reference |
+| `/api/quotes/[id]/generate-excel` | POST | Generate .xlsx + SharePoint write-back |
+| `/api/quotes/[id]/generate-pdf` | POST | Generate .pdf + SharePoint write-back |
 | `/api/quotes/[id]/send` | POST | Email to client |
 | `/api/quotes/next-number` | GET | Race-safe quote number |
 | `/api/supplier-requests` | GET, POST | List/create requests |
 | `/api/supplier-requests/[id]` | PATCH | Approve/reject |
 | `/api/normalize` | POST | AI spec extraction |
-| `/api/scraper/status` | GET | Poll job progress |
 | `/api/bluebook/ingest` | POST | Trigger PDF ingestion |
 | `/api/bluebook/search` | POST | Vector search bluebook |
 | `/api/bluebook/status` | GET | Knowledge base status |
@@ -897,37 +900,42 @@ Uses Playwright `page.pdf()` running on Inngest infrastructure — same as scrap
 | `/api/compliance/[id]` | GET, PATCH | Read/update regulation |
 | `/api/compliance/[id]/scrape` | POST | Re-scrape regulation |
 | `/api/compliance/search` | POST | Vector search regulations |
+| `/api/compliance/seed` | POST | Seed 14 starting regulations |
 | `/api/golden-thread/generate` | POST | Generate GT package |
 | `/api/golden-thread/packages` | GET | List packages for project |
 | `/api/golden-thread/packages/[id]` | GET | Package status + files |
 | `/api/golden-thread/packages/[id]/download` | GET | Download export |
 | `/api/golden-thread/packages/[id]/audit` | GET | View audit trail |
-| `/api/microsoft/upload-product-file` | POST | Upload to SharePoint |
+| `/api/sharepoint/config` | GET, PUT | Read/save org SharePoint config |
+| `/api/sharepoint/sites` | GET | List SharePoint sites via Graph |
+| `/api/sharepoint/libraries` | GET | List document libraries for site |
+| `/api/sharepoint/test` | POST | Test connection + create folder structure |
 | `/api/inngest` | POST | Inngest serve endpoint |
 
 ---
 
-## 14. Pages
+## 14. Pages (33 total)
 
-### Existing (keep/update)
+### Inherited from dpow.chat (updated with HF branding)
 
 | Route | Status | Notes |
 |-------|--------|-------|
-| `/` | UPDATE | Becomes Melvin chat with pill mode cards |
-| `/chat` | KEEP | Main chat interface |
-| `/dashboard` | ENHANCE | 4-tile hub with DashboardCard |
-| `/report` | KEEP | HF colors only |
-| `/scope` | KEEP | HF colors only |
-| `/summary`, `/preview` | KEEP | HF colors only |
-| `/auth`, `/auth/callback` | KEEP | Rebrand text |
-| `/invite/[token]` | KEEP | Rebrand text |
-| `/pricing` | KEEP | Disabled |
-| `/demo` | KEEP | May not use |
+| `/` | DONE | Melvin chat with rotating suggestion pills per mode |
+| `/chat` | DONE | Main chat, export titles rebranded |
+| `/dashboard` | DONE | Personalised portal: avatar upload, profile header, key insights, project completion, line chart, calendar |
+| `/report` | DONE | HF colors + branding |
+| `/scope` | DONE | HF blue gradient, "hf.scope" heading |
+| `/scope/viewer` | DONE | Three.js + @thatopen IFC viewer (split-screen 3D/2D) |
+| `/summary`, `/preview` | DONE | HF branding, export filenames updated |
+| `/auth`, `/auth/callback` | DONE | HF branding, PKCE flow |
+| `/invite/[token]` | DONE | HF branding |
+| `/pricing` | DONE | HF branding (Stripe disabled) |
+| `/demo` | DONE | HF branding |
 | `/list`, `/procure`, `/tidp`, `/wlca`, `/assign` | KEEP | Waitlist pages |
 
 ### New Pages
 
-| Route | Purpose | Lucide Icon |
+| Route | Purpose | Sidebar Icon |
 |-------|---------|-------------|
 | `/manufacturers` | Manufacturer list + search (card grid) | `Factory` |
 | `/manufacturers/new` | Add manufacturer form (admin) | — |
@@ -942,17 +950,27 @@ Uses Playwright `page.pdf()` running on Inngest infrastructure — same as scrap
 | `/compliance/[id]` | Regulation detail with key sections | — |
 | `/golden-thread` | Project GT packages + generate | `Scroll` |
 | `/golden-thread/[id]` | Package detail + downloads + audit | — |
-| `/data-mining` | Scrape jobs dashboard + progress | `PickaxeIcon` or `Search` |
-| `/supplier-requests` | Admin approval page | — |
-| `/surveying` | Placeholder — "Coming Soon" | `Ruler` |
+| `/data-mining` | Scrape jobs dashboard + progress | `Search` |
+| `/knowledge` | RAG ingestion trigger + status (admin only) | — |
 
 ---
 
-## 15. New Components
+## 15. New Components (~50 active .tsx files)
+
+### Dashboard Components (`components/dashboard/`)
 
 | Component | Purpose |
 |-----------|---------|
-| `DashboardCard` | Action tiles on dashboard |
+| `UserProfileHeader` | Large avatar, tags, detail grid, key insights panel |
+| `AvatarUpload` | Portrait avatar with CDN background removal (@imgly) |
+| `ProjectCompletion` | Stacked horizontal bars per pillar |
+| `PlannedVsActual` | SVG line chart (5 trend lines) |
+| `DashboardCalendar` | Month calendar grid + event list |
+
+### Data Components
+
+| Component | Purpose |
+|-----------|---------|
 | `ManufacturerCard` | Supplier grid card |
 | `ProductCard` | Product grid card (visual browsing) |
 | `ProductListRow` | Compact list row |
@@ -965,37 +983,67 @@ Uses Playwright `page.pdf()` running on Inngest infrastructure — same as scrap
 | `ScraperProgress` | Job progress bar |
 | `SupplierRequestCard` | Approval card |
 | `RequestSupplierModal` | Staff request form |
-| `PDFViewer` | Product spec PDF viewer |
 | `RegulationCard` | Compliance library card |
 | `RegulationDetail` | Full regulation view with sections |
+| `RegulationLinkModal` | Link products to regulations |
+| `ComplianceTab` | Quote compliance cross-reference |
 | `GoldenThreadModal` | GT generation options modal |
 | `GoldenThreadPackageCard` | Package status/download card |
-| `ComplianceTab` | Quote compliance cross-reference |
+
+### Auth Components
+
+| Component | Purpose |
+|-----------|---------|
+| `AuthGuard` | Client-side auth wrapper, shows AuthDrawer when unauthenticated |
+| `AuthDrawer` | Login drawer (Microsoft Entra ID + magic link) |
+
+### Scope/IFC Components (`components/scope/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `ViewerCanvas` | Three.js scene + @thatopen IFC rendering |
+| `Viewer2D` | 2D section view |
+| `ScopeToolsPanel` | Left tools panel for IFC viewer |
 
 ---
 
-## 16. New Lib Files
+## 16. Lib Files (36 total)
+
+### New lib files added by hf.bluebook
 
 ```
-lib/authHelper.ts                  — getAuthUser + isAdmin
-lib/productSearch.ts               — vector + keyword + spec search
-lib/productEmbeddings.ts           — generate product embeddings
-lib/quoteGenerator.ts              — Excel (exceljs) + PDF (pdf-lib) output
-lib/sharepointUploader.ts          — upload to SharePoint (>10MB files)
-lib/scrapers/playwrightScraper.ts  — browser scraping (products + regulations)
-lib/parsers/pdfParser.ts           — PDF text extraction (pdf-parse)
-lib/parsers/dxfParser.ts           — CAD dimension extraction
-lib/normalizer/aiExtractor.ts      — GPT-4o spec extraction from text
-lib/normalizer/schemaValidator.ts  — validate against pillar schemas
-lib/bluebook/chunker.ts            — structure-aware text chunking
-lib/bluebook/embeddings.ts         — OpenAI embedding wrapper
-lib/bluebook/pillarDetector.ts     — auto-detect pillar from content
-lib/compliance/regulationScraper.ts — regulation-specific scraping logic
-lib/goldenThread/compiler.ts       — compile project data for GT export
-lib/goldenThread/validator.ts      — BSA compliance validation
-lib/goldenThread/pdfGenerator.ts   — Playwright page.pdf() for handover packs
-lib/inngest/client.ts              — Inngest client init
-lib/inngest/functions.ts           — all 7 job definitions
+lib/authHelper.ts                      — getAuthUser + isAdmin for all API routes
+lib/quoteCalculations.ts               — Quote subtotal/VAT/total calculations
+lib/quoteGenerator.ts                  — Excel (exceljs) + PDF (pdf-lib) output
+lib/twilioClient.ts                    — WhatsApp/Teams notification wrapper
+lib/scrapers/playwrightScraper.ts      — browser scraping (products + regulations)
+lib/bluebook/chunker.ts                — structure-aware text chunking
+lib/bluebook/embeddings.ts             — OpenAI embedding wrapper + embedChunks()
+lib/bluebook/pillarDetector.ts         — auto-detect pillar from filename + content
+lib/compliance/regulationScraper.ts    — regulation-specific scraping logic
+lib/goldenThread/compiler.ts           — compile project data for GT export
+lib/goldenThread/validator.ts          — BSA Section 88/91 compliance validation
+lib/goldenThread/pdfGenerator.ts       — Playwright page.pdf() for handover packs
+lib/goldenThread/exporters.ts          — JSON + CSV export generators
+lib/sharepoint/client.ts              — SharePoint Graph API (token refresh, upload, folders)
+lib/sharepoint/uploadWithFallback.ts   — Dual storage: SharePoint primary, Supabase fallback
+lib/inngest/client.ts                  — Inngest client init
+lib/inngest/functions.ts               — 6 background job definitions
+```
+
+### Inherited lib files from dpow.chat
+
+```
+lib/dpowAiClient.ts                   — AI client (filename kept for import compat)
+lib/embeddingService.ts                — OpenAI embedding wrapper (1536 dims)
+lib/hybridSearch.ts                    — Vector + keyword hybrid search
+lib/supabase.ts                        — Supabase client init
+lib/reportGenerator.ts                 — Report PDF generation
+lib/excelProcessor.ts                  — Excel file processing
+lib/microsoftGraph.ts                  — Microsoft Graph API helpers
+lib/logger.ts                          — Persistent logging (console stripped in prod)
+lib/utils.ts                           — shadcn/ui utility (cn)
++ 5 more (debugGuard, fetchWrapper, lexicon, monitor, tokenMonitor, etc.)
 ```
 
 ---

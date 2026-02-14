@@ -293,10 +293,10 @@ exceljs
 
 ## Totals
 
-- **9 sprints + Emergency Auth + Phase A (SharePoint)**, **~90 tasks** (69 remaining)
-- **15 new database tables** + 3 RPC functions + 38 RLS policies
-- **~35 new API routes** (+ `/api/setup` provisioning)
-- **~16 new pages**
-- **~19 new components** (+ AuthGuard, AuthDrawer)
-- **~20 new lib files** (+ `lib/sharepoint/client.ts` planned)
-- **7 Inngest background functions**
+- **9 sprints + Emergency Auth + Phase A + Phase B**, **~90 tasks built, 39 remaining** (Sprint 9: 8, Sprint 10: 31)
+- **27 database tables** (12 inherited + 15 new) + 3 RPC functions + 38 RLS policies
+- **86 API routes** (46 inherited + 40 new)
+- **33 pages** (17 inherited + 16 new)
+- **~50 active components** (including Dashboard, Data, Auth, Scope groups)
+- **36 lib files** (17 new + 19 inherited)
+- **6 Inngest background functions** (parseProductFile deferred to Sprint 9)
