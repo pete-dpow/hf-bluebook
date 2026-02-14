@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-hf.bluebook — Harmony Fire's fire protection product intelligence platform. Built on top of dpow.chat (kept 100%), adding product catalog, compliance library, quote generation, web scraping, RAG knowledge base, and BSA Golden Thread export.
+hf.bluebook — Harmony Fire's fire protection product intelligence platform. Built on top of dpow.chat (kept 100%), adding product catalog, compliance library, quote generation, web scraping, RAG knowledge base, BSA Golden Thread export, and AutoPlan fire safety plan generation.
 
 ## Build Commands
 
@@ -20,7 +20,7 @@ npm run postinstall  # Copy WASM files for web-ifc (runs automatically after npm
 
 - **Framework**: Next.js 13.5 App Router (NO pages/ directory)
 - **Database**: Supabase (PostgreSQL + pgvector + Auth + Storage)
-- **AI Models**: GPT-4o-mini (chat), Claude Sonnet (knowledge/compliance), GPT-4o (normalizer), text-embedding-3-small (all embeddings, 1536 dims)
+- **AI Models**: GPT-4o-mini (chat), Claude Sonnet (knowledge/compliance/autoplan vision), GPT-4o (normalizer), text-embedding-3-small (all embeddings, 1536 dims)
 - **Background Jobs**: Inngest (runs on Inngest infrastructure, NOT Vercel)
 - **Scraping**: Playwright via Inngest (NOT Cheerio, NOT Browserless.io)
 - **UI**: shadcn/ui + Tailwind CSS + Lucide icons
@@ -63,23 +63,29 @@ lib/hybridSearch.ts               — Vector + keyword hybrid search
 lib/embeddingService.ts           — OpenAI embedding wrapper (1536 dims)
 lib/dpowAiClient.ts              — AI client (filename kept for import compat, NOT renamed yet)
 lib/inngest/client.ts             — Inngest client
-lib/inngest/functions.ts          — 8 background job definitions
+lib/inngest/functions.ts          — 9 background job definitions
 lib/inngest/surveyFunctions.ts   — processSurveyScan Inngest function
+lib/inngest/autoplanFunctions.ts — analyzeFloorPlan Inngest function (Claude Sonnet vision)
+lib/autoplan/types.ts            — AutoPlan TypeScript interfaces
+lib/autoplan/symbols.ts          — 18 BS 5499/ISO 7010 fire safety symbol definitions
+lib/autoplan/analyzer.ts         — Claude Sonnet vision floor plan analysis
+lib/autoplan/pdfGenerator.ts     — A3 branded PDF export (pdf-lib)
 lib/surveying/                   — LAS parser, decimator, floor/wall detectors, PDF/DXF exporters
 lib/productFileParser.ts         — PDF/DXF product file parser
 lib/scrapers/playwrightScraper.ts — Single scraper for products + regulations
 components/LeftSidebar.tsx        — Fixed 64px nav with icons + tooltips
+components/autoplan/PlanCanvas.tsx — HTML5 Canvas fire safety plan editor
 scripts/copy-wasm.js             — Postinstall: copies web-ifc WASM to public/wasm/
 ```
 
 ## Database
 
-- **31 tables total** (12 existing dpow.chat + 15 Sprint 2 + 4 Sprint 10 surveying)
-- **48 RLS policies** on new tables (38 Sprint 2 + 10 Sprint 10)
+- **36 tables total** (12 existing dpow.chat + 15 Sprint 2 + 4 Sprint 10 surveying + 5 Sprint 11 autoplan)
+- **60 RLS policies** on new tables (38 Sprint 2 + 10 Sprint 10 + 12 Sprint 11)
 - **3 RPC functions**: match_products, match_bluebook_chunks, match_regulation_sections
-- **2 sequences**: quote_number_seq, plan_number_seq
+- **3 sequences**: quote_number_seq, plan_number_seq, autoplan_number_seq
 - All vectors are VECTOR(1536) using text-embedding-3-small
-- **Migrations**: `supabase/migrations/` — Sprint 2 tables in `001_sprint2_tables.sql`, Sprint 10 surveying in `004_sprint10_surveying.sql`, earlier dpow.chat migrations for tokens + pgvector
+- **Migrations**: `supabase/migrations/` — Sprint 2 in `001_sprint2_tables.sql`, Sprint 10 in `004_sprint10_surveying.sql`, Sprint 11 in `005_sprint11_autoplan.sql`
 
 ## Melvin Chat Modes (5)
 
@@ -121,9 +127,21 @@ These are Harmony Fire's product divisions. Hardcoded in products table CHECK co
 
 ## Build Progress
 
-Sprints 1-10 are complete (all core features built). Emergency Auth, Phase A (SharePoint), Phase B (Rebrand) also complete. Remaining: Sprint 9 tasks 9.3 (surveying placeholder — superseded by Sprint 10), 9.6 (dangerous domain changes), 9.7/9.8 (brand colors). See `BUILD_PLAN.md` for full history.
+Sprints 1-11 are complete. Sprint 11 adds AutoPlan (fire safety plan generator with AI vision, canvas editor, BS 5499 symbols, PDF export). Emergency Auth, Phase A (SharePoint), Phase B (Rebrand) also complete. See `BUILD_PLAN.md` for full history.
+
+## AutoPlan Module
+
+Fire safety plan generator at `/autoplan`. AI analyzes uploaded floor plan PDFs using Claude Sonnet vision, suggests BS 5499/ISO 7010 symbol placements (~90% accuracy), expert refines in HTML5 Canvas editor. Exports branded A3 PDFs.
+
+- **Pages**: `/autoplan` (list), `/autoplan/new`, `/autoplan/[buildingId]` (dashboard), `/autoplan/editor/[planId]` (canvas editor)
+- **API**: 8 routes under `/api/autoplan/` (buildings CRUD, floor upload, plans CRUD/approve/export)
+- **Components**: 8 under `components/autoplan/` (BuildingCard, FloorCard, BuildingForm, SymbolPalette, PlanCanvas, CanvasToolbar, PropertiesPanel, ApprovalModal)
+- **Lib**: 5 files under `lib/autoplan/` (types, symbols, analyzer, pdfGenerator) + Inngest function
+- **DB**: 5 tables (autoplan_buildings, autoplan_floors, autoplan_plans, autoplan_approvals, autoplan_audit_log)
 
 ## Reference Docs
 
 - `ARCHITECTURE.md` — Complete technical spec (database schemas, all RLS policies, API routes, component specs)
 - `BUILD_PLAN.md` — Sprint-based build checklist with dependencies and execution order
+- `AUTOPLAN_PRD.md` — AutoPlan product requirements document
+- `AUTOPLAN_BUILD_PLAN.md` — AutoPlan build plan with 28 tasks across 6 phases

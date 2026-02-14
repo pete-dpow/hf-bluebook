@@ -24,6 +24,7 @@ import {
   Target,
   LayoutDashboard,
   FileBarChart,
+  Flame,
 } from "lucide-react";
 import AppSwitcherBubble from "./AppSwitcherBubble";
 
@@ -351,6 +352,12 @@ export default function LeftSidebar() {
                 label="Scope"
                 tooltip="Scope — BIM Viewer"
                 onClick={() => router.push("/scope")}
+              />
+              <IconButton
+                icon={<Flame size={20} />}
+                label="AutoPlan"
+                tooltip="AutoPlan — Fire Safety Plans"
+                onClick={() => router.push("/autoplan")}
               />
             </>
           )}

@@ -13,6 +13,7 @@ import { generateGoldenThreadPdf } from "@/lib/goldenThread/pdfGenerator";
 import { generateGoldenThreadJson, generateGoldenThreadCsvs } from "@/lib/goldenThread/exporters";
 import { uploadGoldenThreadWithFallback } from "@/lib/sharepoint/uploadWithFallback";
 import { processSurveyScan } from "@/lib/inngest/surveyFunctions";
+import { analyzeFloorPlan } from "@/lib/inngest/autoplanFunctions";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://odhvxoelxiffhocrgtll.supabase.co",
@@ -711,4 +712,4 @@ const parseProductFileJob = inngest.createFunction(
   }
 );
 
-export const functions = [scrapeManufacturer, generateProductEmbeddings, sendQuoteEmail, ingestBluebookPDFs, scrapeRegulation, generateGoldenThread, parseProductFileJob, processSurveyScan];
+export const functions = [scrapeManufacturer, generateProductEmbeddings, sendQuoteEmail, ingestBluebookPDFs, scrapeRegulation, generateGoldenThread, parseProductFileJob, processSurveyScan, analyzeFloorPlan];

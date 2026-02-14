@@ -347,12 +347,47 @@ web-e57
 
 ---
 
+## Sprint 11 — AutoPlan (Fire Safety Plan Generator)
+
+AI-powered fire safety plan markup tool. Claude Sonnet vision analyzes floor plans, suggests BS 5499/ISO 7010 symbol placements. Expert refines in HTML5 Canvas editor. Exports branded A3 PDFs.
+
+- [x] **11.1** Database migration — 5 tables, 1 sequence, 8 indexes, 12 RLS policies (`supabase/migrations/005_sprint11_autoplan.sql`)
+- [x] **11.2** TypeScript interfaces (`lib/autoplan/types.ts`)
+- [x] **11.3** 18 BS 5499/ISO 7010 symbol definitions + canvas drawing function (`lib/autoplan/symbols.ts`)
+- [x] **11.4** Claude Sonnet vision analyzer — prompt builder + JSON parser (`lib/autoplan/analyzer.ts`)
+- [x] **11.5** Inngest function: analyzeFloorPlan (`lib/inngest/autoplanFunctions.ts`)
+- [x] **11.6** Register Inngest function #9 (`lib/inngest/functions.ts`)
+- [x] **11.7** Buildings list + create API (`app/api/autoplan/buildings/route.ts`)
+- [x] **11.8** Building detail + update + delete API (`app/api/autoplan/buildings/[id]/route.ts`)
+- [x] **11.9** Floor upload API (`app/api/autoplan/floors/route.ts`)
+- [x] **11.10** Floor delete API (`app/api/autoplan/floors/[id]/route.ts`)
+- [x] **11.11** Plans CRUD API (`app/api/autoplan/plans/route.ts` + `[id]/route.ts`)
+- [x] **11.12** Plan approve API (`app/api/autoplan/plans/[id]/approve/route.ts`)
+- [x] **11.13** PDF generator — A3 branded export (`lib/autoplan/pdfGenerator.ts`)
+- [x] **11.14** Plan export API (`app/api/autoplan/plans/[id]/export/route.ts`)
+- [x] **11.15** BuildingCard component (`components/autoplan/BuildingCard.tsx`)
+- [x] **11.16** FloorCard component (`components/autoplan/FloorCard.tsx`)
+- [x] **11.17** BuildingForm component (`components/autoplan/BuildingForm.tsx`)
+- [x] **11.18** SymbolPalette component (`components/autoplan/SymbolPalette.tsx`)
+- [x] **11.19** PlanCanvas component — HTML5 Canvas editor (`components/autoplan/PlanCanvas.tsx`)
+- [x] **11.20** CanvasToolbar component (`components/autoplan/CanvasToolbar.tsx`)
+- [x] **11.21** PropertiesPanel component (`components/autoplan/PropertiesPanel.tsx`)
+- [x] **11.22** ApprovalModal component (`components/autoplan/ApprovalModal.tsx`)
+- [x] **11.23** Building list page (`app/autoplan/page.tsx`)
+- [x] **11.24** New building page (`app/autoplan/new/page.tsx`)
+- [x] **11.25** Building dashboard page (`app/autoplan/[buildingId]/page.tsx`)
+- [x] **11.26** Canvas editor page (`app/autoplan/editor/[planId]/page.tsx`)
+- [x] **11.27** Sidebar Flame icon (`components/LeftSidebar.tsx`)
+- [x] **11.28** Documentation updates (`CLAUDE.md`, `BUILD_PLAN.md`)
+
+---
+
 ## Totals
 
-- **10 sprints + Emergency Auth + Phase A + Phase B**, **~125 tasks built, 3 remaining** (9.6, 9.7, 9.8)
-- **31 database tables** (12 inherited + 15 Sprint 2 + 4 Sprint 10) + 3 RPC functions + 48 RLS policies + 2 sequences
-- **92 API routes** (46 inherited + 40 Sprints 3-8 + 6 Sprint 10 surveying)
-- **35 pages** (17 inherited + 16 Sprints 3-8 + 2 Sprint 10 surveying)
-- **~56 active components** (including Dashboard, Data, Auth, Scope, Surveying groups)
-- **46 lib files** (17 inherited + 19 Sprints 3-8 + 10 Sprint 10 surveying)
-- **8 Inngest background functions** (7 original + processSurveyScan)
+- **11 sprints + Emergency Auth + Phase A + Phase B**, **~153 tasks built**
+- **36 database tables** (12 inherited + 15 Sprint 2 + 4 Sprint 10 + 5 Sprint 11) + 3 RPC functions + 60 RLS policies + 3 sequences
+- **100 API routes** (46 inherited + 40 Sprints 3-8 + 6 Sprint 10 + 8 Sprint 11)
+- **39 pages** (17 inherited + 16 Sprints 3-8 + 2 Sprint 10 + 4 Sprint 11)
+- **~64 active components** (including Dashboard, Data, Auth, Scope, Surveying, AutoPlan groups)
+- **51 lib files** (17 inherited + 19 Sprints 3-8 + 10 Sprint 10 + 5 Sprint 11)
+- **9 Inngest background functions** (7 original + processSurveyScan + analyzeFloorPlan)
