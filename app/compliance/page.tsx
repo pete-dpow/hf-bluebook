@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck, AlertCircle, CheckCircle } from "lucide-react";
 import RegulationCard from "@/components/RegulationCard";
 
 const CATEGORIES = [
@@ -45,6 +45,8 @@ export default function CompliancePage() {
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
   const [seeding, setSeeding] = useState(false);
+  const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
     loadRegulations();
@@ -77,21 +79,27 @@ export default function CompliancePage() {
 
   async function handleSeed() {
     setSeeding(true);
+    setError("");
+    setSuccessMsg("");
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    const res = await fetch("/api/compliance/seed", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
+    try {
+      const res = await fetch("/api/compliance/seed", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      alert(`Seeded ${data.created} regulations`);
-      loadRegulations();
-    } else {
-      const err = await res.json();
-      alert(err.error || "Failed to seed regulations");
+      if (res.ok) {
+        const data = await res.json();
+        setSuccessMsg(`Seeded ${data.created} regulations successfully`);
+        loadRegulations();
+      } else {
+        const err = await res.json().catch(() => ({ error: "Request failed" }));
+        setError(err.error || "Failed to seed regulations");
+      }
+    } catch {
+      setError("Network error — check your connection and try again");
     }
     setSeeding(false);
   }
@@ -153,6 +161,30 @@ export default function CompliancePage() {
             style={{ fontFamily: "var(--font-ibm-plex)" }}
           />
         </div>
+
+        {/* Inline error/success banners */}
+        {error && (
+          <div
+            className="mb-6 p-4 rounded-lg flex items-start gap-3"
+            style={{ background: "#FEF2F2", border: "1px solid #FCA5A5" }}
+          >
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm" style={{ fontFamily: "var(--font-ibm-plex)", color: "#991B1B" }}>
+              {error}
+            </p>
+          </div>
+        )}
+        {successMsg && (
+          <div
+            className="mb-6 p-4 rounded-lg flex items-start gap-3"
+            style={{ background: "#F0FDF4", border: "1px solid #86EFAC" }}
+          >
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm" style={{ fontFamily: "var(--font-ibm-plex)", color: "#166534" }}>
+              {successMsg}
+            </p>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex items-center justify-center py-16">

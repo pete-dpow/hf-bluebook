@@ -25,6 +25,7 @@ import {
   LayoutDashboard,
   FileBarChart,
   Flame,
+  BookOpen,
 } from "lucide-react";
 import AppSwitcherBubble from "./AppSwitcherBubble";
 
@@ -328,6 +329,12 @@ export default function LeftSidebar() {
                 label="Data Mining"
                 tooltip="Data Mining"
                 onClick={() => router.push("/data-mining")}
+              />
+              <IconButton
+                icon={<BookOpen size={20} />}
+                label="Knowledge"
+                tooltip="Knowledge Base"
+                onClick={() => router.push("/knowledge")}
               />
               <IconButton
                 icon={<ShieldCheck size={20} />}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Upload, BookOpen, RefreshCw } from "lucide-react";
+import { Loader2, Upload, BookOpen, RefreshCw, AlertCircle } from "lucide-react";
 
 const PILLAR_LABELS: Record<string, string> = {
   fire_doors: "Fire Doors",
@@ -34,6 +34,8 @@ export default function KnowledgePage() {
   const [pillarCounts, setPillarCounts] = useState<Record<string, number>>({});
   const [logs, setLogs] = useState<IngestionLog[]>([]);
   const [ingesting, setIngesting] = useState(false);
+
+  const [error, setError] = useState("");
 
   // Ingest form
   const [sourceFile, setSourceFile] = useState("");
@@ -67,28 +69,33 @@ export default function KnowledgePage() {
     if (!sourceFile.trim()) return;
 
     setIngesting(true);
+    setError("");
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { router.replace("/auth"); return; }
 
-    const res = await fetch("/api/bluebook/ingest", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
-        source_file: sourceFile.trim(),
-        source_file_drive_id: driveId.trim() || null,
-      }),
-    });
+    try {
+      const res = await fetch("/api/bluebook/ingest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          source_file: sourceFile.trim(),
+          source_file_drive_id: driveId.trim() || null,
+        }),
+      });
 
-    if (res.ok) {
-      setSourceFile("");
-      setDriveId("");
-      await loadStatus();
-    } else {
-      const err = await res.json();
-      alert(err.error || "Failed to trigger ingestion");
+      if (res.ok) {
+        setSourceFile("");
+        setDriveId("");
+        await loadStatus();
+      } else {
+        const err = await res.json().catch(() => ({ error: "Request failed" }));
+        setError(err.error || "Failed to trigger ingestion");
+      }
+    } catch {
+      setError("Network error — check your connection and try again");
     }
     setIngesting(false);
   }
@@ -192,6 +199,19 @@ export default function KnowledgePage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Inline error banner */}
+        {error && (
+          <div
+            className="mb-6 p-4 rounded-lg flex items-start gap-3"
+            style={{ background: "#FEF2F2", border: "1px solid #FCA5A5" }}
+          >
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm" style={{ fontFamily: "var(--font-ibm-plex)", color: "#991B1B" }}>
+              {error}
+            </p>
           </div>
         )}
 
