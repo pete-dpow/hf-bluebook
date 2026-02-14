@@ -1,23 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import RegulationDetail from "@/components/RegulationDetail";
+
+type ScrapeStatus = "idle" | "scraping" | "complete" | "error";
 
 export default function ComplianceDetailPage() {
   const router = useRouter();
   const params = useParams();
   const [regulation, setRegulation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [scraping, setScraping] = useState(false);
 
-  useEffect(() => {
-    loadRegulation();
-  }, [params.id]);
+  // Scrape progress state
+  const [scrapeStatus, setScrapeStatus] = useState<ScrapeStatus>("idle");
+  const [scrapeStartTime, setScrapeStartTime] = useState<number | null>(null);
+  const [scrapeError, setScrapeError] = useState("");
+  const previousScrapeAt = useRef<string | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  async function loadRegulation() {
+  const loadRegulation = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { router.replace("/auth"); return; }
 
@@ -28,27 +33,96 @@ export default function ComplianceDetailPage() {
     if (res.ok) {
       const data = await res.json();
       setRegulation(data.regulation);
+      return data.regulation;
     }
-    setLoading(false);
+    return null;
+  }, [params.id, router]);
+
+  useEffect(() => {
+    loadRegulation().then(() => setLoading(false));
+  }, [loadRegulation]);
+
+  // Store initial last_scraped_at when regulation loads
+  useEffect(() => {
+    if (regulation && scrapeStatus === "idle") {
+      previousScrapeAt.current = regulation.last_scraped_at || null;
+    }
+  }, [regulation, scrapeStatus]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  function stopPolling() {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
   }
 
   async function handleScrape() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    setScraping(true);
-    const res = await fetch(`/api/compliance/${params.id}/scrape`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
+    setScrapeStatus("scraping");
+    setScrapeStartTime(Date.now());
+    setScrapeError("");
 
-    if (res.ok) {
-      alert("Scraping started — sections will update shortly");
-    } else {
-      const err = await res.json();
-      alert(err.error || "Failed to start scraping");
+    try {
+      const res = await fetch(`/api/compliance/${params.id}/scrape`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Request failed" }));
+        setScrapeStatus("error");
+        setScrapeError(err.error || "Failed to start scraping");
+        return;
+      }
+
+      // Start polling every 5 seconds
+      pollIntervalRef.current = setInterval(async () => {
+        const updated = await loadRegulation();
+        if (updated) {
+          const newScrapeAt = updated.last_scraped_at || null;
+          if (newScrapeAt && newScrapeAt !== previousScrapeAt.current) {
+            // Scraping complete — new timestamp detected
+            stopPolling();
+            setScrapeStatus("complete");
+            previousScrapeAt.current = newScrapeAt;
+
+            // Auto-dismiss after 8 seconds
+            setTimeout(() => setScrapeStatus("idle"), 8000);
+          }
+        }
+      }, 5000);
+
+      // Timeout after 3 minutes
+      timeoutRef.current = setTimeout(() => {
+        stopPolling();
+        setScrapeStatus("error");
+        setScrapeError("Scraping is taking longer than expected. Check back shortly — sections will appear when processing completes.");
+      }, 180_000);
+
+    } catch {
+      setScrapeStatus("error");
+      setScrapeError("Network error — check your connection and try again");
     }
-    setScraping(false);
+  }
+
+  function handleRetry() {
+    stopPolling();
+    setScrapeStatus("idle");
+    setScrapeError("");
   }
 
   if (loading) {
@@ -86,7 +160,10 @@ export default function ComplianceDetailPage() {
         <RegulationDetail
           regulation={regulation}
           onScrape={handleScrape}
-          scraping={scraping}
+          onRetry={handleRetry}
+          scrapeStatus={scrapeStatus}
+          scrapeStartTime={scrapeStartTime}
+          scrapeError={scrapeError}
         />
       </div>
     </div>
