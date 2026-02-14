@@ -382,7 +382,7 @@ export default function ChatPage() {
 
   // ⭐ Task 10: Export chat as Markdown
   function exportAsMarkdown() {
-    const projectTitle = loadedProjectName || loadedFileName || "dpow.chat Conversation";
+    const projectTitle = loadedProjectName || loadedFileName || "hf.bluebook Conversation";
     const timestamp = new Date().toISOString().split('T')[0];
     
     let markdown = `# ${projectTitle}\n`;
@@ -391,7 +391,7 @@ export default function ChatPage() {
     markdown += `\n---\n\n`;
 
     messages.forEach((msg) => {
-      const role = msg.role === "user" ? "**You**" : "**dpow.chat**";
+      const role = msg.role === "user" ? "**You**" : "**hf.bluebook**";
       const modeTag = msg.mode ? ` \`${msg.mode}\`` : "";
       markdown += `${role}${modeTag}:\n${msg.content}\n\n`;
     });
@@ -412,7 +412,7 @@ export default function ChatPage() {
 
   // ⭐ Task 9: Export chat as PDF
   function exportAsPDF() {
-    const projectTitle = loadedProjectName || loadedFileName || "dpow.chat Conversation";
+    const projectTitle = loadedProjectName || loadedFileName || "hf.bluebook Conversation";
     const timestamp = new Date().toISOString().split('T')[0];
     
     const doc = new jsPDF();
@@ -451,7 +451,7 @@ export default function ChatPage() {
       // Role header
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
-      const roleText = msg.role === "user" ? "You" : "dpow.chat";
+      const roleText = msg.role === "user" ? "You" : "hf.bluebook";
       const modeText = msg.mode ? ` [${msg.mode}]` : "";
       doc.setTextColor(msg.role === "user" ? 37 : 16, msg.role === "user" ? 99 : 185, msg.role === "user" ? 235 : 129);
       doc.text(`${roleText}${modeText}:`, margin, yPosition);
@@ -480,7 +480,7 @@ export default function ChatPage() {
 
   // ⭐ Task 11: Export chat as Word
   async function exportAsWord() {
-    const projectTitle = loadedProjectName || loadedFileName || "dpow.chat Conversation";
+    const projectTitle = loadedProjectName || loadedFileName || "hf.bluebook Conversation";
     const timestamp = new Date().toISOString().split('T')[0];
 
     const children: any[] = [];
@@ -516,7 +516,7 @@ export default function ChatPage() {
 
     // Messages
     messages.forEach((msg) => {
-      const roleText = msg.role === "user" ? "You" : "dpow.chat";
+      const roleText = msg.role === "user" ? "You" : "hf.bluebook";
       const modeText = msg.mode ? ` [${msg.mode}]` : "";
       
       children.push(

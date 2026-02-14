@@ -168,7 +168,7 @@ export default function AcceptInvite() {
               color: "#2A2A2A",
             }}
           >
-            dpow.chat
+            hf.bluebook
           </h1>
           <p
             className="text-sm"
@@ -177,7 +177,7 @@ export default function AcceptInvite() {
               color: "#4B4B4B",
             }}
           >
-            Structured Intelligence for Project Delivery
+            Fire Protection Product Intelligence
           </p>
         </div>
 
@@ -290,7 +290,7 @@ export default function AcceptInvite() {
                   color: "#6B7280",
                 }}
               >
-                Redirecting to dpow.chat...
+                Redirecting to hf.bluebook...
               </p>
             </div>
           )}
@@ -344,7 +344,7 @@ export default function AcceptInvite() {
                   fontWeight: 500,
                 }}
               >
-                Go to dpow.chat
+                Go to hf.bluebook
               </button>
             </div>
           )}
