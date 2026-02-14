@@ -54,6 +54,7 @@ export default function CompliancePage() {
 
   async function loadRegulations() {
     setLoading(true);
+    setError("");
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { router.replace("/auth"); return; }
 
@@ -65,14 +66,21 @@ export default function CompliancePage() {
     params.set("page", String(page));
     params.set("limit", String(limit));
 
-    const res = await fetch(`/api/compliance?${params}`, {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
+    try {
+      const res = await fetch(`/api/compliance?${params}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      setRegulations(data.regulations || []);
-      setTotal(data.total || 0);
+      if (res.ok) {
+        const data = await res.json();
+        setRegulations(data.regulations || []);
+        setTotal(data.total || 0);
+      } else {
+        const err = await res.json().catch(() => ({ error: "Request failed" }));
+        setError(err.error || "Failed to load regulations");
+      }
+    } catch {
+      setError("Network error — check your connection and try again");
     }
     setLoading(false);
   }

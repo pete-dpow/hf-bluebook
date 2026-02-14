@@ -116,18 +116,8 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Env validation (first request only)
-  const warnings = checkEnv();
-  if (warnings.length > 0 && process.env.NODE_ENV === "production") {
-    // In production, block requests if critical env vars are missing
-    const missing = warnings.filter((w) => w.startsWith("ENV MISSING:"));
-    if (missing.length > 0) {
-      return NextResponse.json(
-        { error: "Server configuration error. Contact administrator." },
-        { status: 500 }
-      );
-    }
-  }
+  // Env validation (first request only — log warnings, don't block)
+  checkEnv();
 
   // Rate limiting
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
