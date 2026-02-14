@@ -15,8 +15,8 @@ export async function POST(request: Request) {
 
     // Create Supabase client with user's token
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "build-placeholder",
       {
         global: {
           headers: {

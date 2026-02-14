@@ -25,6 +25,7 @@ npm run postinstall  # Copy WASM files for web-ifc (runs automatically after npm
 - **Scraping**: Playwright via Inngest (NOT Cheerio, NOT Browserless.io)
 - **UI**: shadcn/ui + Tailwind CSS + Lucide icons
 - **3D/IFC Viewer**: Three.js + @thatopen/components + web-ifc (WASM). Webpack configured for `asyncWebAssembly` in `next.config.js`.
+- **Point Cloud (Surveying)**: Three.js directly (NOT @thatopen). E57 via `web-e57`, LAS/LAZ via `@loaders.gl/las`. DXF export via `@tarikjabiri/dxf`.
 - **Fonts**: Cormorant Garamond (headings) + IBM Plex Sans (body)
 - **Path alias**: `@/*` maps to project root (tsconfig.json)
 
@@ -62,7 +63,10 @@ lib/hybridSearch.ts               — Vector + keyword hybrid search
 lib/embeddingService.ts           — OpenAI embedding wrapper (1536 dims)
 lib/dpowAiClient.ts              — AI client (filename kept for import compat, NOT renamed yet)
 lib/inngest/client.ts             — Inngest client
-lib/inngest/functions.ts          — 7 background job definitions
+lib/inngest/functions.ts          — 8 background job definitions
+lib/inngest/surveyFunctions.ts   — processSurveyScan Inngest function
+lib/surveying/                   — LAS parser, decimator, floor/wall detectors, PDF/DXF exporters
+lib/productFileParser.ts         — PDF/DXF product file parser
 lib/scrapers/playwrightScraper.ts — Single scraper for products + regulations
 components/LeftSidebar.tsx        — Fixed 64px nav with icons + tooltips
 scripts/copy-wasm.js             — Postinstall: copies web-ifc WASM to public/wasm/
@@ -70,12 +74,12 @@ scripts/copy-wasm.js             — Postinstall: copies web-ifc WASM to public/
 
 ## Database
 
-- **27 tables total** (12 existing dpow.chat + 15 new)
-- **38 RLS policies** on new tables
+- **31 tables total** (12 existing dpow.chat + 15 Sprint 2 + 4 Sprint 10 surveying)
+- **48 RLS policies** on new tables (38 Sprint 2 + 10 Sprint 10)
 - **3 RPC functions**: match_products, match_bluebook_chunks, match_regulation_sections
-- **1 sequence**: quote_number_seq
+- **2 sequences**: quote_number_seq, plan_number_seq
 - All vectors are VECTOR(1536) using text-embedding-3-small
-- **Migrations**: `supabase/migrations/` — Sprint 2 tables in `001_sprint2_tables.sql`, earlier dpow.chat migrations for tokens + pgvector
+- **Migrations**: `supabase/migrations/` — Sprint 2 tables in `001_sprint2_tables.sql`, Sprint 10 surveying in `004_sprint10_surveying.sql`, earlier dpow.chat migrations for tokens + pgvector
 
 ## Melvin Chat Modes (5)
 
@@ -117,7 +121,7 @@ These are Harmony Fire's product divisions. Hardcoded in products table CHECK co
 
 ## Build Progress
 
-Sprints 1-3 are complete (UI shell, database, data mining). See `BUILD_PLAN.md` for remaining tasks in Sprints 4-9. Sprint 1 has ~17 cosmetic rebrand tasks still open (text changes only, no logic).
+Sprints 1-10 are complete (all core features built). Emergency Auth, Phase A (SharePoint), Phase B (Rebrand) also complete. Remaining: Sprint 9 tasks 9.3 (surveying placeholder — superseded by Sprint 10), 9.6 (dangerous domain changes), 9.7/9.8 (brand colors). See `BUILD_PLAN.md` for full history.
 
 ## Reference Docs
 

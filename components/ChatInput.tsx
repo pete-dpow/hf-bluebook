@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Paperclip, Loader2 } from "lucide-react";
 import VoiceInput from "./VoiceInput";
-import { useFreemiumUpload } from "@/components/hooks/useFreemiumUpload";
+import { supabase } from "@/lib/supabase";
 import { jsPDF } from "jspdf";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 
@@ -19,8 +19,9 @@ export default function ChatInput({
   messages?: { role: string; content: string }[];
 }) {
   const [value, setValue] = useState("");
-  const { uploading, handleFreemiumUpload } = useFreemiumUpload();
+  const [uploading, setUploading] = useState(false);
   const textAreaRef = useRef<HTMLInputElement>(null);
+  // supabase imported from @/lib/supabase at module scope
 
   useEffect(() => {
     textAreaRef.current?.focus();
@@ -37,11 +38,26 @@ export default function ChatInput({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setUploading(true);
     try {
-      await handleFreemiumUpload(file);
-      alert(`✅ ${file.name} processed in freemium mode.`);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload-excel", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+      alert(`${file.name} uploaded successfully.`);
     } catch (err: any) {
       alert(err.message || "Upload failed.");
+    } finally {
+      setUploading(false);
     }
   };
 

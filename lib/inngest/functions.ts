@@ -12,6 +12,7 @@ import { validateGoldenThread } from "@/lib/goldenThread/validator";
 import { generateGoldenThreadPdf } from "@/lib/goldenThread/pdfGenerator";
 import { generateGoldenThreadJson, generateGoldenThreadCsvs } from "@/lib/goldenThread/exporters";
 import { uploadGoldenThreadWithFallback } from "@/lib/sharepoint/uploadWithFallback";
+import { processSurveyScan } from "@/lib/inngest/surveyFunctions";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://odhvxoelxiffhocrgtll.supabase.co",
@@ -659,4 +660,55 @@ const generateGoldenThread = inngest.createFunction(
   }
 );
 
-export const functions = [scrapeManufacturer, generateProductEmbeddings, sendQuoteEmail, ingestBluebookPDFs, scrapeRegulation, generateGoldenThread];
+// 7. Parse uploaded product file — extract text, generate embedding
+const parseProductFileJob = inngest.createFunction(
+  { id: "parse-product-file", concurrency: [{ limit: 3 }] },
+  { event: "product/file.uploaded" },
+  async ({ event, step }) => {
+    const { product_id, file_path, file_name, organization_id } = event.data;
+
+    // Download + parse in one step (Buffer can't survive Inngest JSON serialization)
+    const parsed = await step.run("download-and-parse", async () => {
+      const { parseProductFile } = await import("@/lib/productFileParser");
+      const { data, error } = await supabaseAdmin.storage
+        .from("product-files")
+        .download(file_path);
+      if (error || !data) throw new Error("Failed to download product file");
+      const fileBuffer = Buffer.from(await data.arrayBuffer());
+      return parseProductFile(fileBuffer, file_name);
+    });
+
+    // Update product with extracted text
+    await step.run("update-product", async () => {
+      const { data: product } = await supabaseAdmin
+        .from("products")
+        .select("description, specifications")
+        .eq("id", product_id)
+        .single();
+
+      const existingDesc = product?.description || "";
+      const appendedDesc = existingDesc
+        ? `${existingDesc}\n\n--- Extracted from ${file_name} ---\n${parsed.text.slice(0, 2000)}`
+        : parsed.text.slice(0, 2000);
+
+      await supabaseAdmin
+        .from("products")
+        .update({
+          description: appendedDesc,
+          needs_review: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", product_id);
+    });
+
+    // Trigger re-embedding
+    await step.sendEvent("trigger-re-embed", {
+      name: "products/embeddings.requested",
+      data: { organization_id, product_id },
+    });
+
+    return { product_id, file_name, text_length: parsed.text.length, pages: parsed.pageCount };
+  }
+);
+
+export const functions = [scrapeManufacturer, generateProductEmbeddings, sendQuoteEmail, ingestBluebookPDFs, scrapeRegulation, generateGoldenThread, parseProductFileJob, processSurveyScan];

@@ -246,14 +246,66 @@ Everything else depends on this.
 
 ## Sprint 9 — Polish + Future
 
-- [ ] **9.1** PDF/DXF parsers for uploaded product files
-- [ ] **9.2** Inngest function: `parseProductFile`
-- [ ] **9.3** Surveying shell page (`/surveying`) — placeholder "Coming Soon"
-- [ ] **9.4** Update CLAUDE.md with final build state
-- [ ] **9.5** Clean up: remove unused freemium paths, test routes, debug endpoints
+- [x] **9.1** PDF/DXF parsers for uploaded product files — `lib/productFileParser.ts`
+- [x] **9.2** Inngest function: `parseProductFile` — added to `lib/inngest/functions.ts`
+- [x] **9.3** Surveying shell page (`/surveying`) — superseded by Sprint 10 full surveying module
+- [x] **9.4** Update CLAUDE.md with final build state
+- [x] **9.5** Clean up: remove unused freemium paths, test routes, debug endpoints — deleted 6 files + updated ChatInput
 - [ ] **9.6** Dangerous dpow changes — update Vercel URLs, email addresses, OAuth redirects (ONLY after new domain is configured)
 - [ ] **9.7** Brand colors — update `globals.css` HSL variables + dark mode to HF blue palette
 - [ ] **9.8** `tailwind.config.ts` — verify HSL vars flow through (no structural changes needed)
+
+---
+
+## Sprint 10 — Surveying Module (Point Cloud → Floor Plans)
+
+**Depends on:** Phase A (SharePoint) + Sprint 2 (database)
+**Status: COMPLETE**
+
+### Foundation
+- [x] **10.1** Database migration — 4 tables (survey_scans, survey_floors, survey_walls, survey_plans), 1 sequence, 7 indexes, 10 RLS — `supabase/migrations/004_sprint10_surveying.sql`
+- [x] **10.2** Supabase Storage bucket `survey-scans` (private, 500MB limit)
+- [x] **10.3** `npm install web-e57 @loaders.gl/core @loaders.gl/las @tarikjabiri/dxf`
+- [x] **10.4** TypeScript interfaces — `lib/surveying/types.ts`
+
+### Processing Pipeline
+- [x] **10.5** LAS/LAZ parser — `lib/surveying/lasParser.ts`
+- [x] **10.6** Voxel grid decimator (2M points) — `lib/surveying/decimator.ts`
+- [x] **10.7** Floor detector (Z-histogram) — `lib/surveying/floorDetector.ts`
+- [x] **10.8** Wall detector (RANSAC) — `lib/surveying/wallDetector.ts`
+- [x] **10.9** E57→LAZ converter — `lib/surveying/e57Converter.ts`
+
+### Inngest
+- [x] **10.10** `processSurveyScan` Inngest function — `lib/inngest/surveyFunctions.ts`
+- [x] **10.11** Register in functions array — `lib/inngest/functions.ts`
+
+### API Routes (6)
+- [x] **10.12** GET list + POST upload — `app/api/surveying/scans/route.ts`
+- [x] **10.13** GET detail + DELETE — `app/api/surveying/scans/[id]/route.ts`
+- [x] **10.14** GET signed URL — `app/api/surveying/scans/[id]/point-cloud/route.ts`
+- [x] **10.15** PATCH confirm floor — `app/api/surveying/floors/[id]/confirm/route.ts`
+- [x] **10.16** Shared layout calculator — `lib/surveying/planRenderer.ts`
+- [x] **10.17** PDF generator — `lib/surveying/planPdfGenerator.ts`
+- [x] **10.18** DXF exporter — `lib/surveying/planDxfExporter.ts`
+- [x] **10.19** POST generate PDF/DXF — `app/api/surveying/floors/[id]/export/route.ts`
+- [x] **10.20** GET download plan — `app/api/surveying/plans/[id]/download/route.ts`
+
+### UI Components (6)
+- [x] **10.21** ScanUploadCard — `components/surveying/ScanUploadCard.tsx`
+- [x] **10.22** ScanCard — `components/surveying/ScanCard.tsx`
+- [x] **10.23** PointCloudViewer — `components/surveying/PointCloudViewer.tsx`
+- [x] **10.24** FloorLevelPanel — `components/surveying/FloorLevelPanel.tsx`
+- [x] **10.25** FloorPlanViewer — `components/surveying/FloorPlanViewer.tsx`
+- [x] **10.26** SurveyToolsPanel — `components/surveying/SurveyToolsPanel.tsx`
+
+### Pages (2)
+- [x] **10.27** Surveying dashboard — `app/surveying/page.tsx`
+- [x] **10.28** Scan viewer (split-screen 3D/2D) — `app/surveying/[id]/page.tsx`
+
+### Integration
+- [x] **10.29** Wire export buttons in SurveyToolsPanel
+- [x] **10.30** Update CLAUDE.md — table count (31), Inngest count (8)
+- [x] **10.31** Add Sprint 10 section to BUILD_PLAN.md
 
 ---
 
@@ -271,11 +323,11 @@ Sprint 8 (Melvin) ──────── depends on Sprint 5 + Sprint 6 ─→
 Emergency Auth ─────────── no deps ────────────────────────→ ✅ done
 Phase A (SharePoint) ──── depends on Emergency Auth ───────→ ✅ done
 Phase B (Rebrand Polish) ─ no deps, parallel with Phase A ─→ ✅ done
-Sprint 9 (Polish) ──────── depends on Phase A + B ─────────→ pending (8 tasks) ← UNBLOCKED
-Sprint 10 (Surveying) ──── depends on Phase A ─────────────→ future (31 tasks)
+Sprint 9 (Polish) ──────── depends on Phase A + B ─────────→ ✅ done (5/8, 3 deferred)
+Sprint 10 (Surveying) ──── depends on Phase A ─────────────→ ✅ done (31/31)
 ```
 
-**Total remaining: 39 tasks (Sprint 9: 8, Sprint 10: 31). Phase A + B complete.**
+**Total remaining: 3 tasks (9.6 dangerous domain changes, 9.7 brand colors, 9.8 Tailwind verify). All sprints + phases complete.**
 
 ---
 
@@ -287,16 +339,20 @@ playwright
 @anthropic-ai/sdk
 pdf-parse
 exceljs
+web-e57
+@loaders.gl/core
+@loaders.gl/las
+@tarikjabiri/dxf
 ```
 
 ---
 
 ## Totals
 
-- **9 sprints + Emergency Auth + Phase A + Phase B**, **~90 tasks built, 39 remaining** (Sprint 9: 8, Sprint 10: 31)
-- **27 database tables** (12 inherited + 15 new) + 3 RPC functions + 38 RLS policies
-- **86 API routes** (46 inherited + 40 new)
-- **33 pages** (17 inherited + 16 new)
-- **~50 active components** (including Dashboard, Data, Auth, Scope groups)
-- **36 lib files** (17 new + 19 inherited)
-- **6 Inngest background functions** (parseProductFile deferred to Sprint 9)
+- **10 sprints + Emergency Auth + Phase A + Phase B**, **~125 tasks built, 3 remaining** (9.6, 9.7, 9.8)
+- **31 database tables** (12 inherited + 15 Sprint 2 + 4 Sprint 10) + 3 RPC functions + 48 RLS policies + 2 sequences
+- **92 API routes** (46 inherited + 40 Sprints 3-8 + 6 Sprint 10 surveying)
+- **35 pages** (17 inherited + 16 Sprints 3-8 + 2 Sprint 10 surveying)
+- **~56 active components** (including Dashboard, Data, Auth, Scope, Surveying groups)
+- **46 lib files** (17 inherited + 19 Sprints 3-8 + 10 Sprint 10 surveying)
+- **8 Inngest background functions** (7 original + processSurveyScan)

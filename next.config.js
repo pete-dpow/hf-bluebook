@@ -6,6 +6,7 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    serverComponentsExternalPackages: ['web-e57', 'pdf-parse'],
   },
   webpack: (config, { isServer }) => {
     // WASM support for web-ifc
