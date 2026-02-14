@@ -33,16 +33,19 @@ export default function AvatarUpload({ currentUrl, displayName, onUploaded }: Av
 
     setProcessing(true);
     try {
-      const { removeBackground } = await import("@imgly/background-removal");
-      const blob = await removeBackground(file, {
+      // Load @imgly/background-removal from CDN at runtime to avoid
+      // webpack bundling issues with onnxruntime-web + Next.js 13.5
+      // @ts-ignore — CDN import resolved at runtime, not by webpack/tsc
+      const bgLib = await import(/* webpackIgnore: true */ "https://esm.sh/@imgly/background-removal@1.5.1");
+      const blob = await bgLib.removeBackground(file, {
         output: { format: "image/png", quality: 0.9 },
       });
       const url = URL.createObjectURL(blob);
       setPreview(url);
       setProcessedBlob(blob);
     } catch (err) {
-      console.error("Background removal failed:", err);
-      // Fallback: use original image
+      console.error("Background removal failed, using original:", err);
+      // Fallback: use original image as-is
       const url = URL.createObjectURL(file);
       setPreview(url);
       setProcessedBlob(file);
