@@ -8,6 +8,7 @@ interface AvatarUploadProps {
   currentUrl: string | null;
   displayName: string;
   onUploaded: (url: string) => void;
+  size?: number;
 }
 
 function getInitials(name: string): string {
@@ -20,7 +21,7 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-export default function AvatarUpload({ currentUrl, displayName, onUploaded }: AvatarUploadProps) {
+export default function AvatarUpload({ currentUrl, displayName, onUploaded, size = 80 }: AvatarUploadProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [processedBlob, setProcessedBlob] = useState<Blob | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -45,7 +46,6 @@ export default function AvatarUpload({ currentUrl, displayName, onUploaded }: Av
       setProcessedBlob(blob);
     } catch (err) {
       console.error("Background removal failed, using original:", err);
-      // Fallback: use original image as-is
       const url = URL.createObjectURL(file);
       setPreview(url);
       setProcessedBlob(file);
@@ -85,9 +85,10 @@ export default function AvatarUpload({ currentUrl, displayName, onUploaded }: Av
   };
 
   const initials = getInitials(displayName);
+  const fontSize = size > 100 ? "text-3xl" : size > 60 ? "text-xl" : "text-base";
 
   return (
-    <div className="relative group">
+    <div className="relative group" style={{ width: size, height: size }}>
       <input
         ref={fileRef}
         type="file"
@@ -98,19 +99,23 @@ export default function AvatarUpload({ currentUrl, displayName, onUploaded }: Av
 
       {/* Avatar display */}
       <div
-        className="w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm cursor-pointer flex items-center justify-center"
-        style={{ background: currentUrl || preview ? "transparent" : "linear-gradient(135deg, #0056a7, #0078d4)" }}
+        className="rounded-xl overflow-hidden border-2 border-[#E5E7EB] shadow-sm cursor-pointer flex items-center justify-center"
+        style={{
+          width: size,
+          height: size,
+          background: currentUrl || preview ? "#F3F4F6" : "linear-gradient(135deg, #0056a7, #0078d4)",
+        }}
         onClick={() => !processing && !preview && fileRef.current?.click()}
       >
         {processing ? (
-          <Loader2 className="w-6 h-6 animate-spin text-white" />
+          <Loader2 className="w-8 h-8 animate-spin text-white" />
         ) : preview ? (
           <img src={preview} alt="Preview" className="w-full h-full object-cover" />
         ) : currentUrl ? (
           <img src={currentUrl} alt={displayName} className="w-full h-full object-cover" />
         ) : (
           <span
-            className="text-white text-xl font-semibold"
+            className={`text-white font-semibold ${fontSize}`}
             style={{ fontFamily: "var(--font-cormorant)" }}
           >
             {initials}
@@ -118,37 +123,37 @@ export default function AvatarUpload({ currentUrl, displayName, onUploaded }: Av
         )}
       </div>
 
-      {/* Camera overlay on hover (only when no preview) */}
+      {/* Camera overlay on hover */}
       {!preview && !processing && (
         <div
-          className="absolute inset-0 w-20 h-20 rounded-lg bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+          className="absolute inset-0 rounded-xl bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
           onClick={() => fileRef.current?.click()}
         >
-          <Camera className="w-5 h-5 text-white" />
+          <Camera className="w-6 h-6 text-white" />
         </div>
       )}
 
-      {/* Confirm/Cancel buttons when preview is showing */}
+      {/* Confirm/Cancel when preview showing */}
       {preview && !uploading && (
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
           <button
             onClick={handleConfirm}
-            className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center shadow-md hover:bg-green-600 transition"
+            className="w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center shadow-md hover:bg-green-600 transition"
           >
-            <Check className="w-3.5 h-3.5" />
+            <Check className="w-4 h-4" />
           </button>
           <button
             onClick={handleCancel}
-            className="w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 transition"
+            className="w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 transition"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {uploading && (
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
-          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2">
+          <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
         </div>
       )}
     </div>
