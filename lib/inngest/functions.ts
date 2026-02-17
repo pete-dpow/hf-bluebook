@@ -2,6 +2,7 @@ import { inngest } from "./client";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { scrapeManufacturerProducts } from "@/lib/scrapers/playwrightScraper";
+import { scrapeShopifyProducts } from "@/lib/scrapers/shopifyScraper";
 import { generateQuotePdf } from "@/lib/quoteGenerator";
 import { scrapeAndStoreRegulation } from "@/lib/compliance/regulationScraper";
 import { extractPagesFromPdf, chunkPages } from "@/lib/bluebook/chunker";
@@ -38,10 +39,13 @@ const scrapeManufacturer = inngest.createFunction(
       return data;
     });
 
-    if (!manufacturer?.scraper_config?.product_list_url) {
+    const hasPlaywrightConfig = !!manufacturer?.scraper_config?.product_list_url;
+    const hasShopifyConfig = manufacturer?.scraper_config?.type === "shopify" && !!manufacturer?.scraper_config?.store_url;
+
+    if (!hasPlaywrightConfig && !hasShopifyConfig) {
       await supabaseAdmin.from("scrape_jobs").update({
         status: "failed",
-        error_log: "No scraper config or product_list_url set",
+        error_log: "No scraper config set (need product_list_url for Playwright or type:'shopify' with store_url)",
         completed_at: new Date().toISOString(),
       }).eq("id", job_id);
       return { error: "No scraper config" };
@@ -55,8 +59,11 @@ const scrapeManufacturer = inngest.createFunction(
       }).eq("id", job_id);
     });
 
-    // Run scraper
+    // Run scraper — route based on config type
     const products = await step.run("scrape-products", async () => {
+      if (manufacturer.scraper_config.type === "shopify") {
+        return scrapeShopifyProducts(manufacturer.scraper_config);
+      }
       return scrapeManufacturerProducts(
         manufacturer.scraper_config,
         async (current, total, found) => {
@@ -96,7 +103,7 @@ const scrapeManufacturer = inngest.createFunction(
           await supabaseAdmin.from("products").insert({
             manufacturer_id,
             organization_id: manufacturer.organization_id,
-            pillar: "fire_stopping", // default — needs manual review
+            pillar: manufacturer.scraper_config?.default_pillar || "fire_stopping",
             product_code: productCode,
             product_name: p.product_name,
             description: p.description,
