@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/authHelper";
 import { createClient } from "@supabase/supabase-js";
 import { inngest } from "@/lib/inngest/client";
-import { scrapeShopifyProducts } from "@/lib/scrapers/shopifyScraper";
+import { scrapeShopifyProducts, type ShopifyScraperConfig } from "@/lib/scrapers/shopifyScraper";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://odhvxoelxiffhocrgtll.supabase.co",
@@ -12,6 +12,24 @@ const supabaseAdmin = createClient(
 
 export const maxDuration = 60;
 
+/**
+ * Auto-detect if a URL is a Shopify store by probing /products.json
+ */
+async function detectShopify(websiteUrl: string): Promise<boolean> {
+  try {
+    const url = websiteUrl.replace(/\/+$/, "") + "/products.json?limit=1";
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return Array.isArray(data?.products);
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await getAuthUser(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -20,15 +38,37 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const body = await req.json().catch(() => ({}));
   const scrapeType = body.scrape_type || "full";
 
-  // Get manufacturer to check scraper config
+  // Get manufacturer
   const { data: manufacturer } = await supabaseAdmin
     .from("manufacturers")
-    .select("id, organization_id, scraper_config")
+    .select("id, organization_id, website_url, scraper_config")
     .eq("id", params.id)
     .single();
 
   if (!manufacturer) {
     return NextResponse.json({ error: "Manufacturer not found" }, { status: 404 });
+  }
+
+  // Determine scraper type — explicit config or auto-detect from website_url
+  let isShopify = manufacturer.scraper_config?.type === "shopify";
+  let shopifyConfig: ShopifyScraperConfig | null = null;
+
+  if (isShopify) {
+    shopifyConfig = manufacturer.scraper_config as ShopifyScraperConfig;
+  } else if (manufacturer.website_url && !manufacturer.scraper_config?.product_list_url) {
+    // No explicit config — try auto-detecting Shopify
+    isShopify = await detectShopify(manufacturer.website_url);
+    if (isShopify) {
+      shopifyConfig = {
+        type: "shopify",
+        store_url: manufacturer.website_url.replace(/\/+$/, ""),
+        default_pillar: "fire_stopping",
+      };
+      // Save detected config for future scrapes
+      await supabaseAdmin.from("manufacturers").update({
+        scraper_config: shopifyConfig,
+      }).eq("id", params.id);
+    }
   }
 
   // Create scrape job
@@ -54,18 +94,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   // Fallback: synchronous Shopify scraping (no Playwright needed)
-  if (manufacturer.scraper_config?.type === "shopify") {
+  if (isShopify && shopifyConfig) {
     try {
       await supabaseAdmin.from("scrape_jobs").update({
         status: "running",
         started_at: new Date().toISOString(),
       }).eq("id", job.id);
 
-      const products = await scrapeShopifyProducts(manufacturer.scraper_config);
+      const products = await scrapeShopifyProducts(shopifyConfig);
 
       let created = 0;
       let updated = 0;
-      const defaultPillar = manufacturer.scraper_config.default_pillar || "fire_stopping";
+      const defaultPillar = shopifyConfig.default_pillar || "fire_stopping";
 
       for (const p of products) {
         const productCode = p.product_code || p.product_name.toLowerCase().replace(/\s+/g, "-").slice(0, 50);
@@ -117,7 +157,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
       return NextResponse.json({
         job,
-        mode: "fetch",
+        mode: "shopify",
         products_created: created,
         products_updated: updated,
         total: products.length,
@@ -133,15 +173,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
   }
 
-  // No fallback available for Playwright-based scrapers
+  // No website_url and no scraper config — nothing to scrape
+  const reason = manufacturer.website_url
+    ? "This website requires Playwright scraping (needs Inngest infrastructure configured)"
+    : "No website URL configured for this manufacturer";
+
   await supabaseAdmin.from("scrape_jobs").update({
     status: "failed",
-    error_log: "Inngest unavailable and no sync fallback for this scraper type",
+    error_log: reason,
     completed_at: new Date().toISOString(),
   }).eq("id", job.id);
 
-  return NextResponse.json(
-    { error: "Inngest unavailable — Playwright-based scraping requires Inngest infrastructure" },
-    { status: 503 }
-  );
+  return NextResponse.json({ error: reason }, { status: 400 });
 }
