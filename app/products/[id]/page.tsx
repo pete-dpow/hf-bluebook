@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Loader2, Globe, FileText, Trash2, Upload, ShieldCheck, Plus } from "lucide-react";
+import { ArrowLeft, Loader2, Globe, FileText, Trash2, Upload, ShieldCheck, Plus, ExternalLink } from "lucide-react";
 import RegulationLinkModal from "@/components/RegulationLinkModal";
 
 const PILLAR_LABELS: Record<string, string> = {
@@ -181,13 +181,49 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
+        {/* Source link */}
+        {product.scraped_data?.source_url && (
+          <div className="mb-6">
+            <a
+              href={product.scraped_data.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition"
+              style={{ fontFamily: "var(--font-ibm-plex)" }}
+            >
+              <ExternalLink size={14} />
+              View on manufacturer website
+            </a>
+          </div>
+        )}
+
+        {/* Product images */}
+        {product.scraped_data?.image_urls?.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+              Images
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {product.scraped_data.image_urls.slice(0, 8).map((url: string, i: number) => (
+                <div key={i} className="aspect-square rounded-lg border border-gray-100 overflow-hidden bg-gray-50">
+                  <img
+                    src={url}
+                    alt={`${product.product_name} ${i + 1}`}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Description */}
         {product.description && (
           <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
             <h2 className="text-lg font-medium text-gray-900 mb-2" style={{ fontFamily: "var(--font-ibm-plex)" }}>
               Description
             </h2>
-            <p className="text-sm text-gray-600 leading-relaxed" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line" style={{ fontFamily: "var(--font-ibm-plex)" }}>
               {product.description}
             </p>
           </div>
@@ -196,44 +232,52 @@ export default function ProductDetailPage() {
         {/* Pricing & Details */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-            Pricing & Details
+            Details
           </h2>
-          <div className="grid grid-cols-4 gap-4 text-sm" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-            <div>
-              <span className="text-gray-500">List Price</span>
-              <p className="text-gray-900">{product.list_price ? `${product.currency || "GBP"} ${product.list_price.toFixed(2)}` : "—"}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Trade Price</span>
-              <p className="text-gray-900">{product.trade_price ? `${product.currency || "GBP"} ${product.trade_price.toFixed(2)}` : "—"}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Sell Price</span>
-              <p className="text-gray-900">{product.sell_price ? `${product.currency || "GBP"} ${product.sell_price.toFixed(2)}` : "—"}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Unit</span>
-              <p className="text-gray-900">{product.unit || "each"}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-4 gap-4 text-sm mt-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-            <div>
-              <span className="text-gray-500">Lead Time</span>
-              <p className="text-gray-900">{product.lead_time_days ? `${product.lead_time_days} days` : "—"}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Min Order Qty</span>
-              <p className="text-gray-900">{product.minimum_order_quantity || 1}</p>
-            </div>
+          <div className="grid grid-cols-3 md:grid-cols-4 gap-4 text-sm" style={{ fontFamily: "var(--font-ibm-plex)" }}>
             <div>
               <span className="text-gray-500">Manufacturer</span>
               <p className="text-gray-900">{product.manufacturers?.name || "—"}</p>
             </div>
             <div>
-              <span className="text-gray-500">Certifications</span>
-              <p className="text-gray-900">{product.certifications?.length ? product.certifications.join(", ") : "—"}</p>
+              <span className="text-gray-500">Price</span>
+              <p className="text-gray-900">
+                {product.list_price
+                  ? `${product.currency || "GBP"} ${product.list_price.toFixed(2)}`
+                  : product.scraped_data?.price_text || "—"}
+              </p>
+            </div>
+            <div>
+              <span className="text-gray-500">Unit</span>
+              <p className="text-gray-900">{product.unit || "each"}</p>
+            </div>
+            <div>
+              <span className="text-gray-500">Lead Time</span>
+              <p className="text-gray-900">{product.lead_time_days ? `${product.lead_time_days} days` : "—"}</p>
             </div>
           </div>
+          {(product.trade_price || product.sell_price || product.certifications?.length > 0) && (
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-4 text-sm mt-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+              {product.trade_price && (
+                <div>
+                  <span className="text-gray-500">Trade Price</span>
+                  <p className="text-gray-900">{`${product.currency || "GBP"} ${product.trade_price.toFixed(2)}`}</p>
+                </div>
+              )}
+              {product.sell_price && (
+                <div>
+                  <span className="text-gray-500">Sell Price</span>
+                  <p className="text-gray-900">{`${product.currency || "GBP"} ${product.sell_price.toFixed(2)}`}</p>
+                </div>
+              )}
+              {product.certifications?.length > 0 && (
+                <div>
+                  <span className="text-gray-500">Certifications</span>
+                  <p className="text-gray-900">{product.certifications.join(", ")}</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Specifications */}

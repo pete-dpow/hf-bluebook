@@ -133,6 +133,9 @@ function mapShopifyProduct(
       ? `£${firstPrice}`
       : "Quote on request";
 
+  // Collect image URLs
+  const imageUrls = product.images?.map((img) => img.src).filter(Boolean) || [];
+
   return {
     product_name: product.title,
     product_code: productCode,
@@ -140,6 +143,7 @@ function mapShopifyProduct(
     specifications: specs,
     price_text: priceText,
     pdf_urls: [],
+    image_urls: imageUrls,
     source_url: `${storeUrl}/products/${product.handle}`,
   };
 }

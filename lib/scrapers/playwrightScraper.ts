@@ -32,6 +32,7 @@ export interface ScrapedProduct {
   specifications: Record<string, string>;
   price_text?: string;
   pdf_urls: string[];
+  image_urls?: string[];
   source_url: string;
 }
 
