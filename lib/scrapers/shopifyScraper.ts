@@ -1,6 +1,7 @@
 /**
  * Shopify JSON API product scraper.
  * Fetches structured product data from /products.json — no Playwright needed.
+ * Also enriches products with installation/application page content.
  * Works on Vercel serverless.
  */
 
@@ -49,6 +50,82 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+/**
+ * Extract test standard references from HTML description.
+ * Looks for patterns like "BS EN 1366-3", "EN 13501-2", "EI 120", etc.
+ */
+function extractTestStandards(html: string): string[] {
+  if (!html) return [];
+  const text = stripHtml(html);
+  const standards: string[] = [];
+
+  // BS EN / EN standards
+  const enMatches = text.match(/(?:BS\s+)?EN\s+\d[\d\-.:]+/gi);
+  if (enMatches) {
+    for (const m of enMatches) {
+      const normalized = m.replace(/\s+/g, " ").trim();
+      if (!standards.includes(normalized)) standards.push(normalized);
+    }
+  }
+
+  // Fire ratings: EI 30, EI 60, EI 120, EI 240, etc.
+  const ratingMatches = text.match(/EI\s*\d{2,3}/gi);
+  if (ratingMatches) {
+    for (const m of ratingMatches) {
+      const normalized = m.replace(/\s+/g, " ").trim().toUpperCase();
+      if (!standards.includes(normalized)) standards.push(normalized);
+    }
+  }
+
+  // BS standards (without EN)
+  const bsMatches = text.match(/BS\s+\d[\d\-.:]+/gi);
+  if (bsMatches) {
+    for (const m of bsMatches) {
+      const normalized = m.replace(/\s+/g, " ").trim();
+      // Skip if already captured as BS EN
+      if (!standards.some((s) => s.includes(normalized))) standards.push(normalized);
+    }
+  }
+
+  return standards;
+}
+
+/**
+ * Derive the product code prefix from SKU for install page lookup.
+ * e.g. "QWR25/CE" → "qwr", "PUTPAD-S" → "putpad", "QSS310ML" → "qss"
+ */
+function deriveCodePrefix(sku: string): string {
+  // Remove trailing numbers, sizes, suffixes
+  return sku
+    .replace(/[\d\/\-].*/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Try to fetch a Shopify page's body_html via the JSON API.
+ * Returns stripped text or null if the page doesn't exist or has no content.
+ */
+async function fetchPageContent(storeUrl: string, pageHandle: string): Promise<string | null> {
+  try {
+    const url = `${storeUrl}/pages/${pageHandle}.json`;
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 (compatible; HFBluebook/1.0)",
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const html = data?.page?.body_html;
+    if (!html || html.trim().length < 20) return null;
+    return stripHtml(html);
+  } catch {
+    return null;
+  }
+}
+
 export async function scrapeShopifyProducts(
   config: ShopifyScraperConfig
 ): Promise<ScrapedProduct[]> {
@@ -85,7 +162,72 @@ export async function scrapeShopifyProducts(
     page++;
   }
 
+  // Enrich products with install/application page content (parallel, best-effort)
+  await enrichWithInstallPages(allProducts, storeUrl);
+
   return allProducts;
+}
+
+/**
+ * For each product, try to fetch install/application pages from Shopify.
+ * Pages follow the pattern /pages/install{code} and /pages/application{code}.
+ */
+async function enrichWithInstallPages(
+  products: ScrapedProduct[],
+  storeUrl: string
+): Promise<void> {
+  // Build a set of code prefixes we need to fetch
+  const enrichTasks: { product: ScrapedProduct; codePrefix: string }[] = [];
+
+  for (const p of products) {
+    if (!p.product_code) continue;
+    const prefix = deriveCodePrefix(p.product_code);
+    if (prefix && prefix.length >= 2) {
+      enrichTasks.push({ product: p, codePrefix: prefix });
+    }
+  }
+
+  // Deduplicate by code prefix (multiple variants share the same install page)
+  const seen = new Set<string>();
+  const uniqueTasks = enrichTasks.filter((t) => {
+    if (seen.has(t.codePrefix)) return false;
+    seen.add(t.codePrefix);
+    return true;
+  });
+
+  // Fetch install + application pages in parallel (max 10 concurrent)
+  const batchSize = 10;
+  for (let i = 0; i < uniqueTasks.length; i += batchSize) {
+    const batch = uniqueTasks.slice(i, i + batchSize);
+    const results = await Promise.allSettled(
+      batch.flatMap((t) => [
+        fetchPageContent(storeUrl, `install${t.codePrefix}`).then((content) => ({
+          codePrefix: t.codePrefix,
+          type: "installation" as const,
+          content,
+        })),
+        fetchPageContent(storeUrl, `application${t.codePrefix}`).then((content) => ({
+          codePrefix: t.codePrefix,
+          type: "application" as const,
+          content,
+        })),
+      ])
+    );
+
+    // Apply results to products
+    for (const result of results) {
+      if (result.status !== "fulfilled" || !result.value.content) continue;
+      const { codePrefix, type, content } = result.value;
+
+      // Apply to all products sharing this code prefix
+      for (const task of enrichTasks) {
+        if (task.codePrefix === codePrefix) {
+          const key = type === "installation" ? "Installation Details" : "Application Guide";
+          task.product.specifications[key] = content.slice(0, 2000);
+        }
+      }
+    }
+  }
 }
 
 function mapShopifyProduct(
@@ -101,9 +243,20 @@ function mapShopifyProduct(
   // Build specifications from variants and tags
   const specs: Record<string, string> = {};
 
+  // Product type from Shopify
+  if (product.product_type) {
+    specs["Product Type"] = product.product_type;
+  }
+
   // Add tags as category
   if (product.tags.length > 0) {
     specs["Category"] = product.tags.join(", ");
+  }
+
+  // Extract test standards from body_html
+  const standards = extractTestStandards(product.body_html);
+  if (standards.length > 0) {
+    specs["Test Standards"] = standards.join(", ");
   }
 
   // Add variant info
@@ -124,7 +277,7 @@ function mapShopifyProduct(
   }
 
   specs["Variants"] = String(product.variants.length);
-  specs["Vendor"] = product.vendor || "Quelfire";
+  specs["Vendor"] = product.vendor || "Unknown";
 
   // Price — Shopify B2B often shows 0
   const firstPrice = product.variants[0]?.price;
