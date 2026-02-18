@@ -13,20 +13,38 @@ const supabaseAdmin = createClient(
 export const maxDuration = 60;
 
 /**
- * Auto-detect if a URL is a Shopify store by probing /products.json
+ * Extract the origin (protocol + host) from a URL.
+ * e.g. "https://quelfire.co.uk/pages/foo" → "https://quelfire.co.uk"
  */
-async function detectShopify(websiteUrl: string): Promise<boolean> {
+function extractOrigin(websiteUrl: string): string {
   try {
-    const url = websiteUrl.replace(/\/+$/, "") + "/products.json?limit=1";
-    const res = await fetch(url, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return false;
-    const data = await res.json();
-    return Array.isArray(data?.products);
+    return new URL(websiteUrl).origin;
   } catch {
-    return false;
+    // If it's not a valid URL, return as-is stripped of trailing slashes
+    return websiteUrl.replace(/\/+$/, "");
+  }
+}
+
+/**
+ * Auto-detect if a URL is a Shopify store by probing /products.json
+ * Uses the origin (host) only — ignores any path in the URL.
+ */
+async function detectShopify(websiteUrl: string): Promise<{ detected: boolean; storeUrl: string }> {
+  const storeUrl = extractOrigin(websiteUrl);
+  try {
+    const url = storeUrl + "/products.json?limit=1";
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 (compatible; HFBluebook/1.0)",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return { detected: false, storeUrl };
+    const data = await res.json();
+    return { detected: Array.isArray(data?.products), storeUrl };
+  } catch {
+    return { detected: false, storeUrl };
   }
 }
 
@@ -56,12 +74,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (isShopify) {
     shopifyConfig = manufacturer.scraper_config as ShopifyScraperConfig;
   } else if (manufacturer.website_url && !manufacturer.scraper_config?.product_list_url) {
-    // No explicit config — try auto-detecting Shopify
-    isShopify = await detectShopify(manufacturer.website_url);
+    // No explicit config — try auto-detecting Shopify (uses origin only)
+    const detection = await detectShopify(manufacturer.website_url);
+    isShopify = detection.detected;
     if (isShopify) {
       shopifyConfig = {
         type: "shopify",
-        store_url: manufacturer.website_url.replace(/\/+$/, ""),
+        store_url: detection.storeUrl,
         default_pillar: "fire_stopping",
       };
       // Save detected config for future scrapes

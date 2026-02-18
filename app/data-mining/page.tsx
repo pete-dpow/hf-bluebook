@@ -16,59 +16,71 @@ export default function DataMiningPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
   async function loadData() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { router.replace("/auth"); return; }
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { router.replace("/auth"); return; }
 
-    const headers = { Authorization: `Bearer ${session.access_token}` };
+      const headers = { Authorization: `Bearer ${session.access_token}` };
 
-    // Load manufacturers for quick-scrape buttons
-    const mfgRes = await fetch("/api/manufacturers", { headers });
-    if (mfgRes.ok) {
-      const data = await mfgRes.json();
-      setManufacturers(data.manufacturers || []);
+      // Load manufacturers for quick-scrape buttons
+      try {
+        const mfgRes = await fetch("/api/manufacturers", { headers });
+        if (mfgRes.ok) {
+          const data = await mfgRes.json();
+          setManufacturers(data.manufacturers || []);
+        }
+      } catch { /* manufacturers endpoint may not be ready */ }
+
+      // Load recent scrape jobs from Supabase directly
+      try {
+        const { data: jobs } = await supabase
+          .from("scrape_jobs")
+          .select("*, manufacturers(name)")
+          .order("created_at", { ascending: false })
+          .limit(20);
+        setScrapeJobs(jobs || []);
+      } catch { /* scrape_jobs table may not exist yet */ }
+
+      // Load supplier requests
+      try {
+        const srRes = await fetch("/api/supplier-requests", { headers });
+        if (srRes.ok) {
+          const data = await srRes.json();
+          setSupplierRequests(data.requests || []);
+        }
+      } catch { /* supplier_requests may not exist yet */ }
+
+      // Check admin status via a lightweight call
+      try {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("active_organization_id")
+          .eq("id", session.user.id)
+          .single();
+
+        if (userData?.active_organization_id) {
+          const { data: membership } = await supabase
+            .from("organization_members")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .eq("organization_id", userData.active_organization_id)
+            .single();
+
+          setIsAdmin(membership?.role === "admin" || membership?.role === "owner");
+        }
+      } catch { /* admin check failed, default to non-admin */ }
+    } catch (err: any) {
+      setError(err.message || "Failed to load data");
+    } finally {
+      setLoading(false);
     }
-
-    // Load recent scrape jobs from Supabase directly
-    const { data: jobs } = await supabase
-      .from("scrape_jobs")
-      .select("*, manufacturers(name)")
-      .order("created_at", { ascending: false })
-      .limit(20);
-
-    setScrapeJobs(jobs || []);
-
-    // Load supplier requests
-    const srRes = await fetch("/api/supplier-requests", { headers });
-    if (srRes.ok) {
-      const data = await srRes.json();
-      setSupplierRequests(data.requests || []);
-    }
-
-    // Check admin status via a lightweight call
-    const { data: userData } = await supabase
-      .from("users")
-      .select("active_organization_id")
-      .eq("id", session.user.id)
-      .single();
-
-    if (userData?.active_organization_id) {
-      const { data: membership } = await supabase
-        .from("organization_members")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("organization_id", userData.active_organization_id)
-        .single();
-
-      setIsAdmin(membership?.role === "admin" || membership?.role === "owner");
-    }
-
-    setLoading(false);
   }
 
   async function triggerScrape(manufacturerId: string) {
@@ -154,6 +166,11 @@ export default function DataMiningPage() {
   return (
     <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px" }}>
       <div className="max-w-5xl mx-auto">
+        {error && (
+          <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+            {error}
+          </div>
+        )}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl" style={{ fontFamily: "var(--font-cormorant)", fontWeight: 500, color: "#2A2A2A" }}>
