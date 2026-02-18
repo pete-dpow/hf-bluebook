@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/authHelper";
 import { createClient } from "@supabase/supabase-js";
 import { inngest } from "@/lib/inngest/client";
-import { scrapeShopifyProducts, type ShopifyScraperConfig } from "@/lib/scrapers/shopifyScraper";
+import { scrapeShopifyProducts, categorizePdf, type ShopifyScraperConfig } from "@/lib/scrapers/shopifyScraper";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://odhvxoelxiffhocrgtll.supabase.co",
@@ -124,6 +124,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
       let created = 0;
       let updated = 0;
+      let filesCreated = 0;
       const defaultPillar = shopifyConfig.default_pillar || "fire_stopping";
 
       for (const p of products) {
@@ -136,6 +137,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           .eq("product_code", productCode)
           .single();
 
+        let productId: string;
+
         if (existing) {
           await supabaseAdmin.from("products").update({
             product_name: p.product_name,
@@ -145,9 +148,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             needs_review: true,
             updated_at: new Date().toISOString(),
           }).eq("id", existing.id);
+          productId = existing.id;
           updated++;
         } else {
-          await supabaseAdmin.from("products").insert({
+          const { data: newProduct } = await supabaseAdmin.from("products").insert({
             manufacturer_id: params.id,
             organization_id: manufacturer.organization_id,
             pillar: defaultPillar,
@@ -158,8 +162,31 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             scraped_data: p,
             needs_review: true,
             status: "draft",
-          });
+          }).select("id").single();
+          productId = newProduct?.id;
           created++;
+        }
+
+        // Save PDF files as product_files records
+        if (productId && p.pdf_urls && p.pdf_urls.length > 0) {
+          // Remove existing scraped files for this product (avoid duplicates on re-scrape)
+          await supabaseAdmin
+            .from("product_files")
+            .delete()
+            .eq("product_id", productId)
+            .is("uploaded_by", null); // Only delete auto-scraped files (no uploaded_by)
+
+          for (const pdfUrl of p.pdf_urls) {
+            const { type, name } = categorizePdf(pdfUrl);
+            await supabaseAdmin.from("product_files").insert({
+              product_id: productId,
+              file_type: type,
+              file_name: name,
+              file_url: pdfUrl,
+              mime_type: "application/pdf",
+            });
+            filesCreated++;
+          }
         }
       }
 
@@ -179,6 +206,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         mode: "shopify",
         products_created: created,
         products_updated: updated,
+        files_created: filesCreated,
         total: products.length,
       });
     } catch (err: any) {

@@ -1,8 +1,9 @@
 /**
- * Shopify JSON API product scraper.
- * Fetches structured product data from /products.json — no Playwright needed.
- * Also enriches products with installation/application page content.
- * Works on Vercel serverless.
+ * Shopify product scraper.
+ * 1. Fetches product catalogue from /products.json (structured data)
+ * 2. Fetches each product's HTML page to extract PDF download links
+ * 3. Fetches install/application pages for technical details
+ * Works on Vercel serverless — no Playwright needed.
  */
 
 import type { ScrapedProduct } from "./playwrightScraper";
@@ -34,6 +35,11 @@ interface ShopifyProduct {
   images: { src: string }[];
 }
 
+const FETCH_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+};
+
 function stripHtml(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, "\n")
@@ -52,14 +58,12 @@ function stripHtml(html: string): string {
 
 /**
  * Extract test standard references from HTML description.
- * Looks for patterns like "BS EN 1366-3", "EN 13501-2", "EI 120", etc.
  */
 function extractTestStandards(html: string): string[] {
   if (!html) return [];
   const text = stripHtml(html);
   const standards: string[] = [];
 
-  // BS EN / EN standards
   const enMatches = text.match(/(?:BS\s+)?EN\s+\d[\d\-.:]+/gi);
   if (enMatches) {
     for (const m of enMatches) {
@@ -68,7 +72,6 @@ function extractTestStandards(html: string): string[] {
     }
   }
 
-  // Fire ratings: EI 30, EI 60, EI 120, EI 240, etc.
   const ratingMatches = text.match(/EI\s*\d{2,3}/gi);
   if (ratingMatches) {
     for (const m of ratingMatches) {
@@ -77,25 +80,59 @@ function extractTestStandards(html: string): string[] {
     }
   }
 
-  // BS standards (without EN)
-  const bsMatches = text.match(/BS\s+\d[\d\-.:]+/gi);
-  if (bsMatches) {
-    for (const m of bsMatches) {
-      const normalized = m.replace(/\s+/g, " ").trim();
-      // Skip if already captured as BS EN
-      if (!standards.some((s) => s.includes(normalized))) standards.push(normalized);
-    }
-  }
-
   return standards;
 }
 
 /**
+ * Fetch a product's HTML page and extract all PDF URLs.
+ * PDFs are hosted on S3 (quelfire.s3.eu-west-2.amazonaws.com) and embedded in the HTML.
+ */
+async function extractPdfUrls(productPageUrl: string): Promise<string[]> {
+  try {
+    const res = await fetch(productPageUrl, {
+      headers: FETCH_HEADERS,
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return [];
+    const html = await res.text();
+
+    // Extract all PDF URLs from the page HTML
+    const pdfRegex = /https?:\/\/[^"'\s<>]+\.pdf/gi;
+    const matches = html.match(pdfRegex) || [];
+
+    // Deduplicate
+    return Array.from(new Set(matches));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Categorise a PDF URL by its S3 path.
+ * Returns a human-readable type like "Product Data Sheet", "Installation Instructions", etc.
+ */
+function categorizePdf(url: string): { type: string; name: string } {
+  const path = url.toLowerCase();
+  const filename = url.split("/").pop() || url;
+  const name = filename
+    .replace(/\.pdf$/i, "")
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  if (path.includes("product-data-sheet")) return { type: "datasheet", name };
+  if (path.includes("installation-instruction")) return { type: "installation_guide", name };
+  if (path.includes("coshh")) return { type: "certificate", name };
+  if (path.includes("declaration-of-performance") || path.includes("dop")) return { type: "certificate", name };
+  if (path.includes("certificate-of-constancy") || path.includes("ccp")) return { type: "certificate", name };
+  if (path.includes("standard-installation-detail")) return { type: "installation_guide", name };
+  if (path.includes("acoustic")) return { type: "datasheet", name };
+  return { type: "other", name };
+}
+
+/**
  * Derive the product code prefix from SKU for install page lookup.
- * e.g. "QWR25/CE" → "qwr", "PUTPAD-S" → "putpad", "QSS310ML" → "qss"
  */
 function deriveCodePrefix(sku: string): string {
-  // Remove trailing numbers, sizes, suffixes
   return sku
     .replace(/[\d\/\-].*/g, "")
     .toLowerCase()
@@ -104,16 +141,12 @@ function deriveCodePrefix(sku: string): string {
 
 /**
  * Try to fetch a Shopify page's body_html via the JSON API.
- * Returns stripped text or null if the page doesn't exist or has no content.
  */
 async function fetchPageContent(storeUrl: string, pageHandle: string): Promise<string | null> {
   try {
     const url = `${storeUrl}/pages/${pageHandle}.json`;
     const res = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "Mozilla/5.0 (compatible; HFBluebook/1.0)",
-      },
+      headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (compatible; HFBluebook/1.0)" },
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return null;
@@ -133,12 +166,13 @@ export async function scrapeShopifyProducts(
   const allProducts: ScrapedProduct[] = [];
   let page = 1;
 
+  // Step 1: Fetch product catalogue from JSON API
   while (page <= 10) {
     const url = `${storeUrl}/products.json?limit=250&page=${page}`;
     const res = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; HFBluebook/1.0; +https://hf-bluebook.vercel.app)",
-        "Accept": "application/json",
+        Accept: "application/json",
       },
       signal: AbortSignal.timeout(15000),
     });
@@ -157,12 +191,26 @@ export async function scrapeShopifyProducts(
       if (mapped) allProducts.push(mapped);
     }
 
-    // Shopify returns up to 250 per page — if less, we've got everything
     if (products.length < 250) break;
     page++;
   }
 
-  // Enrich products with install/application page content (parallel, best-effort)
+  // Step 2: Fetch each product's HTML page to extract PDF download links
+  // Do in batches of 5 to avoid overwhelming the server
+  const batchSize = 5;
+  for (let i = 0; i < allProducts.length; i += batchSize) {
+    const batch = allProducts.slice(i, i + batchSize);
+    const results = await Promise.allSettled(
+      batch.map((p) => extractPdfUrls(p.source_url))
+    );
+    for (let j = 0; j < batch.length; j++) {
+      if (results[j].status === "fulfilled") {
+        batch[j].pdf_urls = (results[j] as PromiseFulfilledResult<string[]>).value;
+      }
+    }
+  }
+
+  // Step 3: Enrich with install/application page content
   await enrichWithInstallPages(allProducts, storeUrl);
 
   return allProducts;
@@ -170,13 +218,11 @@ export async function scrapeShopifyProducts(
 
 /**
  * For each product, try to fetch install/application pages from Shopify.
- * Pages follow the pattern /pages/install{code} and /pages/application{code}.
  */
 async function enrichWithInstallPages(
   products: ScrapedProduct[],
   storeUrl: string
 ): Promise<void> {
-  // Build a set of code prefixes we need to fetch
   const enrichTasks: { product: ScrapedProduct; codePrefix: string }[] = [];
 
   for (const p of products) {
@@ -187,7 +233,6 @@ async function enrichWithInstallPages(
     }
   }
 
-  // Deduplicate by code prefix (multiple variants share the same install page)
   const seen = new Set<string>();
   const uniqueTasks = enrichTasks.filter((t) => {
     if (seen.has(t.codePrefix)) return false;
@@ -195,7 +240,6 @@ async function enrichWithInstallPages(
     return true;
   });
 
-  // Fetch install + application pages in parallel (max 10 concurrent)
   const batchSize = 10;
   for (let i = 0; i < uniqueTasks.length; i += batchSize) {
     const batch = uniqueTasks.slice(i, i + batchSize);
@@ -214,12 +258,10 @@ async function enrichWithInstallPages(
       ])
     );
 
-    // Apply results to products
     for (const result of results) {
       if (result.status !== "fulfilled" || !result.value.content) continue;
       const { codePrefix, type, content } = result.value;
 
-      // Apply to all products sharing this code prefix
       for (const task of enrichTasks) {
         if (task.codePrefix === codePrefix) {
           const key = type === "installation" ? "Installation Details" : "Application Guide";
@@ -236,30 +278,24 @@ function mapShopifyProduct(
 ): ScrapedProduct {
   const description = product.body_html ? stripHtml(product.body_html) : "";
 
-  // Use first variant SKU as product code, fallback to handle
   const primarySku = product.variants.find((v) => v.sku)?.sku;
   const productCode = primarySku || product.handle;
 
-  // Build specifications from variants and tags
   const specs: Record<string, string> = {};
 
-  // Product type from Shopify
   if (product.product_type) {
     specs["Product Type"] = product.product_type;
   }
 
-  // Add tags as category
   if (product.tags.length > 0) {
     specs["Category"] = product.tags.join(", ");
   }
 
-  // Extract test standards from body_html
   const standards = extractTestStandards(product.body_html);
   if (standards.length > 0) {
     specs["Test Standards"] = standards.join(", ");
   }
 
-  // Add variant info
   if (product.variants.length > 1) {
     const variantSizes = product.variants
       .map((v) => v.title)
@@ -279,14 +315,12 @@ function mapShopifyProduct(
   specs["Variants"] = String(product.variants.length);
   specs["Vendor"] = product.vendor || "Unknown";
 
-  // Price — Shopify B2B often shows 0
   const firstPrice = product.variants[0]?.price;
   const priceText =
     firstPrice && parseFloat(firstPrice) > 0
       ? `£${firstPrice}`
       : "Quote on request";
 
-  // Collect image URLs
   const imageUrls = product.images?.map((img) => img.src).filter(Boolean) || [];
 
   return {
@@ -300,3 +334,5 @@ function mapShopifyProduct(
     source_url: `${storeUrl}/products/${product.handle}`,
   };
 }
+
+export { categorizePdf };

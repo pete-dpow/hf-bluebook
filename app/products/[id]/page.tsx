@@ -313,27 +313,52 @@ export default function ProductDetailPage() {
             <div className="space-y-2">
               {product.product_files.map((f: any) => (
                 <div key={f.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <FileText size={16} className="text-gray-400" />
-                    <div>
-                      <span className="text-sm text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-                        {f.file_name}
-                      </span>
-                      <span className="ml-2 text-xs text-gray-400">{f.file_type}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText size={16} className="text-blue-500 flex-shrink-0" />
+                    <div className="min-w-0">
+                      {f.file_url ? (
+                        <a
+                          href={f.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-800 hover:underline truncate block"
+                          style={{ fontFamily: "var(--font-ibm-plex)" }}
+                        >
+                          {f.file_name}
+                        </a>
+                      ) : (
+                        <span className="text-sm text-gray-900 truncate block" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+                          {f.file_name}
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-400">{f.file_type?.replace(/_/g, " ")}</span>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleDeleteFile(f.id)}
-                    className="p-1 text-gray-400 hover:text-red-600 transition"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {f.file_url && (
+                      <a
+                        href={f.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 text-gray-400 hover:text-blue-600 transition"
+                        title="Download"
+                      >
+                        <ExternalLink size={14} />
+                      </a>
+                    )}
+                    <button
+                      onClick={() => handleDeleteFile(f.id)}
+                      className="p-1 text-gray-400 hover:text-red-600 transition"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
             <p className="text-sm text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              No files uploaded yet
+              No files yet
             </p>
           )}
         </div>
