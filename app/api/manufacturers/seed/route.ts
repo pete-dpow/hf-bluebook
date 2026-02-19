@@ -9,6 +9,7 @@ const supabaseAdmin = createClient(
 );
 
 const SEED_MANUFACTURERS = [
+  // Fire Stopping & Containment
   {
     name: "Quelfire",
     website_url: "https://quelfire.co.uk",
@@ -19,6 +20,54 @@ const SEED_MANUFACTURERS = [
       default_pillar: "fire_stopping",
       installation_details_url: "https://quelfire.co.uk/pages/standard-installation-details",
     },
+  },
+  {
+    name: "Hilti",
+    website_url: "https://hilti.co.uk",
+    scraper_config: { default_pillar: "fire_stopping" },
+  },
+  {
+    name: "Rockwool",
+    website_url: "https://rockwool.com/uk",
+    scraper_config: { default_pillar: "fire_stopping" },
+  },
+  {
+    name: "Siderise",
+    website_url: "https://siderise.com",
+    scraper_config: { default_pillar: "fire_stopping" },
+  },
+  {
+    name: "Promat (Etex)",
+    website_url: "https://promat.com/en-gb",
+    scraper_config: { default_pillar: "fire_stopping" },
+  },
+  // Plasterboard & Partition Systems
+  {
+    name: "British Gypsum",
+    website_url: "https://british-gypsum.com",
+    scraper_config: { default_pillar: "fire_stopping" },
+  },
+  {
+    name: "Knauf",
+    website_url: "https://knauf.co.uk",
+    scraper_config: { default_pillar: "fire_stopping" },
+  },
+  {
+    name: "Siniat",
+    website_url: "https://siniat.co.uk",
+    scraper_config: { default_pillar: "fire_stopping" },
+  },
+  // Fire Door Hardware
+  {
+    name: "Lorient",
+    website_url: "https://lorientuk.com",
+    scraper_config: { default_pillar: "fire_doors" },
+  },
+  // Passive Fire Protection
+  {
+    name: "Kingspan",
+    website_url: "https://kingspan.com/gb/en-gb",
+    scraper_config: { default_pillar: "fire_stopping" },
   },
 ];
 

@@ -367,9 +367,35 @@ export default function LibraryPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-400" style={selectStyle}>
-                  {mfgSearch ? "No suppliers match your search" : "No suppliers yet"}
-                </p>
+                <>
+                  <p className="text-sm text-gray-400 mb-3" style={selectStyle}>
+                    {mfgSearch ? "No suppliers match your search" : "No suppliers yet"}
+                  </p>
+                  {!mfgSearch && manufacturers.length === 0 && (
+                    <button
+                      onClick={async () => {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        if (!session) return;
+                        const res = await fetch("/api/manufacturers/seed", {
+                          method: "POST",
+                          headers: { Authorization: `Bearer ${session.access_token}` },
+                        });
+                        if (res.ok) {
+                          const data = await res.json();
+                          alert(`Seeded ${data.created} suppliers`);
+                          await loadSuppliersData();
+                        } else {
+                          const err = await res.json();
+                          alert(err.error || "Failed to seed");
+                        }
+                      }}
+                      className="px-4 py-2 text-sm bg-[#2563EB] text-white rounded-lg hover:opacity-90 transition"
+                      style={selectStyle}
+                    >
+                      Seed 10 Suppliers
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
