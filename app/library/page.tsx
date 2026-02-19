@@ -1,0 +1,594 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import {
+  Loader2, Plus, LayoutGrid, List, Factory, RefreshCw, Search,
+} from "lucide-react";
+import ProductCard from "@/components/ProductCard";
+import ProductListRow from "@/components/ProductListRow";
+import ScraperProgress from "@/components/ScraperProgress";
+import RequestSupplierModal from "@/components/RequestSupplierModal";
+import SupplierRequestCard from "@/components/SupplierRequestCard";
+
+const PILLARS = [
+  { value: "", label: "All Pillars" },
+  { value: "fire_doors", label: "Fire Doors" },
+  { value: "dampers", label: "Dampers" },
+  { value: "fire_stopping", label: "Fire Stopping" },
+  { value: "retro_fire_stopping", label: "Retro Fire Stopping" },
+  { value: "auro_lume", label: "Auro Lume" },
+];
+
+const STATUSES = [
+  { value: "", label: "All Statuses" },
+  { value: "draft", label: "Draft" },
+  { value: "active", label: "Active" },
+  { value: "discontinued", label: "Discontinued" },
+];
+
+type Tab = "suppliers" | "products";
+
+export default function LibraryPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get("tab") as Tab) || "suppliers";
+
+  const [tab, setTab] = useState<Tab>(initialTab);
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Suppliers tab state
+  const [manufacturers, setManufacturers] = useState<any[]>([]);
+  const [scrapeJobs, setScrapeJobs] = useState<any[]>([]);
+  const [supplierRequests, setSupplierRequests] = useState<any[]>([]);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [mfgSearch, setMfgSearch] = useState("");
+  const [scrapingId, setScrapingId] = useState<string | null>(null);
+
+  // Products tab state
+  const [products, setProducts] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [page, setPage] = useState(1);
+  const limit = 50;
+  const [pillar, setPillar] = useState("");
+  const [status, setStatus] = useState("");
+  const [needsReview, setNeedsReview] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [manufacturerFilter, setManufacturerFilter] = useState("");
+
+  useEffect(() => {
+    loadSuppliersData();
+  }, []);
+
+  useEffect(() => {
+    if (tab === "products") {
+      loadProducts();
+    }
+  }, [tab, pillar, status, needsReview, productSearch, manufacturerFilter, page]);
+
+  function switchTab(newTab: Tab) {
+    setTab(newTab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", newTab);
+    window.history.replaceState({}, "", url.toString());
+  }
+
+  async function loadSuppliersData() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { router.replace("/auth"); return; }
+
+      const headers = { Authorization: `Bearer ${session.access_token}` };
+
+      // Load manufacturers
+      try {
+        const mfgRes = await fetch("/api/manufacturers", { headers });
+        if (mfgRes.ok) {
+          const data = await mfgRes.json();
+          setManufacturers(data.manufacturers || []);
+        }
+      } catch { /* manufacturers endpoint may not be ready */ }
+
+      // Load recent scrape jobs
+      try {
+        const { data: jobs } = await supabase
+          .from("scrape_jobs")
+          .select("*, manufacturers(name)")
+          .order("created_at", { ascending: false })
+          .limit(20);
+        setScrapeJobs(jobs || []);
+      } catch { /* scrape_jobs table may not exist yet */ }
+
+      // Load supplier requests
+      try {
+        const srRes = await fetch("/api/supplier-requests", { headers });
+        if (srRes.ok) {
+          const data = await srRes.json();
+          setSupplierRequests(data.requests || []);
+        }
+      } catch { /* supplier_requests may not exist yet */ }
+
+      // Check admin status
+      try {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("active_organization_id")
+          .eq("id", session.user.id)
+          .single();
+
+        if (userData?.active_organization_id) {
+          const { data: membership } = await supabase
+            .from("organization_members")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .eq("organization_id", userData.active_organization_id)
+            .single();
+
+          setIsAdmin(membership?.role === "admin" || membership?.role === "owner");
+        }
+      } catch { /* admin check failed */ }
+    } catch (err: any) {
+      setError(err.message || "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadProducts() {
+    setProductsLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { router.replace("/auth"); return; }
+
+    const params = new URLSearchParams();
+    if (pillar) params.set("pillar", pillar);
+    if (status) params.set("status", status);
+    if (needsReview) params.set("needs_review", "true");
+    if (productSearch) params.set("search", productSearch);
+    if (manufacturerFilter) params.set("manufacturer_id", manufacturerFilter);
+    params.set("page", String(page));
+    params.set("limit", String(limit));
+
+    const res = await fetch(`/api/products?${params}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      setProducts(data.products || []);
+      setTotal(data.total || 0);
+    }
+    setProductsLoading(false);
+  }
+
+  async function triggerScrape(manufacturerId: string) {
+    setScrapingId(manufacturerId);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const res = await fetch(`/api/manufacturers/${manufacturerId}/scrape`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ scrape_type: "full" }),
+    });
+
+    if (res.ok) {
+      await loadSuppliersData();
+    } else {
+      const err = await res.json();
+      alert(err.error || "Failed to start scrape");
+    }
+    setScrapingId(null);
+  }
+
+  async function handleRequestSupplier(data: { supplier_name: string; supplier_website: string; reason: string }) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    await fetch("/api/supplier-requests", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    await loadSuppliersData();
+  }
+
+  async function handleApproveRequest(id: string) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    await fetch(`/api/supplier-requests/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ status: "approved" }),
+    });
+
+    await loadSuppliersData();
+  }
+
+  async function handleRejectRequest(id: string, reason: string) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    await fetch(`/api/supplier-requests/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ status: "rejected", rejected_reason: reason }),
+    });
+
+    await loadSuppliersData();
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FCFCFA]">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  const runningJobs = scrapeJobs.filter((j) => j.status === "running" || j.status === "queued");
+  const completedJobs = scrapeJobs.filter((j) => j.status === "completed" || j.status === "failed");
+  const totalPages = Math.ceil(total / limit);
+
+  const filteredManufacturers = mfgSearch
+    ? manufacturers.filter((m) => m.name.toLowerCase().includes(mfgSearch.toLowerCase()))
+    : manufacturers;
+
+  const selectStyle = { fontFamily: "var(--font-ibm-plex)" };
+
+  return (
+    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px" }}>
+      <div className="max-w-6xl mx-auto">
+        {error && (
+          <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700" style={selectStyle}>
+            {error}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl" style={{ fontFamily: "var(--font-cormorant)", fontWeight: 500, color: "#2A2A2A" }}>
+              Library
+            </h1>
+            <p className="text-sm text-gray-500 mt-1" style={selectStyle}>
+              Suppliers, products, and data mining
+            </p>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-1 mb-6 border-b border-gray-200">
+          <button
+            onClick={() => switchTab("suppliers")}
+            className={`px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ${
+              tab === "suppliers"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+            style={selectStyle}
+          >
+            Suppliers
+          </button>
+          <button
+            onClick={() => switchTab("products")}
+            className={`px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ${
+              tab === "products"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+            style={selectStyle}
+          >
+            Products {total > 0 && `(${total})`}
+          </button>
+        </div>
+
+        {/* ===== SUPPLIERS TAB ===== */}
+        {tab === "suppliers" && (
+          <>
+            {/* Search + Actions */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search suppliers..."
+                  value={mfgSearch}
+                  onChange={(e) => setMfgSearch(e.target.value)}
+                  className="pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 w-64"
+                  style={selectStyle}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowRequestModal(true)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+                  style={selectStyle}
+                >
+                  Request Supplier
+                </button>
+                <button
+                  onClick={() => router.push("/manufacturers/new")}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white text-sm font-medium rounded-lg hover:opacity-90 transition"
+                  style={selectStyle}
+                >
+                  <Plus size={16} />
+                  Add Supplier
+                </button>
+              </div>
+            </div>
+
+            {/* Manufacturer Cards */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+              {filteredManufacturers.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {filteredManufacturers.map((m) => (
+                    <div key={m.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:border-gray-200 transition">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Factory size={16} className="text-gray-400 flex-shrink-0" />
+                        <span
+                          className="text-sm font-medium text-gray-900 truncate cursor-pointer hover:text-blue-600"
+                          style={selectStyle}
+                          onClick={() => router.push(`/manufacturers/${m.id}`)}
+                        >
+                          {m.name}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => triggerScrape(m.id)}
+                        disabled={scrapingId === m.id}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition flex-shrink-0 disabled:opacity-50"
+                        title="Start scrape"
+                      >
+                        {scrapingId === m.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <RefreshCw size={14} />
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400" style={selectStyle}>
+                  {mfgSearch ? "No suppliers match your search" : "No suppliers yet"}
+                </p>
+              )}
+            </div>
+
+            {/* Active Jobs */}
+            {runningJobs.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+                <h2 className="text-lg font-medium text-gray-900 mb-4" style={selectStyle}>
+                  Active Jobs ({runningJobs.length})
+                </h2>
+                <div className="space-y-3">
+                  {runningJobs.map((job) => (
+                    <div key={job.id}>
+                      {job.manufacturers?.name && (
+                        <p className="text-xs text-gray-500 mb-1" style={selectStyle}>
+                          {job.manufacturers.name}
+                        </p>
+                      )}
+                      <ScraperProgress job={job} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Scrape History */}
+            {completedJobs.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+                <h2 className="text-lg font-medium text-gray-900 mb-4" style={selectStyle}>
+                  Scrape History
+                </h2>
+                <div className="space-y-3">
+                  {completedJobs.map((job) => (
+                    <div key={job.id}>
+                      {job.manufacturers?.name && (
+                        <p className="text-xs text-gray-500 mb-1" style={selectStyle}>
+                          {job.manufacturers.name}
+                        </p>
+                      )}
+                      <ScraperProgress job={job} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Supplier Requests */}
+            {supplierRequests.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                <h2 className="text-lg font-medium text-gray-900 mb-4" style={selectStyle}>
+                  Supplier Requests
+                </h2>
+                <div className="space-y-3">
+                  {supplierRequests.map((req) => (
+                    <SupplierRequestCard
+                      key={req.id}
+                      request={req}
+                      isAdmin={isAdmin}
+                      onApprove={handleApproveRequest}
+                      onReject={handleRejectRequest}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <RequestSupplierModal
+              open={showRequestModal}
+              onClose={() => setShowRequestModal(false)}
+              onSubmit={handleRequestSupplier}
+            />
+          </>
+        )}
+
+        {/* ===== PRODUCTS TAB ===== */}
+        {tab === "products" && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={productSearch}
+                  onChange={(e) => { setProductSearch(e.target.value); setPage(1); }}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 w-64"
+                  style={selectStyle}
+                />
+                <select
+                  value={manufacturerFilter}
+                  onChange={(e) => { setManufacturerFilter(e.target.value); setPage(1); }}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-400"
+                  style={selectStyle}
+                >
+                  <option value="">All Suppliers</option>
+                  {manufacturers.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+                <select
+                  value={pillar}
+                  onChange={(e) => { setPillar(e.target.value); setPage(1); }}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-400"
+                  style={selectStyle}
+                >
+                  {PILLARS.map((p) => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+                <select
+                  value={status}
+                  onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-400"
+                  style={selectStyle}
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer" style={selectStyle}>
+                  <input
+                    type="checkbox"
+                    checked={needsReview}
+                    onChange={(e) => { setNeedsReview(e.target.checked); setPage(1); }}
+                    className="rounded border-gray-300"
+                  />
+                  Needs review
+                </label>
+              </div>
+              <div className="flex items-center gap-1 ml-4">
+                <button
+                  onClick={() => setView("grid")}
+                  className={`p-2 rounded-lg transition ${view === "grid" ? "bg-blue-50 text-blue-600" : "text-gray-400 hover:text-gray-600"}`}
+                >
+                  <LayoutGrid size={18} />
+                </button>
+                <button
+                  onClick={() => setView("list")}
+                  className={`p-2 rounded-lg transition ${view === "list" ? "bg-blue-50 text-blue-600" : "text-gray-400 hover:text-gray-600"}`}
+                >
+                  <List size={18} />
+                </button>
+              </div>
+            </div>
+
+            {productsLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+              </div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-gray-500 mb-2" style={selectStyle}>
+                  No products found
+                </p>
+                <p className="text-sm text-gray-400" style={selectStyle}>
+                  Add products manually or scrape from a supplier
+                </p>
+              </div>
+            ) : view === "grid" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {products.map((p) => (
+                  <ProductCard
+                    key={p.id}
+                    product={p}
+                    onClick={() => router.push(`/products/${p.id}`)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={selectStyle}>Product</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={selectStyle}>Code</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={selectStyle}>Manufacturer</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={selectStyle}>Pillar</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={selectStyle}>Status</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase" style={selectStyle}>Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map((p) => (
+                      <ProductListRow
+                        key={p.id}
+                        product={p}
+                        onClick={() => router.push(`/products/${p.id}`)}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-6">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
+                  style={selectStyle}
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-500" style={selectStyle}>
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
+                  style={selectStyle}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

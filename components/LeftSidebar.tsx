@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 import {
-  Home,
   Upload,
   FolderOpen,
   MessageSquare,
@@ -15,10 +14,7 @@ import {
   X,
   Building2,
   Rocket,
-  Package,
   FileText,
-  Factory,
-  Search,
   ShieldCheck,
   Scroll,
   Target,
@@ -307,10 +303,10 @@ export default function LeftSidebar() {
           {user && (
             <>
               <IconButton
-                icon={<Package size={20} />}
-                label="Products"
-                tooltip="Product Catalog"
-                onClick={() => router.push("/products")}
+                icon={<BookOpen size={20} />}
+                label="Library"
+                tooltip="Suppliers & Products"
+                onClick={() => router.push("/library")}
               />
               <IconButton
                 icon={<FileText size={20} />}
@@ -319,27 +315,9 @@ export default function LeftSidebar() {
                 onClick={() => router.push("/quotes")}
               />
               <IconButton
-                icon={<Factory size={20} />}
-                label="Manufacturers"
-                tooltip="Manufacturers"
-                onClick={() => router.push("/manufacturers")}
-              />
-              <IconButton
-                icon={<Search size={20} />}
-                label="Data Mining"
-                tooltip="Data Mining"
-                onClick={() => router.push("/data-mining")}
-              />
-              <IconButton
-                icon={<BookOpen size={20} />}
-                label="Knowledge"
-                tooltip="Knowledge Base"
-                onClick={() => router.push("/knowledge")}
-              />
-              <IconButton
                 icon={<ShieldCheck size={20} />}
                 label="Compliance"
-                tooltip="Compliance Library"
+                tooltip="Compliance & Knowledge"
                 onClick={() => router.push("/compliance")}
               />
               <IconButton

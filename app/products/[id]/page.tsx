@@ -21,6 +21,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [fileTypeFilter, setFileTypeFilter] = useState("all");
 
   useEffect(() => {
     loadProduct();
@@ -143,7 +144,7 @@ export default function ProductDetailPage() {
     <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px" }}>
       <div className="max-w-4xl mx-auto">
         <button
-          onClick={() => router.push("/products")}
+          onClick={() => router.push("/library?tab=products")}
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6"
           style={{ fontFamily: "var(--font-ibm-plex)" }}
         >
@@ -309,9 +310,49 @@ export default function ProductDetailPage() {
               <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
             </label>
           </div>
+          {/* File type filter chips */}
+          {product.product_files?.length > 0 && (() => {
+            const files = product.product_files as any[];
+            const typeCounts: Record<string, number> = {};
+            for (const f of files) {
+              const t = f.file_type || "other";
+              typeCounts[t] = (typeCounts[t] || 0) + 1;
+            }
+            const types = Object.keys(typeCounts);
+            if (types.length <= 1) return null;
+            return (
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  onClick={() => setFileTypeFilter("all")}
+                  className={`px-3 py-1 text-xs rounded-full border transition ${
+                    fileTypeFilter === "all"
+                      ? "bg-blue-50 border-blue-200 text-blue-700"
+                      : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                  }`}
+                  style={{ fontFamily: "var(--font-ibm-plex)" }}
+                >
+                  All ({files.length})
+                </button>
+                {types.map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setFileTypeFilter(type)}
+                    className={`px-3 py-1 text-xs rounded-full border transition ${
+                      fileTypeFilter === type
+                        ? "bg-blue-50 border-blue-200 text-blue-700"
+                        : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}
+                    style={{ fontFamily: "var(--font-ibm-plex)" }}
+                  >
+                    {type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())} ({typeCounts[type]})
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
           {product.product_files?.length > 0 ? (
             <div className="space-y-2">
-              {product.product_files.map((f: any) => (
+              {product.product_files.filter((f: any) => fileTypeFilter === "all" || f.file_type === fileTypeFilter).map((f: any) => (
                 <div key={f.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2 min-w-0">
                     <FileText size={16} className="text-blue-500 flex-shrink-0" />
