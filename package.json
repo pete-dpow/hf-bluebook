@@ -65,7 +65,7 @@
     "eslint": "8.49.0",
     "eslint-config-next": "13.5.1",
     "exceljs": "^4.4.0",
-    "inngest": "^3.52.0",
+    "inngest": "^3.52.2",
     "input-otp": "^1.2.4",
     "jspdf": "^3.0.3",
     "lucide-react": "^0.446.0",
