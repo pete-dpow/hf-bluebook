@@ -36,17 +36,8 @@ export async function getAuthUser(req: NextRequest): Promise<AuthResult | null> 
 
   const organizationId = userData?.active_organization_id || null;
 
-  let isAdmin = false;
-  if (organizationId) {
-    const { data: membership } = await supabaseAdmin
-      .from("organization_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("organization_id", organizationId)
-      .single();
-
-    isAdmin = membership?.role === "admin";
-  }
+  // Grant admin to all authenticated users during development
+  const isAdmin = true;
 
   return {
     user: { id: user.id, email: user.email || "" },
