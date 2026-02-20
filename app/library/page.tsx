@@ -166,25 +166,41 @@ export default function LibraryPage() {
     setProductsLoading(false);
   }
 
+  const [scrapeStatus, setScrapeStatus] = useState<Record<string, { msg: string; ok: boolean }>>({});
+
   async function triggerScrape(manufacturerId: string) {
     setScrapingId(manufacturerId);
+    setScrapeStatus((s) => ({ ...s, [manufacturerId]: { msg: "Starting scrape...", ok: true } }));
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session) { setScrapingId(null); return; }
 
-    const res = await fetch(`/api/manufacturers/${manufacturerId}/scrape`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ scrape_type: "full" }),
-    });
+    try {
+      const res = await fetch(`/api/manufacturers/${manufacturerId}/scrape`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ scrape_type: "full" }),
+      });
 
-    if (res.ok) {
-      await loadSuppliersData();
-    } else {
-      const err = await res.json();
-      alert(err.error || "Failed to start scrape");
+      const data = await res.json();
+
+      if (res.ok) {
+        const mode = data.mode || "unknown";
+        if (mode === "inngest") {
+          setScrapeStatus((s) => ({ ...s, [manufacturerId]: { msg: "Queued in Inngest — check back shortly", ok: true } }));
+        } else if (mode === "shopify") {
+          setScrapeStatus((s) => ({ ...s, [manufacturerId]: { msg: `Done: ${data.products_created || 0} created, ${data.products_updated || 0} updated, ${data.files_created || 0} files`, ok: true } }));
+        } else {
+          setScrapeStatus((s) => ({ ...s, [manufacturerId]: { msg: `Scrape started (${mode})`, ok: true } }));
+        }
+        await loadSuppliersData();
+      } else {
+        setScrapeStatus((s) => ({ ...s, [manufacturerId]: { msg: data.error || "Failed", ok: false } }));
+      }
+    } catch (err: any) {
+      setScrapeStatus((s) => ({ ...s, [manufacturerId]: { msg: err.message || "Network error", ok: false } }));
     }
     setScrapingId(null);
   }
@@ -388,55 +404,75 @@ export default function LibraryPage() {
             <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
               {filteredManufacturers.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {filteredManufacturers.map((m) => (
-                    <div key={m.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:border-gray-200 transition">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Factory size={16} className="text-gray-400 flex-shrink-0" />
-                        <span
-                          className="text-sm font-medium text-gray-900 truncate cursor-pointer hover:text-blue-600"
-                          style={selectStyle}
-                          onClick={() => router.push(`/manufacturers/${m.id}`)}
-                        >
-                          {m.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <label
-                          className={`p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer ${uploadingId === m.id ? "opacity-50 pointer-events-none" : ""}`}
-                          title="Upload files"
-                        >
-                          {uploadingId === m.id ? (
-                            <Loader2 size={14} className="animate-spin" />
+                  {filteredManufacturers.map((m) => {
+                    const lastJob = scrapeJobs.find((j: any) => j.manufacturer_id === m.id);
+                    const statusMsg = scrapeStatus[m.id];
+                    return (
+                      <div key={m.id} className="p-3 border border-gray-100 rounded-lg hover:border-gray-200 transition">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Factory size={16} className="text-gray-400 flex-shrink-0" />
+                            <span
+                              className="text-sm font-medium text-gray-900 truncate cursor-pointer hover:text-blue-600"
+                              style={selectStyle}
+                              onClick={() => router.push(`/manufacturers/${m.id}`)}
+                            >
+                              {m.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <label
+                              className={`p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer ${uploadingId === m.id ? "opacity-50 pointer-events-none" : ""}`}
+                              title="Upload files"
+                            >
+                              {uploadingId === m.id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <Upload size={14} />
+                              )}
+                              <input
+                                type="file"
+                                multiple
+                                accept=".pdf,.xlsx,.xls,.doc,.docx,.csv,.dwg,.dxf,.png,.jpg,.jpeg"
+                                className="hidden"
+                                onChange={(e) => {
+                                  if (e.target.files?.length) handleFileUpload(m.id, e.target.files);
+                                  e.target.value = "";
+                                }}
+                                disabled={uploadingId === m.id}
+                              />
+                            </label>
+                            <button
+                              onClick={() => triggerScrape(m.id)}
+                              disabled={scrapingId === m.id}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition disabled:opacity-50"
+                              title="Start scrape"
+                            >
+                              {scrapingId === m.id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <RefreshCw size={14} />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        {/* Status line */}
+                        <div className="mt-1.5 text-xs" style={selectStyle}>
+                          {statusMsg ? (
+                            <span className={statusMsg.ok ? "text-green-600" : "text-red-500"}>{statusMsg.msg}</span>
+                          ) : lastJob ? (
+                            <span className={lastJob.status === "completed" ? "text-green-600" : lastJob.status === "failed" ? "text-red-500" : "text-amber-500"}>
+                              {lastJob.status === "completed" && `Last scrape: ${lastJob.products_created || 0} products · ${new Date(lastJob.completed_at).toLocaleDateString()}`}
+                              {lastJob.status === "failed" && `Failed: ${lastJob.error_log || "Unknown error"}`}
+                              {(lastJob.status === "running" || lastJob.status === "queued") && `${lastJob.status}...`}
+                            </span>
                           ) : (
-                            <Upload size={14} />
+                            <span className="text-gray-300">Not scraped yet</span>
                           )}
-                          <input
-                            type="file"
-                            multiple
-                            accept=".pdf,.xlsx,.xls,.doc,.docx,.csv,.dwg,.dxf,.png,.jpg,.jpeg"
-                            className="hidden"
-                            onChange={(e) => {
-                              if (e.target.files?.length) handleFileUpload(m.id, e.target.files);
-                              e.target.value = "";
-                            }}
-                            disabled={uploadingId === m.id}
-                          />
-                        </label>
-                        <button
-                          onClick={() => triggerScrape(m.id)}
-                          disabled={scrapingId === m.id}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition disabled:opacity-50"
-                          title="Start scrape"
-                        >
-                          {scrapingId === m.id ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <RefreshCw size={14} />
-                          )}
-                        </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-gray-400" style={selectStyle}>
