@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
-  Loader2, Plus, LayoutGrid, List, Factory, RefreshCw, Search,
+  Loader2, Plus, LayoutGrid, List, Factory, RefreshCw, Search, Upload,
 } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import ProductListRow from "@/components/ProductListRow";
@@ -60,6 +60,7 @@ export default function LibraryPage() {
   const [needsReview, setNeedsReview] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [manufacturerFilter, setManufacturerFilter] = useState("");
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadSuppliersData();
@@ -236,6 +237,32 @@ export default function LibraryPage() {
     await loadSuppliersData();
   }
 
+  async function handleFileUpload(manufacturerId: string, files: FileList) {
+    setUploadingId(manufacturerId);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append("files", files[i]);
+    }
+
+    const res = await fetch(`/api/manufacturers/${manufacturerId}/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: formData,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      alert(`Uploaded ${data.uploaded}/${data.total} files`);
+    } else {
+      const err = await res.json();
+      alert(err.error || "Upload failed");
+    }
+    setUploadingId(null);
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCFCFA]">
@@ -351,18 +378,41 @@ export default function LibraryPage() {
                           {m.name}
                         </span>
                       </div>
-                      <button
-                        onClick={() => triggerScrape(m.id)}
-                        disabled={scrapingId === m.id}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition flex-shrink-0 disabled:opacity-50"
-                        title="Start scrape"
-                      >
-                        {scrapingId === m.id ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <RefreshCw size={14} />
-                        )}
-                      </button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <label
+                          className={`p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer ${uploadingId === m.id ? "opacity-50 pointer-events-none" : ""}`}
+                          title="Upload files"
+                        >
+                          {uploadingId === m.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Upload size={14} />
+                          )}
+                          <input
+                            type="file"
+                            multiple
+                            accept=".pdf,.xlsx,.xls,.doc,.docx,.csv,.dwg,.dxf,.png,.jpg,.jpeg"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files?.length) handleFileUpload(m.id, e.target.files);
+                              e.target.value = "";
+                            }}
+                            disabled={uploadingId === m.id}
+                          />
+                        </label>
+                        <button
+                          onClick={() => triggerScrape(m.id)}
+                          disabled={scrapingId === m.id}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition disabled:opacity-50"
+                          title="Start scrape"
+                        >
+                          {scrapingId === m.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <RefreshCw size={14} />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
