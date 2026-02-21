@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Loader2, Play, Globe } from "lucide-react";
+import { ArrowLeft, Loader2, Play, Globe, Trash2, Pencil, Check, X } from "lucide-react";
 import ScraperProgress from "@/components/ScraperProgress";
 
 export default function ManufacturerDetailPage() {
@@ -13,6 +13,9 @@ export default function ManufacturerDetailPage() {
   const [scrapeJobs, setScrapeJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [scraping, setScraping] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editingUrl, setEditingUrl] = useState(false);
+  const [urlDraft, setUrlDraft] = useState("");
 
   useEffect(() => {
     loadManufacturer();
@@ -66,6 +69,43 @@ export default function ManufacturerDetailPage() {
     setScraping(false);
   }
 
+  async function handleDelete() {
+    if (!confirm(`Delete ${manufacturer?.name}? This will archive the manufacturer and all its products.`)) return;
+    setDeleting(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const res = await fetch(`/api/manufacturers/${params.id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+
+    if (res.ok) {
+      router.push("/library");
+    } else {
+      const err = await res.json();
+      alert(err.error || "Failed to delete");
+      setDeleting(false);
+    }
+  }
+
+  async function saveUrl() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    await fetch(`/api/manufacturers/${params.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ website_url: urlDraft }),
+    });
+
+    setEditingUrl(false);
+    await loadManufacturer();
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCFCFA]">
@@ -99,28 +139,69 @@ export default function ManufacturerDetailPage() {
             <h1 className="text-3xl" style={{ fontFamily: "var(--font-cormorant)", fontWeight: 500, color: "#2A2A2A" }}>
               {manufacturer.name}
             </h1>
-            {manufacturer.website_url && (
-              <a
-                href={manufacturer.website_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-sm text-blue-600 hover:underline mt-1"
-                style={{ fontFamily: "var(--font-ibm-plex)" }}
-              >
-                <Globe size={14} />
-                {manufacturer.website_url}
-              </a>
-            )}
+            <div className="flex items-center gap-1 mt-1">
+              <Globe size={14} className="text-gray-400 flex-shrink-0" />
+              {editingUrl ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="url"
+                    value={urlDraft}
+                    onChange={(e) => setUrlDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") saveUrl(); if (e.key === "Escape") setEditingUrl(false); }}
+                    className="px-2 py-0.5 border border-blue-300 rounded text-sm focus:outline-none focus:border-blue-500 w-80"
+                    style={{ fontFamily: "var(--font-ibm-plex)" }}
+                    autoFocus
+                    placeholder="https://..."
+                  />
+                  <button onClick={saveUrl} className="p-0.5 text-green-600 hover:text-green-700"><Check size={14} /></button>
+                  <button onClick={() => setEditingUrl(false)} className="p-0.5 text-gray-400 hover:text-gray-600"><X size={14} /></button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  {manufacturer.website_url ? (
+                    <a
+                      href={manufacturer.website_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline"
+                      style={{ fontFamily: "var(--font-ibm-plex)" }}
+                    >
+                      {manufacturer.website_url}
+                    </a>
+                  ) : (
+                    <span className="text-sm text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>No URL set</span>
+                  )}
+                  <button
+                    onClick={() => { setUrlDraft(manufacturer.website_url || ""); setEditingUrl(true); }}
+                    className="p-0.5 text-gray-400 hover:text-blue-600 transition"
+                    title="Edit URL"
+                  >
+                    <Pencil size={12} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-          <button
-            onClick={triggerScrape}
-            disabled={scraping}
-            className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white text-sm font-medium rounded-lg hover:opacity-90 transition disabled:opacity-50"
-            style={{ fontFamily: "var(--font-ibm-plex)" }}
-          >
-            {scraping ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-            Scrape Products
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={triggerScrape}
+              disabled={scraping}
+              className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white text-sm font-medium rounded-lg hover:opacity-90 transition disabled:opacity-50"
+              style={{ fontFamily: "var(--font-ibm-plex)" }}
+            >
+              {scraping ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+              Scrape Products
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-200 text-sm font-medium rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+              style={{ fontFamily: "var(--font-ibm-plex)" }}
+            >
+              {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              Delete
+            </button>
+          </div>
         </div>
 
         {/* Contact Info */}

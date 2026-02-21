@@ -22,6 +22,7 @@ export default function ProductDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [fileTypeFilter, setFileTypeFilter] = useState("all");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadProduct();
@@ -108,6 +109,26 @@ export default function ProductDetailPage() {
     }
   }
 
+  async function handleDelete() {
+    if (!confirm(`Delete ${product?.product_name}? This cannot be undone.`)) return;
+    setDeleting(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const res = await fetch(`/api/products/${params.id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+
+    if (res.ok) {
+      router.push("/library?tab=products");
+    } else {
+      const err = await res.json();
+      alert(err.error || "Failed to delete");
+      setDeleting(false);
+    }
+  }
+
   async function handleUnlinkRegulation(regulationId: string) {
     if (!confirm("Remove this regulation link?")) return;
 
@@ -180,6 +201,15 @@ export default function ProductDetailPage() {
               )}
             </div>
           </div>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-200 text-sm font-medium rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+            style={{ fontFamily: "var(--font-ibm-plex)" }}
+          >
+            {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+            Delete
+          </button>
         </div>
 
         {/* Source link */}
