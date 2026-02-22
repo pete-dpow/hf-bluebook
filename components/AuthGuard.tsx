@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import AuthDrawer from "@/components/AuthDrawer";
 
 // Routes that don't require auth
-const PUBLIC_PATHS = ["/auth", "/auth/callback", "/demo"];
+const PUBLIC_PATHS = ["/auth", "/auth/callback", "/demo", "/cde/residents/portal"];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);

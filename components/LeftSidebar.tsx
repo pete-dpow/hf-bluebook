@@ -22,6 +22,7 @@ import {
   FileBarChart,
   Flame,
   BookOpen,
+  Database,
 } from "lucide-react";
 import AppSwitcherBubble from "./AppSwitcherBubble";
 
@@ -343,6 +344,12 @@ export default function LeftSidebar() {
                 label="AutoPlan"
                 tooltip="AutoPlan — Fire Safety Plans"
                 onClick={() => router.push("/autoplan")}
+              />
+              <IconButton
+                icon={<Database size={20} />}
+                label="CDE"
+                tooltip="Common Data Environment"
+                onClick={() => window.open("/cde", "_blank")}
               />
             </>
           )}
