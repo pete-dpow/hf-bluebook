@@ -1,0 +1,26 @@
+// PATCH /api/cde/visits/[id] — Update a visit
+
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthUser } from "@/lib/authHelper";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const auth = await getAuthUser(req);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await req.json();
+  const allowed = ["visit_date", "start_time", "end_time", "visit_type", "lead_surveyor", "buildings", "flat_access_required", "notes_for_residents", "notified_at"];
+  const updates: any = {};
+  for (const key of allowed) {
+    if (body[key] !== undefined) updates[key] = body[key];
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.from("cde_visits").update(updates).eq("id", params.id).select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ visit: data });
+}

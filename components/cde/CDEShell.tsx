@@ -41,6 +41,7 @@ interface Tab {
 const TABS: Tab[] = [
   { id: "home", label: "Home", icon: "M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z|M9 22V12h6v10" },
   { id: "customers", label: "Customers", icon: "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2|C9 7 4" },
+  { id: "residents", label: "Residents", icon: "M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z|M9 22V12h6v10|C12 7 3" },
   { id: "documents", label: "Documents", icon: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z|M14 2v6h6", projectOnly: true },
   { id: "mail", label: "Mail", icon: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z|M22 6l-10 7L2 6", projectOnly: true },
   { id: "workflows", label: "Workflows", icon: "M22 12l-4 0-3 9-6-18-3 9-4 0", projectOnly: true },
@@ -104,6 +105,8 @@ export default function CDEShell({ children }: CDEShellProps) {
       router.push("/cde/home");
     } else if (tab.id === "customers") {
       router.push("/cde/clients");
+    } else if (tab.id === "residents") {
+      router.push("/cde/residents");
     } else if (tab.projectOnly && projectMatch) {
       router.push(`/cde/${projectMatch[1]}/${tab.id}`);
     }
