@@ -71,8 +71,10 @@ export function parseDocNumber(input: string): ParsedDocNumber {
 export function guessDocType(fileName: string): string | null {
   const upper = fileName.toUpperCase();
 
+  // Use word boundary matching to avoid false positives (e.g. "CALENDAR" matching "CAL")
   for (const code of DOC_TYPE_CODES) {
-    if (upper.includes(code)) return code;
+    const regex = new RegExp(`\\b${code}\\b`);
+    if (regex.test(upper)) return code;
   }
 
   // Common file extension mappings
@@ -115,12 +117,21 @@ export function generateDocNumber(parts: DocNumberParts): string {
 // ── Revision Helpers ────────────────────────────────────────────
 
 // Convert revision letter(s) to a sortable number: A=1, B=2, ... Z=26, AA=27
+// Also handles numeric revisions (e.g. "1", "2", "10") by treating them as-is
 export function revisionToNumber(rev: string): number {
-  const upper = rev.toUpperCase();
-  if (upper.length === 1) {
+  const upper = rev.toUpperCase().trim();
+  if (!upper) return 0;
+
+  // Handle numeric revisions (e.g. "1", "02", "10")
+  if (/^\d+$/.test(upper)) {
+    return parseInt(upper, 10);
+  }
+
+  // Handle letter revisions
+  if (upper.length === 1 && upper >= "A" && upper <= "Z") {
     return upper.charCodeAt(0) - 64; // A=1
   }
-  if (upper.length === 2) {
+  if (upper.length === 2 && upper[0] >= "A" && upper[0] <= "Z" && upper[1] >= "A" && upper[1] <= "Z") {
     return 26 + (upper.charCodeAt(0) - 64 - 1) * 26 + (upper.charCodeAt(1) - 64);
   }
   return 0;

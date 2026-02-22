@@ -6,12 +6,27 @@
 // Changed files trigger version detection.
 
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthUser } from "@/lib/authHelper";
 import { isCDEConfigured } from "@/lib/cde/graph-client";
 import { listAllFiles, SPDriveItem } from "@/lib/cde/sharepoint";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { parseDocNumber, guessDocType, compareRevisions } from "@/lib/cde/doc-number";
 
 export async function POST(req: NextRequest) {
+  // Auth check — require either a valid user session or the webhook secret
+  const webhookSecret = process.env.SYNC_WEBHOOK_SECRET;
+  const internalSecret = req.headers.get("x-sync-secret");
+
+  if (internalSecret && webhookSecret && internalSecret === webhookSecret) {
+    // Called internally from webhook handler — allowed
+  } else {
+    // Require user auth for manual/cron calls
+    const auth = await getAuthUser(req);
+    if (!auth) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   if (!isCDEConfigured()) {
     return NextResponse.json({ error: "CDE Azure AD not configured" }, { status: 503 });
   }
@@ -42,12 +57,12 @@ export async function POST(req: NextRequest) {
       .not("sharepoint_item_id", "is", null);
 
     const trackedByItemId = new Map(
-      (trackedDocs || []).map((d) => [d.sharepoint_item_id, d])
+      (trackedDocs || []).map((d: any) => [d.sharepoint_item_id, d])
     );
 
     // Also index by doc_number for conflict detection
     const trackedByDocNumber = new Map(
-      (trackedDocs || []).map((d) => [d.doc_number, d])
+      (trackedDocs || []).map((d: any) => [d.doc_number, d])
     );
 
     let newFiles = 0;
@@ -56,6 +71,7 @@ export async function POST(req: NextRequest) {
     let conflictFiles = 0;
     let unchangedFiles = 0;
     let needsMetadata = 0;
+    let skippedFiles = 0;
 
     for (const file of spFiles) {
       // Skip folders
@@ -70,6 +86,7 @@ export async function POST(req: NextRequest) {
         else if (result === "version") versionedFiles++;
         else if (result === "conflict") conflictFiles++;
         else if (result === "needs_metadata") needsMetadata++;
+        else if (result === "skipped") skippedFiles++;
       } else if (tracked.file_size !== file.size) {
         // ── File changed — create new version ──
         await processUpdatedFile(supabase, file, tracked);
@@ -91,6 +108,7 @@ export async function POST(req: NextRequest) {
         versioned: versionedFiles,
         conflicts: conflictFiles,
         needs_metadata: needsMetadata,
+        skipped: skippedFiles,
         unchanged: unchangedFiles,
       }),
     });
@@ -104,6 +122,7 @@ export async function POST(req: NextRequest) {
       versioned: versionedFiles,
       conflicts: conflictFiles,
       needs_metadata: needsMetadata,
+      skipped: skippedFiles,
       unchanged: unchangedFiles,
     });
   } catch (err: any) {
@@ -118,7 +137,7 @@ async function processNewFile(
   file: SPDriveItem,
   projectId: string | undefined,
   trackedByDocNumber: Map<string, any>
-): Promise<"new" | "version" | "conflict" | "needs_metadata"> {
+): Promise<"new" | "version" | "conflict" | "needs_metadata" | "skipped"> {
   const parsed = parseDocNumber(file.name);
 
   if (!parsed.isValid) {
@@ -127,7 +146,7 @@ async function processNewFile(
 
     const docType = guessDocType(file.name) || "GEN";
 
-    await supabase.from("cde_documents").insert({
+    const { error } = await supabase.from("cde_documents").insert({
       project_id: projectId,
       doc_number: file.name.replace(/\.[^.]+$/, ""), // Use filename as fallback
       title: file.name,
@@ -139,6 +158,10 @@ async function processNewFile(
       needs_metadata: true,
       status: "S0",
     });
+
+    if (error) {
+      console.error("[CDE Sync] Failed to insert new file:", file.name, error.message);
+    }
 
     return "needs_metadata";
   }
@@ -168,14 +191,14 @@ async function processNewFile(
       return "conflict";
     }
 
-    // Older revision — skip
-    return "new";
+    // Older revision — skip (not "new")
+    return "skipped";
   }
 
   // Completely new document
   if (!projectId) return "needs_metadata";
 
-  await supabase.from("cde_documents").insert({
+  const { error } = await supabase.from("cde_documents").insert({
     project_id: projectId,
     doc_number: docNumber,
     title: file.name.replace(/\.[^.]+$/, ""),
@@ -193,6 +216,10 @@ async function processNewFile(
     status: "S0",
   });
 
+  if (error) {
+    console.error("[CDE Sync] Failed to insert new document:", docNumber, error.message);
+  }
+
   return "new";
 }
 
@@ -206,7 +233,7 @@ async function processUpdatedFile(
   const newVersion = (tracked.version || 1) + 1;
 
   // Create version record for the previous state
-  await supabase.from("cde_document_versions").insert({
+  const { error: versionError } = await supabase.from("cde_document_versions").insert({
     document_id: tracked.id,
     version_number: tracked.version || 1,
     revision: tracked.revision || "A",
@@ -215,8 +242,13 @@ async function processUpdatedFile(
     superseded_at: new Date().toISOString(),
   });
 
+  if (versionError) {
+    console.error("[CDE Sync] Failed to create version record:", tracked.doc_number, versionError.message);
+    return;
+  }
+
   // Update the current document
-  await supabase
+  const { error: updateError } = await supabase
     .from("cde_documents")
     .update({
       version: newVersion,
@@ -225,6 +257,11 @@ async function processUpdatedFile(
       uploaded_at: new Date().toISOString(),
     })
     .eq("id", tracked.id);
+
+  if (updateError) {
+    console.error("[CDE Sync] Failed to update document:", tracked.doc_number, updateError.message);
+    return;
+  }
 
   // Audit log
   await supabase.from("cde_audit_log").insert({
@@ -247,7 +284,7 @@ async function createVersionRecord(
   const newVersion = (existing.version || 1) + 1;
 
   // Archive current state as a version
-  await supabase.from("cde_document_versions").insert({
+  const { error: versionError } = await supabase.from("cde_document_versions").insert({
     document_id: existing.id,
     version_number: existing.version || 1,
     revision: existing.revision || "A",
@@ -256,8 +293,13 @@ async function createVersionRecord(
     superseded_at: new Date().toISOString(),
   });
 
+  if (versionError) {
+    console.error("[CDE Sync] Failed to create version record:", existing.doc_number, versionError.message);
+    return;
+  }
+
   // Update current document to new revision
-  await supabase
+  const { error: updateError } = await supabase
     .from("cde_documents")
     .update({
       revision: newRevision,
@@ -269,6 +311,11 @@ async function createVersionRecord(
       uploaded_at: new Date().toISOString(),
     })
     .eq("id", existing.id);
+
+  if (updateError) {
+    console.error("[CDE Sync] Failed to update document revision:", existing.doc_number, updateError.message);
+    return;
+  }
 
   // Audit log
   await supabase.from("cde_audit_log").insert({

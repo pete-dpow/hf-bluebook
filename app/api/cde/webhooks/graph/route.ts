@@ -18,7 +18,11 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Change notification ─────────────────────────────────────
-  const webhookSecret = process.env.SYNC_WEBHOOK_SECRET || "cde-sync-secret";
+  const webhookSecret = process.env.SYNC_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.error("[CDE Webhook] SYNC_WEBHOOK_SECRET not configured");
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+  }
 
   let body: any;
   try {
@@ -43,7 +47,6 @@ export async function POST(req: NextRequest) {
   }
 
   // Queue a sync for each affected resource
-  // In production this would trigger a background job; for now we call sync inline
   const driveIds = new Set<string>();
   for (const notification of validNotifications) {
     // resource looks like: "drives/{driveId}/root"
@@ -53,13 +56,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Fire-and-forget sync call to our own sync endpoint
+  // Fire-and-forget sync call to our own sync endpoint with internal auth
   const baseUrl = req.nextUrl.origin;
   const driveIdList = Array.from(driveIds);
   for (const driveId of driveIdList) {
     fetch(`${baseUrl}/api/cde/sync`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-sync-secret": webhookSecret,
+      },
       body: JSON.stringify({ driveId, source: "webhook" }),
     }).catch((err) => {
       console.error("[CDE Webhook] Failed to trigger sync:", err.message);

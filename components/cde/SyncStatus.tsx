@@ -64,6 +64,8 @@ export default function SyncStatus({ projectId }: SyncStatusProps) {
         color: "rgba(255,255,255,.55)",
       }}
     >
+      {/* Keyframes for spin animation */}
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       {/* Sync icon */}
       <svg
         width="12"
