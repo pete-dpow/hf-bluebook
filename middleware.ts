@@ -111,7 +111,8 @@ export function middleware(req: NextRequest) {
   if (
     pathname === "/api/inngest" ||
     pathname === "/api/stripe/webhook" ||
-    pathname === "/api/whatsapp/webhook"
+    pathname === "/api/whatsapp/webhook" ||
+    pathname === "/api/cde/webhooks/graph"
   ) {
     return NextResponse.next();
   }
