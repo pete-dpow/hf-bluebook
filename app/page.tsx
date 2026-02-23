@@ -743,7 +743,7 @@ export default function Home() {
                     color: "#4B5563",
                   }}
                 >
-                  Search fire protection products, interrogate your project data, and become compliant — all through conversation.
+                  Find the right product, verify it meets spec, and prove compliance — one conversation that connects your catalogue, regulations, and live project data.
                 </p>
               </div>
               <div className="mt-6 flex flex-wrap gap-2">
