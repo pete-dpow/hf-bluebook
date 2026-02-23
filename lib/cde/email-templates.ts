@@ -48,7 +48,7 @@ export function visitNotificationEmail(params: {
       ${params.buildings.length > 0 ? `<div style="margin-top:8px;font-size:12px;color:#4b5563;">Buildings: ${esc(params.buildings.join(", "))}</div>` : ""}
     </div>
     ${params.notesForResidents ? `<p style="margin:0 0 16px;color:#4b5563;font-size:13px;line-height:1.5;">${esc(params.notesForResidents)}</p>` : ""}
-    <a href="${params.portalUrl}" style="display:inline-block;background:#4d7c0f;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;">
+    <a href="${esc(params.portalUrl)}" style="display:inline-block;background:#4d7c0f;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;">
       View in Resident Portal
     </a>
     <p style="margin:16px 0 0;color:#9ca3af;font-size:11px;">

@@ -207,7 +207,7 @@ export default function UploadModal({ projectId, projectCode, onClose, onUploade
         <div style={{ padding: "12px 18px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end", gap: 6 }}>
           <button style={btnStyle} onClick={onClose}>Cancel</button>
           <button
-            style={{ ...btnStyle, background: "#154f91", borderColor: "#154f91", color: "#fff" }}
+            style={{ ...btnStyle, background: "#154f91", borderColor: "#154f91", color: "#fff", opacity: (uploading || !title) ? 0.5 : 1, cursor: (uploading || !title) ? "not-allowed" : "pointer" }}
             onClick={handleUpload}
             disabled={uploading || !title}
           >

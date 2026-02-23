@@ -30,8 +30,8 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { projectId, clientId, visitDate, startTime, endTime, visitType, leadSurveyor, buildings, flatAccessRequired, notesForResidents } = body;
 
-  if (!projectId || !visitDate || !visitType) {
-    return NextResponse.json({ error: "projectId, visitDate, and visitType are required" }, { status: 400 });
+  if (!projectId || !clientId || !visitDate || !visitType) {
+    return NextResponse.json({ error: "projectId, clientId, visitDate, and visitType are required" }, { status: 400 });
   }
 
   const supabase = getSupabaseAdmin();

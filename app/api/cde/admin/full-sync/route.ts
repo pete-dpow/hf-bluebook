@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     // For each file, check if it exists in cde_documents
     const supabase = getSupabaseAdmin();
-    let synced = 0;
+    let untracked = 0;
     let skipped = 0;
     let errors = 0;
 
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
         // This basic sync just records what's in SharePoint
         // The admin can then associate files via the UI
 
-        synced++;
+        untracked++;
       } catch (err: any) {
         console.error(`[CDE Sync] Error processing file ${file.name}:`, err.message);
         errors++;
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       status: "completed",
       total_files: files.length,
-      synced,
+      untracked,
       skipped,
       errors,
     });

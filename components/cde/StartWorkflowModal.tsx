@@ -96,7 +96,7 @@ export default function StartWorkflowModal({ projectId, onClose, onCreated }: St
 
         <div style={{ padding: "12px 18px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end", gap: 6 }}>
           <button style={btn} onClick={onClose}>Cancel</button>
-          <button style={{ ...btn, background: "#154f91", borderColor: "#154f91", color: "#fff" }} onClick={handleStart} disabled={submitting || !documentId}>
+          <button style={{ ...btn, background: "#154f91", borderColor: "#154f91", color: "#fff", opacity: (submitting || !documentId) ? 0.5 : 1, cursor: (submitting || !documentId) ? "not-allowed" : "pointer" }} onClick={handleStart} disabled={submitting || !documentId}>
             {submitting ? "Starting..." : "Start Workflow"}
           </button>
         </div>

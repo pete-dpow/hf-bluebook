@@ -83,7 +83,7 @@ export default function ScheduleVisitModal({ projectId, clientId, onClose, onCre
         {error && <div style={{ padding: "0 18px 8px", fontSize: 11, color: "#dc2626", fontWeight: 500 }}>{error}</div>}
         <div style={{ padding: "12px 18px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end", gap: 6 }}>
           <button style={btn} onClick={onClose}>Cancel</button>
-          <button style={{ ...btn, background: "#4d7c0f", borderColor: "#4d7c0f", color: "#fff" }} onClick={handleSubmit} disabled={submitting || !visitDate}>
+          <button style={{ ...btn, background: "#4d7c0f", borderColor: "#4d7c0f", color: "#fff", opacity: (submitting || !visitDate) ? 0.5 : 1, cursor: (submitting || !visitDate) ? "not-allowed" : "pointer" }} onClick={handleSubmit} disabled={submitting || !visitDate}>
             {submitting ? "Scheduling..." : "Schedule Visit"}
           </button>
         </div>

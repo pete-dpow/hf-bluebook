@@ -143,7 +143,7 @@ export default function MailDetail({ mailId, onClose, onUpdated }: MailDetailPro
           <div style={{ display: "flex", gap: 6 }}>
             <button style={{ ...footBtn }} onClick={handleClose}>Close</button>
             <button
-              style={{ ...footBtn, background: "#154f91", borderColor: "#154f91", color: "#fff" }}
+              style={{ ...footBtn, background: "#154f91", borderColor: "#154f91", color: "#fff", opacity: (sending || !responseText.trim()) ? 0.5 : 1, cursor: (sending || !responseText.trim()) ? "not-allowed" : "pointer" }}
               onClick={handleRespond}
               disabled={sending || !responseText.trim()}
             >

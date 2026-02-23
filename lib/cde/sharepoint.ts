@@ -326,7 +326,11 @@ export async function createWebhookSubscription(
     notificationUrl,
     resource: `/drives/${driveId}/root`,
     expirationDateTime: expiration.toISOString(),
-    clientState: process.env.SYNC_WEBHOOK_SECRET || "cde-sync-secret",
+    clientState: (() => {
+      const secret = process.env.SYNC_WEBHOOK_SECRET;
+      if (!secret) throw new Error("SYNC_WEBHOOK_SECRET environment variable is not set");
+      return secret;
+    })(),
   });
 }
 

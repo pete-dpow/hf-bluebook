@@ -5,11 +5,22 @@
 // 2. Change notifications (Graph POST with notification payload)
 
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
+
+/** Timing-safe string comparison (returns false if lengths differ) */
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 export async function POST(req: NextRequest) {
   // ── Subscription validation ─────────────────────────────────
   const validationToken = req.nextUrl.searchParams.get("validationToken");
   if (validationToken) {
+    // Only reflect tokens that contain safe characters (alphanumeric + hyphens)
+    if (!/^[A-Za-z0-9\-]+$/.test(validationToken)) {
+      return NextResponse.json({ error: "Invalid validationToken" }, { status: 400 });
+    }
     // Graph expects plain text response with the token
     return new NextResponse(validationToken, {
       status: 200,
@@ -36,9 +47,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: "no_notifications" }, { status: 202 });
   }
 
-  // Validate clientState matches our secret
+  // Validate clientState matches our secret (timing-safe)
   const validNotifications = notifications.filter(
-    (n: any) => n.clientState === webhookSecret
+    (n: any) => typeof n.clientState === "string" && safeEqual(n.clientState, webhookSecret)
   );
 
   if (validNotifications.length === 0) {

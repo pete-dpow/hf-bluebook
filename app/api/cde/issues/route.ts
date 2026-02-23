@@ -67,14 +67,18 @@ export async function POST(req: NextRequest) {
 
   const supabase = getSupabaseAdmin();
 
-  // Get next sequence number
-  const { count } = await supabase
+  // Get next sequence number (MAX-based to avoid race conditions and deletion reuse)
+  const { data: lastIssue } = await supabase
     .from("cde_issues")
-    .select("id", { count: "exact", head: true })
+    .select("issue_number")
     .eq("project_id", projectId)
-    .eq("issue_type", issueType);
+    .eq("issue_type", issueType)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  const seq = (count || 0) + 1;
+  const lastSeq = lastIssue?.issue_number ? parseInt(lastIssue.issue_number.split("-").pop() || "0", 10) : 0;
+  const seq = (lastSeq || 0) + 1;
   const issueNumber = `${issueType}-${String(seq).padStart(3, "0")}`;
 
   const { data, error } = await supabase

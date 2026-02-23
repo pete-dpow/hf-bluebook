@@ -72,6 +72,7 @@ export default function DocumentDetail({ documentId, onClose }: DocumentDetailPr
         zIndex: 200,
         transform: isOpen ? "translateX(0)" : "translateX(100%)",
         transition: "transform .2s cubic-bezier(.16,1,.3,1)",
+        pointerEvents: isOpen ? "auto" : "none",
         display: "flex",
         flexDirection: "column",
         boxShadow: "-4px 0 16px rgba(0,0,0,.08)",

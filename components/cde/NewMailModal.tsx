@@ -107,7 +107,7 @@ export default function NewMailModal({ projectId, onClose, onCreated }: NewMailM
         <div style={{ padding: "12px 18px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end", gap: 6 }}>
           <button style={btnStyle} onClick={onClose}>Cancel</button>
           <button
-            style={{ ...btnStyle, background: "#154f91", borderColor: "#154f91", color: "#fff" }}
+            style={{ ...btnStyle, background: "#154f91", borderColor: "#154f91", color: "#fff", opacity: (sending || !subject) ? 0.5 : 1, cursor: (sending || !subject) ? "not-allowed" : "pointer" }}
             onClick={handleSend}
             disabled={sending || !subject}
           >

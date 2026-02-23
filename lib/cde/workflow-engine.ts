@@ -18,28 +18,31 @@ export async function advanceWorkflow(workflowId: string, completedStepId: strin
   const steps = (workflow.cde_workflow_steps || []).sort((a: any, b: any) => a.step_number - b.step_number);
   const currentStep = steps.find((s: any) => s.id === completedStepId);
   if (!currentStep) return { error: "Step not found" };
-  if (currentStep.status !== "ACTIVE") return { error: "Step is not active" };
 
-  // Mark step as completed
-  const { error: stepError } = await supabase.from("cde_workflow_steps").update({
+  // Mark step as completed (optimistic concurrency: only update if still ACTIVE)
+  const { error: stepError, count: updatedCount } = await supabase.from("cde_workflow_steps").update({
     status: "COMPLETED",
     completed_by: userId,
     completed_at: new Date().toISOString(),
-  }).eq("id", completedStepId);
-  if (stepError) return { error: `Failed to complete step: ${stepError.message}` };
+  }).eq("id", completedStepId).eq("status", "ACTIVE");
+
+  if (stepError) return { error: stepError.message };
+  if (updatedCount === 0) return { error: "Step is not active or was already completed" };
 
   const nextStepNumber = currentStep.step_number + 1;
   const nextStep = steps.find((s: any) => s.step_number === nextStepNumber);
 
   if (nextStep) {
     // Advance to next step
-    await supabase.from("cde_workflow_steps").update({
+    const { error: nextStepError } = await supabase.from("cde_workflow_steps").update({
       status: "ACTIVE",
     }).eq("id", nextStep.id);
+    if (nextStepError) return { error: `Failed to activate next step: ${nextStepError.message}` };
 
-    await supabase.from("cde_workflows").update({
+    const { error: advanceError } = await supabase.from("cde_workflows").update({
       current_step: nextStepNumber,
     }).eq("id", workflowId);
+    if (advanceError) return { error: `Failed to advance workflow: ${advanceError.message}` };
 
     // Audit
     await supabase.from("cde_audit_log").insert({
@@ -54,14 +57,16 @@ export async function advanceWorkflow(workflowId: string, completedStepId: strin
     return { status: "advanced", nextStep: nextStep.step_name };
   } else {
     // Final step completed — complete workflow
-    await supabase.from("cde_workflows").update({
+    const { error: completeError } = await supabase.from("cde_workflows").update({
       status: "COMPLETED",
       completed_at: new Date().toISOString(),
     }).eq("id", workflowId);
+    if (completeError) return { error: `Failed to complete workflow: ${completeError.message}` };
 
     // Auto-publish: set document status to "A" (Approved)
     if (workflow.document_id) {
-      await supabase.from("cde_documents").update({ status: "A" }).eq("id", workflow.document_id);
+      const { error: docError } = await supabase.from("cde_documents").update({ status: "A" }).eq("id", workflow.document_id);
+      if (docError) return { error: `Failed to approve document: ${docError.message}` };
 
       await supabase.from("cde_audit_log").insert({
         event_type: "DOC_AUTO_APPROVED",

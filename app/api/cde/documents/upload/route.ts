@@ -43,14 +43,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  // Get next sequence number for this doc type in project
-  const { count: existingCount } = await supabase
+  // Get next sequence number for this doc type in project (MAX-based to avoid race conditions and deletion reuse)
+  const { data: lastDoc } = await supabase
     .from("cde_documents")
-    .select("id", { count: "exact", head: true })
+    .select("doc_number")
     .eq("project_id", projectId)
-    .eq("doc_type", docType);
+    .eq("doc_type", docType)
+    .order("uploaded_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  const sequence = (existingCount || 0) + 1;
+  // Extract sequence from doc_number (last segment before any revision)
+  const lastSeq = lastDoc?.doc_number
+    ? parseInt(lastDoc.doc_number.match(/(\d+)(?=[^0-9]*$)/)?.[1] || "0", 10)
+    : 0;
+  const sequence = (lastSeq || 0) + 1;
 
   const docNumber = generateDocNumber({
     projectCode: project.project_code,

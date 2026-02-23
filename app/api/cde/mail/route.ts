@@ -74,14 +74,19 @@ export async function POST(req: NextRequest) {
 
   const supabase = getSupabaseAdmin();
 
-  // Get next sequence number for this mail type
-  const { count } = await supabase
+  // Get next sequence number for this mail type (MAX-based to avoid race conditions and deletion reuse)
+  const { data: lastMail } = await supabase
     .from("cde_mail")
-    .select("id", { count: "exact", head: true })
+    .select("mail_number")
     .eq("project_id", projectId)
-    .eq("mail_type", mailType);
+    .eq("mail_type", mailType)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  const sequence = (count || 0) + 1;
+  // Extract numeric part from mail_number like "RFI-003" -> 3
+  const lastSeq = lastMail?.mail_number ? parseInt(lastMail.mail_number.split("-").pop() || "0", 10) : 0;
+  const sequence = (lastSeq || 0) + 1;
   const mailNumber = generateMailNumber(mailType, sequence);
 
   // Calculate due date

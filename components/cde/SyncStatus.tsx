@@ -19,27 +19,32 @@ export default function SyncStatus({ projectId }: SyncStatusProps) {
   }, [projectId]);
 
   async function loadSyncInfo() {
-    // Get last sync event from audit log
-    const { data: auditData } = await supabase
-      .from("cde_audit_log")
-      .select("created_at")
-      .eq("event_type", "SYNC")
-      .order("created_at", { ascending: false })
-      .limit(1);
+    setSyncing(true);
+    try {
+      // Get last sync event from audit log
+      const { data: auditData } = await supabase
+        .from("cde_audit_log")
+        .select("created_at")
+        .eq("event_type", "SYNC")
+        .order("created_at", { ascending: false })
+        .limit(1);
 
-    if (auditData && auditData.length > 0) {
-      setLastSync(auditData[0].created_at);
-    }
+      if (auditData && auditData.length > 0) {
+        setLastSync(auditData[0].created_at);
+      }
 
-    // Get count of documents needing metadata
-    if (projectId) {
-      const { count } = await supabase
-        .from("cde_documents")
-        .select("id", { count: "exact", head: true })
-        .eq("project_id", projectId)
-        .eq("needs_metadata", true);
+      // Get count of documents needing metadata
+      if (projectId) {
+        const { count } = await supabase
+          .from("cde_documents")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", projectId)
+          .eq("needs_metadata", true);
 
-      setPendingCount(count || 0);
+        setPendingCount(count || 0);
+      }
+    } finally {
+      setSyncing(false);
     }
   }
 

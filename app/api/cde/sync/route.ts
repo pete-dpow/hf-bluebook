@@ -6,18 +6,25 @@
 // Changed files trigger version detection.
 
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { getAuthUser } from "@/lib/authHelper";
 import { isCDEConfigured } from "@/lib/cde/graph-client";
 import { listAllFiles, SPDriveItem } from "@/lib/cde/sharepoint";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { parseDocNumber, guessDocType, compareRevisions } from "@/lib/cde/doc-number";
 
+/** Timing-safe string comparison (returns false if lengths differ) */
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+
 export async function POST(req: NextRequest) {
   // Auth check — require either a valid user session or the webhook secret
   const webhookSecret = process.env.SYNC_WEBHOOK_SECRET;
   const internalSecret = req.headers.get("x-sync-secret");
 
-  if (internalSecret && webhookSecret && internalSecret === webhookSecret) {
+  if (internalSecret && webhookSecret && safeEqual(internalSecret, webhookSecret)) {
     // Called internally from webhook handler — allowed
   } else {
     // Require user auth for manual/cron calls

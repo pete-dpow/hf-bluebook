@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const building = url.searchParams.get("building");
 
   const supabase = getSupabaseAdmin();
-  let query = supabase.from("cde_residents").select("*").order("last_name");
+  let query = supabase.from("cde_residents").select("id, client_id, project_id, building, flat_ref, level, first_name, last_name, mobile, email, sms_opt_in, email_opt_in, availability_notes, last_active_at, created_at").order("last_name");
 
   if (projectId) query = query.eq("project_id", projectId);
   if (clientId) query = query.eq("client_id", clientId);
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       last_name: lastName,
       mobile: mobile || null,
       email: email || null,
-      sms_opt_in: smsOptIn ?? true,
+      sms_opt_in: smsOptIn ?? false,
       email_opt_in: emailOptIn ?? true,
     })
     .select()
