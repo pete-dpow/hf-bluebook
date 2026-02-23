@@ -673,7 +673,7 @@ export default function Home() {
           </div>
 
           {/* 3 Suggestion Pills — glass row */}
-          <div className="flex gap-3 mb-8" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+          <div className="grid grid-cols-3 gap-3 mb-8" style={{ fontFamily: "var(--font-ibm-plex)" }}>
             {suggestions.map((s, i) => (
               <button
                 key={i}
@@ -685,9 +685,11 @@ export default function Home() {
                     if (trigger) trigger.click();
                   }, 100);
                 }}
-                className="flex-1 px-4 py-3 text-left text-sm rounded-xl transition-all hover:shadow-md"
+                className="px-3 py-2.5 text-left rounded-xl transition-all hover:shadow-md"
                 style={{
-                  color: "#4B5563",
+                  fontSize: "12px",
+                  lineHeight: "1.4",
+                  color: "#6B7280",
                   background: "rgba(255,255,255,0.6)",
                   backdropFilter: "blur(12px)",
                   WebkitBackdropFilter: "blur(12px)",
@@ -703,61 +705,70 @@ export default function Home() {
           <div className="flex gap-6 mb-6 items-stretch">
             {/* Left: USP Card */}
             <div
-              className="w-1/3 rounded-2xl p-6 flex flex-col justify-between"
+              className="w-1/3 rounded-2xl overflow-hidden flex flex-col"
               style={{
-                background: "rgba(255,255,255,0.55)",
-                backdropFilter: "blur(16px)",
-                WebkitBackdropFilter: "blur(16px)",
-                border: "1px solid rgba(229,231,235,0.6)",
-                boxShadow: "0 4px 24px rgba(37,99,235,0.06)",
+                background: "linear-gradient(135deg, #1e3a5f 0%, #2563EB 100%)",
+                boxShadow: "0 8px 32px rgba(37,99,235,0.18), 0 2px 8px rgba(0,0,0,0.08)",
               }}
             >
-              <div>
-                <h2
-                  className="text-3xl mb-1"
-                  style={{
-                    fontFamily: "var(--font-cormorant)",
-                    fontWeight: 600,
-                    color: "#2A2A2A",
-                  }}
-                >
-                  Melvin.Chat
-                </h2>
-                <p
-                  className="text-sm mb-4"
-                  style={{
-                    fontFamily: "var(--font-ibm-plex)",
-                    color: "#2563EB",
-                    fontWeight: 500,
-                  }}
-                >
-                  Hybrid Product Intelligence
-                </p>
-                <p
-                  className="text-sm leading-relaxed"
-                  style={{
-                    fontFamily: "var(--font-ibm-plex)",
-                    color: "#4B5563",
-                  }}
-                >
-                  Search fire protection products, interrogate your project data, and become compliant — all through conversation. One AI that connects your product catalogue, regulations, and live project schedules.
-                </p>
-              </div>
-              <div className="mt-6 flex flex-wrap gap-2">
-                {["Products", "Regulations", "Projects", "Compliance"].map((tag) => (
-                  <span
-                    key={tag}
-                    className="text-xs px-3 py-1 rounded-full"
+              {/* Top accent bar */}
+              <div style={{ height: "3px", background: "linear-gradient(90deg, #60a5fa, #a78bfa, #60a5fa)" }} />
+              <div className="p-6 flex flex-col justify-between flex-1">
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)" }}>
+                      <Cpu className="w-4.5 h-4.5 text-white" />
+                    </div>
+                    <h2
+                      className="text-2xl"
+                      style={{
+                        fontFamily: "var(--font-cormorant)",
+                        fontWeight: 600,
+                        color: "#FFFFFF",
+                        letterSpacing: "0.01em",
+                      }}
+                    >
+                      Melvin.Chat
+                    </h2>
+                  </div>
+                  <p
+                    className="text-xs uppercase tracking-widest mb-4"
                     style={{
                       fontFamily: "var(--font-ibm-plex)",
-                      color: "#2563EB",
-                      background: "rgba(37,99,235,0.08)",
-                      border: "1px solid rgba(37,99,235,0.15)",
+                      color: "rgba(255,255,255,0.6)",
+                      fontWeight: 500,
+                      letterSpacing: "0.12em",
                     }}
                   >
-                    {tag}
-                  </span>
-                ))}
+                    Hybrid Product Intelligence
+                  </p>
+                  <p
+                    className="text-sm leading-relaxed"
+                    style={{
+                      fontFamily: "var(--font-ibm-plex)",
+                      color: "rgba(255,255,255,0.85)",
+                    }}
+                  >
+                    Search fire protection products, interrogate your project data, and become compliant — all through conversation.
+                  </p>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {["Products", "Regulations", "Projects", "Compliance"].map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-[10px] px-2.5 py-1 rounded-full"
+                      style={{
+                        fontFamily: "var(--font-ibm-plex)",
+                        color: "rgba(255,255,255,0.9)",
+                        background: "rgba(255,255,255,0.12)",
+                        border: "1px solid rgba(255,255,255,0.2)",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -883,8 +894,8 @@ export default function Home() {
             </div>
           )}
 
-          {/* Bottom: App Icon Grid — single row */}
-          <div className="flex justify-center gap-5 mt-4">
+          {/* Bottom: App Icon Grid — single row, equally distributed */}
+          <div className="grid grid-cols-8 mt-4">
             {APP_ICONS.map((app) => (
               <a
                 key={app.label}
