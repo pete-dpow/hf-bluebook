@@ -49,6 +49,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -89,6 +91,36 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#FCFCFA] pl-[64px]">
       <div className="max-w-[1100px] mx-auto p-6 flex flex-col gap-5">
+        {/* Seed Demo Data */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button
+            onClick={async () => {
+              setSeeding(true);
+              setSeedResult(null);
+              const { data: { session } } = await supabase.auth.getSession();
+              if (!session) return;
+              const res = await fetch("/api/seed-demo", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${session.access_token}` },
+              });
+              const d = await res.json();
+              setSeeding(false);
+              setSeedResult(res.ok ? d.message : `Error: ${d.error}`);
+              if (res.ok) window.location.reload();
+            }}
+            disabled={seeding}
+            style={{
+              padding: "8px 16px", borderRadius: 8, border: "1px solid #E5E7EB",
+              background: seeding ? "#F3F4F6" : "#2563EB", color: seeding ? "#6B7280" : "#fff",
+              fontSize: 13, fontWeight: 500, cursor: seeding ? "not-allowed" : "pointer",
+              fontFamily: "var(--font-ibm-plex)",
+            }}
+          >
+            {seeding ? "Seeding demo data…" : "Seed Demo Data"}
+          </button>
+          {seedResult && <span style={{ fontSize: 12, color: seedResult.startsWith("Error") ? "#DC2626" : "#059669", fontFamily: "var(--font-ibm-plex)" }}>{seedResult}</span>}
+        </div>
+
         {/* 1. User Profile Header — full-width card matching Figma */}
         <UserProfileHeader user={data.user} stats={data.stats} />
 
