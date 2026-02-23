@@ -12,12 +12,16 @@ const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-cormorant",
+  display: "swap",
+  fallback: ["Georgia", "Times New Roman", "serif"],
 });
 
 const ibmPlex = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-ibm-plex",
+  display: "swap",
+  fallback: ["system-ui", "-apple-system", "sans-serif"],
 });
 
 export const metadata = {
