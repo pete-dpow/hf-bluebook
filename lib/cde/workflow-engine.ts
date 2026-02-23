@@ -18,13 +18,15 @@ export async function advanceWorkflow(workflowId: string, completedStepId: strin
   const steps = (workflow.cde_workflow_steps || []).sort((a: any, b: any) => a.step_number - b.step_number);
   const currentStep = steps.find((s: any) => s.id === completedStepId);
   if (!currentStep) return { error: "Step not found" };
+  if (currentStep.status !== "ACTIVE") return { error: "Step is not active" };
 
   // Mark step as completed
-  await supabase.from("cde_workflow_steps").update({
+  const { error: stepError } = await supabase.from("cde_workflow_steps").update({
     status: "COMPLETED",
     completed_by: userId,
     completed_at: new Date().toISOString(),
   }).eq("id", completedStepId);
+  if (stepError) return { error: `Failed to complete step: ${stepError.message}` };
 
   const nextStepNumber = currentStep.step_number + 1;
   const nextStep = steps.find((s: any) => s.step_number === nextStepNumber);

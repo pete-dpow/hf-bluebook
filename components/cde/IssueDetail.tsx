@@ -20,7 +20,9 @@ export default function IssueDetail({ issueId, onClose, onUpdated }: IssueDetail
   const [auditEvents, setAuditEvents] = useState<any[]>([]);
 
   useEffect(() => {
-    if (issueId) { loadIssue(); loadAudit(); }
+    if (!issueId) { setIssue(null); setAuditEvents([]); return; }
+    loadIssue();
+    loadAudit();
   }, [issueId]);
 
   async function loadIssue() {
@@ -37,14 +39,16 @@ export default function IssueDetail({ issueId, onClose, onUpdated }: IssueDetail
 
   async function advanceStatus(newStatus: string) {
     const { data: { session } } = await supabase.auth.getSession();
-    await fetch(`/api/cde/issues/${issueId}/status`, {
+    const res = await fetch(`/api/cde/issues/${issueId}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
       body: JSON.stringify({ status: newStatus }),
     });
-    loadIssue();
-    loadAudit();
-    onUpdated();
+    if (res.ok) {
+      loadIssue();
+      loadAudit();
+      onUpdated();
+    }
   }
 
   const isOpen = !!issueId;
@@ -58,6 +62,7 @@ export default function IssueDetail({ issueId, onClose, onUpdated }: IssueDetail
       transform: isOpen ? "translateX(0)" : "translateX(100%)",
       transition: "transform .2s cubic-bezier(.16,1,.3,1)",
       display: "flex", flexDirection: "column", boxShadow: "-4px 0 16px rgba(0,0,0,.08)",
+      pointerEvents: isOpen ? "auto" : "none",
     }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid #e5e7eb", background: "#f8f9fb" }}>

@@ -17,7 +17,7 @@ export default function ScheduleVisitModal({ projectId, clientId, onClose, onCre
   const [visitDate, setVisitDate] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
-  const [visitType, setVisitType] = useState("SURVEY");
+  const [visitType, setVisitType] = useState<string>(VISIT_TYPES[0].code);
   const [leadSurveyor, setLeadSurveyor] = useState("");
   const [buildings, setBuildings] = useState("");
   const [notes, setNotes] = useState("");

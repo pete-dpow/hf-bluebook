@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
             notesForResidents: visit.notes_for_residents || messageBody || "",
             portalUrl,
           })
-        : `<p>${messageBody || subject || "Notification from Harmony Fire"}</p><p><a href="${portalUrl}">View Portal</a></p>`;
+        : `<p>${(messageBody || subject || "Notification from Harmony Fire").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p><p><a href="${portalUrl}">View Portal</a></p>`;
 
       const result = await sendResidentEmail({
         to: resident.email,
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
     sent_by: auth.user.id,
     resend_batch_id: resendBatchId || null,
     twilio_batch_id: twilioBatchId || null,
-    recipient_count: residents.length,
+    recipient_count: emailsSent + smsSent,
   });
 
   // Audit

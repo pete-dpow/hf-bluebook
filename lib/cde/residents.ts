@@ -10,10 +10,12 @@ export async function generatePortalToken(residentId: string): Promise<string> {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 90);
 
-  await supabase.from("cde_residents").update({
+  const { error } = await supabase.from("cde_residents").update({
     portal_token: token,
     portal_token_expires_at: expiresAt.toISOString(),
   }).eq("id", residentId);
+
+  if (error) throw new Error(`Failed to save portal token: ${error.message}`);
 
   return token;
 }

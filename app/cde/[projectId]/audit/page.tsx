@@ -31,12 +31,13 @@ export default function AuditPage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
     const qp = new URLSearchParams({ page: String(page), limit: "100" });
+    if (projectId) qp.set("projectId", projectId);
     if (filterType) qp.set("entityType", filterType);
     if (search) qp.set("search", search);
 
     const res = await fetch(`/api/cde/audit?${qp}`, { headers: { Authorization: `Bearer ${session.access_token}` } });
     if (res.ok) { const d = await res.json(); setEvents(d.events); setTotal(d.total); }
-  }, [page, filterType, search]);
+  }, [page, filterType, search, projectId]);
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
 
@@ -50,7 +51,17 @@ export default function AuditPage() {
     if (!session) return;
     const qp = new URLSearchParams();
     if (filterType) qp.set("entityType", filterType);
-    window.open(`/api/cde/audit/export?${qp}`, "_blank");
+    const res = await fetch(`/api/cde/audit/export?${qp}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cde_audit_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (

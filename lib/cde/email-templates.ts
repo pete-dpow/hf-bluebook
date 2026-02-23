@@ -1,5 +1,10 @@
 // lib/cde/email-templates.ts — Branded HF email HTML templates
 
+// HTML-escape user-provided strings to prevent injection
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 export function visitNotificationEmail(params: {
   residentName: string;
   visitDate: string;
@@ -21,7 +26,7 @@ export function visitNotificationEmail(params: {
     <div style="color:rgba(255,255,255,.6);font-size:12px;">Building Safety Notification</div>
   </div>
   <div style="background:#fff;padding:24px;border-radius:0 0 8px 8px;border:1px solid #e5e7eb;border-top:none;">
-    <p style="margin:0 0 12px;color:#111827;font-size:14px;">Dear ${params.residentName},</p>
+    <p style="margin:0 0 12px;color:#111827;font-size:14px;">Dear ${esc(params.residentName)},</p>
     <p style="margin:0 0 16px;color:#4b5563;font-size:13px;line-height:1.5;">
       We are writing to inform you of an upcoming visit to your building.
     </p>
@@ -29,20 +34,20 @@ export function visitNotificationEmail(params: {
       <div style="display:flex;gap:16px;">
         <div>
           <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em;">Date</div>
-          <div style="font-size:14px;font-weight:500;color:#111827;">${params.visitDate}</div>
+          <div style="font-size:14px;font-weight:500;color:#111827;">${esc(params.visitDate)}</div>
         </div>
         <div>
           <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em;">Time</div>
-          <div style="font-size:14px;font-weight:500;color:#111827;">${params.startTime} – ${params.endTime}</div>
+          <div style="font-size:14px;font-weight:500;color:#111827;">${esc(params.startTime)} – ${esc(params.endTime)}</div>
         </div>
         <div>
           <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em;">Type</div>
-          <div style="font-size:14px;font-weight:500;color:#111827;">${params.visitType}</div>
+          <div style="font-size:14px;font-weight:500;color:#111827;">${esc(params.visitType)}</div>
         </div>
       </div>
-      ${params.buildings.length > 0 ? `<div style="margin-top:8px;font-size:12px;color:#4b5563;">Buildings: ${params.buildings.join(", ")}</div>` : ""}
+      ${params.buildings.length > 0 ? `<div style="margin-top:8px;font-size:12px;color:#4b5563;">Buildings: ${esc(params.buildings.join(", "))}</div>` : ""}
     </div>
-    ${params.notesForResidents ? `<p style="margin:0 0 16px;color:#4b5563;font-size:13px;line-height:1.5;">${params.notesForResidents}</p>` : ""}
+    ${params.notesForResidents ? `<p style="margin:0 0 16px;color:#4b5563;font-size:13px;line-height:1.5;">${esc(params.notesForResidents)}</p>` : ""}
     <a href="${params.portalUrl}" style="display:inline-block;background:#4d7c0f;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;">
       View in Resident Portal
     </a>

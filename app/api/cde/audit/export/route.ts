@@ -18,15 +18,22 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Build CSV
+  // Build CSV with formula injection protection
+  const csvSafe = (v: string): string => {
+    const escaped = v.replace(/"/g, '""');
+    // Prefix cells starting with formula-triggering chars to prevent CSV injection
+    if (/^[=+\-@\t\r]/.test(escaped)) return "'" + escaped;
+    return escaped;
+  };
+
   const headers = ["Timestamp", "Event Type", "Entity Type", "Entity Ref", "User", "Detail"];
   const rows = (data || []).map((e) => [
     new Date(e.created_at).toISOString(),
-    e.event_type,
-    e.entity_type,
-    e.entity_ref || "",
-    e.user_name || "System",
-    (e.detail || "").replace(/"/g, '""'),
+    csvSafe(e.event_type || ""),
+    csvSafe(e.entity_type || ""),
+    csvSafe(e.entity_ref || ""),
+    csvSafe(e.user_name || "System"),
+    csvSafe(e.detail || ""),
   ]);
 
   const csv = [

@@ -20,10 +20,9 @@ export default function MailDetail({ mailId, onClose, onUpdated }: MailDetailPro
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (mailId) {
-      loadMail();
-      loadResponses();
-    }
+    if (!mailId) { setMail(null); setResponses([]); return; }
+    loadMail();
+    loadResponses();
   }, [mailId]);
 
   async function loadMail() {
@@ -44,26 +43,30 @@ export default function MailDetail({ mailId, onClose, onUpdated }: MailDetailPro
     if (!responseText.trim()) return;
     setSending(true);
     const { data: { session } } = await supabase.auth.getSession();
-    await fetch(`/api/cde/mail/${mailId}/respond`, {
+    const res = await fetch(`/api/cde/mail/${mailId}/respond`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
       body: JSON.stringify({ responseBody: responseText }),
     });
-    setResponseText("");
     setSending(false);
-    loadMail();
-    loadResponses();
-    onUpdated();
+    if (res.ok) {
+      setResponseText("");
+      loadMail();
+      loadResponses();
+      onUpdated();
+    }
   }
 
   async function handleClose() {
     const { data: { session } } = await supabase.auth.getSession();
-    await fetch(`/api/cde/mail/${mailId}/close`, {
+    const res = await fetch(`/api/cde/mail/${mailId}/close`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${session?.access_token}` },
     });
-    loadMail();
-    onUpdated();
+    if (res.ok) {
+      loadMail();
+      onUpdated();
+    }
   }
 
   const isOpen = !!mailId;
@@ -77,6 +80,7 @@ export default function MailDetail({ mailId, onClose, onUpdated }: MailDetailPro
       transition: "transform .2s cubic-bezier(.16,1,.3,1)",
       display: "flex", flexDirection: "column",
       boxShadow: "-4px 0 16px rgba(0,0,0,.08)",
+      pointerEvents: isOpen ? "auto" : "none",
     }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid #e5e7eb", background: "#f8f9fb" }}>

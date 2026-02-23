@@ -23,7 +23,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
   }
 
-  await supabase.from("cde_residents").update(updates).eq("id", resident.id);
+  const { error } = await supabase.from("cde_residents").update(updates).eq("id", resident.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
 }

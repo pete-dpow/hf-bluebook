@@ -15,13 +15,22 @@ export async function GET(
 
   const supabase = getSupabaseAdmin();
 
-  // Get upcoming visits for this resident's building/project
-  const { data: visits } = await supabase
+  // Get upcoming visits scoped to this resident's project/client
+  const visitQuery = supabase
     .from("cde_visits")
-    .select("*")
+    .select("id, visit_date, start_time, end_time, visit_type, buildings, flat_access_required, notes_for_residents")
     .gte("visit_date", new Date().toISOString().split("T")[0])
     .order("visit_date", { ascending: true })
     .limit(10);
+
+  // Scope to resident's project or client
+  if (resident.project_id) {
+    visitQuery.eq("project_id", resident.project_id);
+  } else if (resident.client_id) {
+    visitQuery.eq("client_id", resident.client_id);
+  }
+
+  const { data: visits } = await visitQuery;
 
   // Filter to visits that include this resident's building
   const relevantVisits = (visits || []).filter((v: any) =>

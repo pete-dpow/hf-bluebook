@@ -59,7 +59,7 @@ export default function WorkflowsPage() {
 
       {/* Cards */}
       <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380, 1fr))", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 12 }}>
           {workflows.map((w) => (
             <WorkflowCard key={w.id} workflow={w} onCompleteStep={handleCompleteStep} />
           ))}

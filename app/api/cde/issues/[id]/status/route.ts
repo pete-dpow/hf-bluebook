@@ -40,6 +40,7 @@ export async function PATCH(
 
   const updates: any = { status };
   if (status === "CLOSED") updates.closed_at = new Date().toISOString();
+  if (status === "OPEN") updates.closed_at = null;
 
   const { error } = await supabase.from("cde_issues").update(updates).eq("id", params.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

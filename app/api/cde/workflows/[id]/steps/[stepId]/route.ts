@@ -18,7 +18,7 @@ export async function PATCH(
   if (notes) {
     const { getSupabaseAdmin } = await import("@/lib/supabaseAdmin");
     const supabase = getSupabaseAdmin();
-    await supabase.from("cde_workflow_steps").update({ notes }).eq("id", params.stepId);
+    await supabase.from("cde_workflow_steps").update({ notes }).eq("id", params.stepId).eq("workflow_id", params.id);
   }
 
   const result = await advanceWorkflow(params.id, params.stepId, auth.user.id, auth.user.email || "");

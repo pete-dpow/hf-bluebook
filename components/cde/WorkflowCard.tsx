@@ -71,7 +71,7 @@ export default function WorkflowCard({ workflow, onCompleteStep }: WorkflowCardP
 
       {/* Meta */}
       <div style={{ display: "flex", gap: 12, fontSize: 9, color: "#9ca3af" }}>
-        <span>Type: <strong style={{ color: "#4b5563" }}>{workflow.workflow_type.replace("_", " ")}</strong></span>
+        <span>Type: <strong style={{ color: "#4b5563" }}>{(workflow.workflow_type || "").replace("_", " ")}</strong></span>
         <span>Step {workflow.current_step}/{workflow.total_steps}</span>
         {workflow.due_date && (
           <span style={{ color: isOverdue ? "#dc2626" : "#9ca3af" }}>

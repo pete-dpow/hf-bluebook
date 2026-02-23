@@ -5,7 +5,7 @@ import { getAuthUser } from "@/lib/authHelper";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const ALLOWED_SORT = ["issue_number", "title", "issue_type", "priority", "status", "raised_at", "due_date", "building"];
-const VALID_TYPES = ["FD-DEF", "FS-DEF", "CM-BRE", "DM-DEF", "SNG", "NCN"];
+const VALID_TYPES = ["FD-DEF", "FS-DEF", "CM-BRE", "DM-DEF", "AOV-DEF", "SNG", "NCN", "GEN"];
 
 export async function GET(req: NextRequest) {
   const auth = await getAuthUser(req);

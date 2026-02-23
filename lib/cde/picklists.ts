@@ -107,10 +107,10 @@ export const VISIT_TYPES = [
 
 // ── Priority Levels ─────────────────────────────────────────────
 export const PRIORITIES = [
-  { code: "critical", label: "Critical", color: "#dc2626" },
-  { code: "high", label: "High", color: "#d97706" },
-  { code: "medium", label: "Medium", color: "#3b82f6" },
-  { code: "low", label: "Low", color: "#9ca3af" },
+  { code: "CRITICAL", label: "Critical", color: "#dc2626" },
+  { code: "HIGH", label: "High", color: "#d97706" },
+  { code: "MEDIUM", label: "Medium", color: "#3b82f6" },
+  { code: "LOW", label: "Low", color: "#9ca3af" },
 ] as const;
 
 // ── Project Statuses ────────────────────────────────────────────
@@ -119,4 +119,20 @@ export const PROJECT_STATUSES = [
   { code: "on_hold", label: "On Hold", color: "#d97706" },
   { code: "completed", label: "Completed", color: "#3b82f6" },
   { code: "archived", label: "Archived", color: "#9ca3af" },
+] as const;
+
+// ── Mail Statuses ──────────────────────────────────────────
+export const MAIL_STATUSES = [
+  { code: "OPEN", label: "Open", color: "#d97706" },
+  { code: "OVERDUE", label: "Overdue", color: "#dc2626" },
+  { code: "RESPONDED", label: "Responded", color: "#4d7c0f" },
+  { code: "CLOSED", label: "Closed", color: "#6b7280" },
+] as const;
+
+// ── Issue Statuses ─────────────────────────────────────────
+export const ISSUE_STATUSES = [
+  { code: "OPEN", label: "Open", color: "#dc2626" },
+  { code: "WORK_DONE", label: "Work Done", color: "#d97706" },
+  { code: "INSPECT", label: "Inspect", color: "#ea580c" },
+  { code: "CLOSED", label: "Closed", color: "#4d7c0f" },
 ] as const;

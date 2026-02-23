@@ -30,7 +30,7 @@ export async function GET(
   if (projectIds.length > 0) {
     const [dRes, iRes] = await Promise.all([
       supabase.from("cde_documents").select("id", { count: "exact", head: true }).in("project_id", projectIds),
-      supabase.from("cde_issues").select("id", { count: "exact", head: true }).in("project_id", projectIds).in("status", ["open", "work_done", "ready_to_inspect"]),
+      supabase.from("cde_issues").select("id", { count: "exact", head: true }).in("project_id", projectIds).in("status", ["OPEN", "WORK_DONE", "INSPECT"]),
     ]);
     docCount = dRes.count || 0;
     issueCount = iRes.count || 0;
