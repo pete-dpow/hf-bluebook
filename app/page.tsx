@@ -705,70 +705,62 @@ export default function Home() {
           <div className="flex gap-6 mb-6 items-stretch">
             {/* Left: USP Card */}
             <div
-              className="w-1/3 rounded-2xl overflow-hidden flex flex-col"
+              className="w-1/3 rounded-2xl p-6 flex flex-col justify-between"
               style={{
-                background: "linear-gradient(135deg, #1e3a5f 0%, #2563EB 100%)",
-                boxShadow: "0 8px 32px rgba(37,99,235,0.18), 0 2px 8px rgba(0,0,0,0.08)",
+                background: "rgba(255,255,255,0.55)",
+                backdropFilter: "blur(16px)",
+                WebkitBackdropFilter: "blur(16px)",
+                border: "1px solid rgba(229,231,235,0.6)",
+                boxShadow: "0 4px 24px rgba(37,99,235,0.06)",
               }}
             >
-              {/* Top accent bar */}
-              <div style={{ height: "3px", background: "linear-gradient(90deg, #60a5fa, #a78bfa, #60a5fa)" }} />
-              <div className="p-6 flex flex-col justify-between flex-1">
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)" }}>
-                      <Cpu className="w-4.5 h-4.5 text-white" />
-                    </div>
-                    <h2
-                      className="text-2xl"
-                      style={{
-                        fontFamily: "var(--font-cormorant)",
-                        fontWeight: 600,
-                        color: "#FFFFFF",
-                        letterSpacing: "0.01em",
-                      }}
-                    >
-                      Melvin.Chat
-                    </h2>
-                  </div>
-                  <p
-                    className="text-xs uppercase tracking-widest mb-4"
+              <div>
+                <h2
+                  className="text-3xl mb-1"
+                  style={{
+                    fontFamily: "var(--font-cormorant)",
+                    fontWeight: 600,
+                    color: "#2A2A2A",
+                  }}
+                >
+                  Melvin.Chat
+                </h2>
+                <p
+                  className="text-xs mb-4"
+                  style={{
+                    fontFamily: "var(--font-ibm-plex)",
+                    color: "#6B7280",
+                    fontWeight: 500,
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  Hybrid Product Intelligence
+                </p>
+                <p
+                  className="text-[13px] leading-relaxed"
+                  style={{
+                    fontFamily: "var(--font-ibm-plex)",
+                    color: "#4B5563",
+                  }}
+                >
+                  Search fire protection products, interrogate your project data, and become compliant — all through conversation.
+                </p>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {["Products", "Regulations", "Projects", "Compliance"].map((tag) => (
+                  <span
+                    key={tag}
+                    className="text-[11px] px-2.5 py-1 rounded-full"
                     style={{
                       fontFamily: "var(--font-ibm-plex)",
-                      color: "rgba(255,255,255,0.6)",
-                      fontWeight: 500,
-                      letterSpacing: "0.12em",
+                      color: "#6B7280",
+                      background: "rgba(0,0,0,0.03)",
+                      border: "1px solid rgba(0,0,0,0.06)",
                     }}
                   >
-                    Hybrid Product Intelligence
-                  </p>
-                  <p
-                    className="text-sm leading-relaxed"
-                    style={{
-                      fontFamily: "var(--font-ibm-plex)",
-                      color: "rgba(255,255,255,0.85)",
-                    }}
-                  >
-                    Search fire protection products, interrogate your project data, and become compliant — all through conversation.
-                  </p>
-                </div>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {["Products", "Regulations", "Projects", "Compliance"].map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[10px] px-2.5 py-1 rounded-full"
-                      style={{
-                        fontFamily: "var(--font-ibm-plex)",
-                        color: "rgba(255,255,255,0.9)",
-                        background: "rgba(255,255,255,0.12)",
-                        border: "1px solid rgba(255,255,255,0.2)",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+                    {tag}
+                  </span>
+                ))}
               </div>
             </div>
 
