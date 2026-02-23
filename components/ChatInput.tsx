@@ -20,7 +20,7 @@ export default function ChatInput({
 }) {
   const [value, setValue] = useState("");
   const [uploading, setUploading] = useState(false);
-  const textAreaRef = useRef<HTMLInputElement>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
   // supabase imported from @/lib/supabase at module scope
 
   useEffect(() => {
@@ -138,9 +138,9 @@ export default function ChatInput({
       <div className="flex gap-2 justify-end w-full">
         <button
           onClick={handleExportPDF}
-          disabled={!showPrompt}
+          disabled={messages.length === 0}
           className={`text-xs px-3 py-1.5 rounded-md border border-gray-300 ${
-            showPrompt
+            messages.length > 0
               ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
               : "bg-gray-50 text-gray-400 cursor-not-allowed opacity-60"
           }`}
@@ -149,9 +149,9 @@ export default function ChatInput({
         </button>
         <button
           onClick={handleExportDOCX}
-          disabled={!showPrompt}
+          disabled={messages.length === 0}
           className={`text-xs px-3 py-1.5 rounded-md border border-gray-300 ${
-            showPrompt
+            messages.length > 0
               ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
               : "bg-gray-50 text-gray-400 cursor-not-allowed opacity-60"
           }`}
@@ -162,11 +162,11 @@ export default function ChatInput({
 
       {/* File + Input + Send */}
       <div className="flex gap-3 items-center w-full">
-        <label htmlFor="file-upload" className="cursor-pointer text-gray-500 hover:text-gray-700">
+        <label htmlFor="chat-file-upload" className="cursor-pointer text-gray-500 hover:text-gray-700">
           {uploading ? <Loader2 className="animate-spin" size={20} /> : <Paperclip size={20} />}
         </label>
         <input
-          id="file-upload"
+          id="chat-file-upload"
           type="file"
           accept=".xlsx,.xls,.csv"
           onChange={handleFileChange}
@@ -174,11 +174,12 @@ export default function ChatInput({
         />
 
         <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-lg">
-          <input
+          <textarea
             ref={textAreaRef}
-            className="flex-1 px-4 py-3 focus:outline-none transition-all"
-            style={{ fontFamily: "var(--font-ibm-plex)", minHeight: "120px" }}
+            className="flex-1 px-4 py-3 focus:outline-none transition-all resize-none"
+            style={{ fontFamily: "var(--font-ibm-plex)", minHeight: "44px", maxHeight: "120px" }}
             placeholder="Ask Melvin anything on life safety, compliance or judgements..."
+            rows={1}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {
@@ -189,7 +190,7 @@ export default function ChatInput({
             }}
             disabled={disabled}
           />
-          <VoiceInput onTranscript={(t) => setValue(t)} />
+          <VoiceInput onTranscript={(t) => setValue((prev) => prev + (prev ? " " : "") + t)} />
         </div>
 
         <button

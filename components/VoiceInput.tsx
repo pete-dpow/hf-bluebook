@@ -20,6 +20,7 @@ export default function VoiceInput({ onTranscript }: { onTranscript: (text: stri
         };
 
         recog.onerror = () => setIsRecording(false);
+        recog.onend = () => setIsRecording(false);
         setRecognition(recog);
       }
     }

@@ -1,18 +1,22 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import { supabase } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 import { generateEmbedding } from "@/lib/embeddingService";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "sk-placeholder" });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || "sk-ant-placeholder" });
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://odhvxoelxiffhocrgtll.supabase.co",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "build-placeholder",
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+let _supabaseAdmin: any = null;
+function getSupabaseAdmin() {
+  if (!_supabaseAdmin) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) throw new Error("Missing Supabase env vars");
+    _supabaseAdmin = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+  }
+  return _supabaseAdmin;
+}
 
 type MelvinMode = "GENERAL" | "PROJECT" | "PRODUCT" | "KNOWLEDGE" | "FULL";
 
@@ -30,6 +34,20 @@ export async function POST(req: Request) {
 
     if (!question) {
       return NextResponse.json({ error: "Question is required" }, { status: 400 });
+    }
+
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // Validate token if provided
+    if (token) {
+      const { data: { user: tokenUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      if (authError || !tokenUser) {
+        return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+      }
+      // Ensure userId matches the token
+      if (userId && tokenUser.id !== userId) {
+        return NextResponse.json({ error: "Token/user mismatch" }, { status: 403 });
+      }
     }
 
     // Fetch user memories if authenticated
@@ -55,7 +73,7 @@ export async function POST(req: Request) {
     // Get organization ID for data queries
     let organizationId: string | null = null;
     if (userId && projectId) {
-      const { data: userData } = await supabase
+      const { data: userData } = await supabaseAdmin
         .from("users")
         .select("active_organization_id")
         .eq("id", userId)
@@ -64,7 +82,7 @@ export async function POST(req: Request) {
       organizationId = userData?.active_organization_id || null;
 
       if (organizationId) {
-        const { data: projectData } = await supabase
+        const { data: projectData } = await supabaseAdmin
           .from("projects")
           .select("organization_id, user_id")
           .eq("id", projectId)
@@ -81,7 +99,7 @@ export async function POST(req: Request) {
         }
       }
     } else if (userId) {
-      const { data: userData } = await supabase
+      const { data: userData } = await supabaseAdmin
         .from("users")
         .select("active_organization_id")
         .eq("id", userId)
@@ -240,7 +258,7 @@ async function handleProduct(question: string, history: any[], memoryContext: st
     try {
       const embedding = await generateEmbedding(question);
 
-      const { data: products } = await supabaseAdmin.rpc("match_products", {
+      const { data: products } = await getSupabaseAdmin().rpc("match_products", {
         query_embedding: embedding,
         match_org_id: organizationId,
         match_count: 8,
@@ -304,7 +322,7 @@ async function handleKnowledge(question: string, history: any[], memoryContext: 
       const embedding = await generateEmbedding(question);
 
       // Search bluebook chunks
-      const { data: chunks } = await supabaseAdmin.rpc("match_bluebook_chunks", {
+      const { data: chunks } = await getSupabaseAdmin().rpc("match_bluebook_chunks", {
         query_embedding: embedding,
         match_org_id: organizationId,
         match_count: 5,
@@ -321,7 +339,7 @@ async function handleKnowledge(question: string, history: any[], memoryContext: 
       }
 
       // Search regulation sections
-      const { data: sections } = await supabaseAdmin.rpc("match_regulation_sections", {
+      const { data: sections } = await getSupabaseAdmin().rpc("match_regulation_sections", {
         query_embedding: embedding,
         match_org_id: organizationId,
         match_count: 5,
@@ -409,7 +427,7 @@ async function handleFull(
       const embedding = await generateEmbedding(question);
 
       // Products
-      const { data: products } = await supabaseAdmin.rpc("match_products", {
+      const { data: products } = await getSupabaseAdmin().rpc("match_products", {
         query_embedding: embedding,
         match_org_id: organizationId,
         match_count: 5,
@@ -426,7 +444,7 @@ async function handleFull(
       }
 
       // Bluebook chunks
-      const { data: chunks } = await supabaseAdmin.rpc("match_bluebook_chunks", {
+      const { data: chunks } = await getSupabaseAdmin().rpc("match_bluebook_chunks", {
         query_embedding: embedding,
         match_org_id: organizationId,
         match_count: 3,
@@ -443,7 +461,7 @@ async function handleFull(
       }
 
       // Regulation sections
-      const { data: sections } = await supabaseAdmin.rpc("match_regulation_sections", {
+      const { data: sections } = await getSupabaseAdmin().rpc("match_regulation_sections", {
         query_embedding: embedding,
         match_org_id: organizationId,
         match_count: 3,

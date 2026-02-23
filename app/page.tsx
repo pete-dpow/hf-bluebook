@@ -3,10 +3,21 @@
 import { useCallback, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as XLSX from "xlsx";
-import { Loader2, X, FileSpreadsheet, Calendar, HardDrive, AlertCircle, Cloud, Folder, ChevronRight, CheckCircle, Info } from "lucide-react";
+import { Loader2, X, FileSpreadsheet, Calendar, HardDrive, AlertCircle, Cloud, Folder, ChevronRight, CheckCircle, Info, LayoutDashboard, BookOpen, FileText, ShieldCheck, Link2, ClipboardCheck, FolderOpen, Cpu } from "lucide-react";
 import VoiceInput from "@/components/VoiceInput";
 import ChatDrawerWrapper from "@/components/ChatDrawerWrapper";
 import { supabase } from "@/lib/supabase";
+
+const APP_ICONS = [
+  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { label: "Library", icon: BookOpen, href: "/library" },
+  { label: "Quotes", icon: FileText, href: "/quotes" },
+  { label: "Compliance", icon: ShieldCheck, href: "/compliance" },
+  { label: "Golden Thread", icon: Link2, href: "/golden-thread" },
+  { label: "AutoPlan", icon: Cpu, href: "/autoplan" },
+  { label: "Surveying", icon: ClipboardCheck, href: "/surveying" },
+  { label: "CDE", icon: FolderOpen, href: "/cde", target: "_blank" },
+];
 
 interface OneDriveFile {
   id: string;
@@ -88,10 +99,32 @@ const SUGGESTION_POOLS: { mode: string; prompts: string[] }[] = [
 ];
 
 function getRandomSuggestions() {
-  return SUGGESTION_POOLS.map((pool) => ({
+  const all = SUGGESTION_POOLS.map((pool) => ({
     mode: pool.mode,
     text: pool.prompts[Math.floor(Math.random() * pool.prompts.length)],
   }));
+  // Shuffle and pick 3 for the pill row
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [all[i], all[j]] = [all[j], all[i]];
+  }
+  return all.slice(0, 3);
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function getFormattedDate() {
+  return new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 export default function Home() {
@@ -606,9 +639,10 @@ export default function Home() {
   return (
     <>
       <div
-        className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+        className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden"
         style={{ background: "#FCFCFA" }}
       >
+        {/* Mouse-tracking blue gradient */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -616,167 +650,30 @@ export default function Home() {
           }}
         />
 
-        <div className="w-full max-w-2xl relative z-10">
-          <div className="text-center mb-12">
+        <div className="w-full max-w-[1100px] relative z-10">
+          {/* Date + Greeting */}
+          <div className="mb-6">
+            <p
+              className="text-sm"
+              style={{ fontFamily: "var(--font-ibm-plex)", color: "#9CA3AF" }}
+            >
+              {getFormattedDate()}
+            </p>
             <h1
-              className="text-6xl md:text-7xl mb-3"
+              className="text-4xl md:text-5xl mt-1"
               style={{
                 fontFamily: "var(--font-cormorant)",
                 fontWeight: 500,
-                letterSpacing: "0.01em",
                 color: "#2A2A2A",
+                letterSpacing: "0.01em",
               }}
             >
-              hf.bluebook
+              {getGreeting()}{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name.split(" ")[0]}` : ""}
             </h1>
-            <p
-              className="text-lg"
-              style={{
-                fontFamily: "var(--font-ibm-plex)",
-                color: "#4B4B4B",
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Fire Protection Product Intelligence
-            </p>
-            <p
-              className="text-sm mt-2"
-              style={{
-                fontFamily: "var(--font-ibm-plex)",
-                color: "#6B7280",
-              }}
-            >
-              Melvin AI — products, compliance, quotes, golden thread
-            </p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden transition-all hover:shadow-md">
-            <div className="p-6 border-b border-[#E5E7EB]">
-              <div className="flex gap-2">
-                <textarea
-                  placeholder="How can Melvin help you today?"
-                  className="w-full resize-none outline-none text-base"
-                  style={{
-                    fontFamily: "var(--font-ibm-plex)",
-                    color: "#2A2A2A",
-                    minHeight: "120px",
-                    maxHeight: "300px",
-                  }}
-                  rows={5}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                />
-                <div className="flex items-end pb-1">
-                  <VoiceInput onTranscript={(text) => setMessage(text)} />
-                </div>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 bg-[#FCFCFA] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <input
-                  type="file"
-                  id="file-upload"
-                  className="hidden"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={handleFileSelect}
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="p-2 hover:bg-white rounded-lg transition-colors cursor-pointer"
-                  title="Attach file"
-                >
-                  {isUploading ? (
-                    <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
-                  ) : (
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="text-gray-500"
-                    >
-                      <path
-                        d="M10 4V14M10 4L13 7M10 4L7 7"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M4 14V16C4 17.1046 4.89543 18 6 18H14C15.1046 18 16 17.1046 16 16V14"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  )}
-                </label>
-                <span
-                  className="text-xs"
-                  style={{
-                    fontFamily: "var(--font-ibm-plex)",
-                    color: "#6B7280",
-                  }}
-                >
-                  .xlsx, .xls, or .csv • max 5MB
-                </span>
-                {microsoftConnected ? (
-                  <div className="ml-4 flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        setShowM365Modal(true);
-                        loadM365Files();
-                      }}
-                      className="px-4 py-2 text-sm font-medium text-white bg-[#107C10] border border-[#107C10] rounded-lg hover:bg-[#0D6A0D] transition-colors flex items-center gap-2"
-                      style={{ fontFamily: "var(--font-ibm-plex)" }}
-                    >
-                      <Cloud className="w-4 h-4" />
-                      Import Files
-                    </button>
-                    <button
-                      onClick={handleDisconnectMicrosoft}
-                      className="px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                      style={{ fontFamily: "var(--font-ibm-plex)" }}
-                      title="Disconnect Microsoft 365"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleConnectMicrosoft}
-                    className="ml-4 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                    style={{ fontFamily: "var(--font-ibm-plex)" }}
-                  >
-                    Connect Microsoft 365
-                  </button>
-                )}
-              </div>
-
-              <button
-                onClick={handleSend}
-                className="px-5 py-2 bg-[#2563EB] text-white font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ fontFamily: "var(--font-ibm-plex)" }}
-                disabled={!message.trim()}
-              >
-                Send
-              </button>
-            </div>
-          </div>
-
-          {/* Suggestion Pills */}
-          <div
-            className="mt-4 grid grid-cols-2 gap-3"
-            style={{ fontFamily: "var(--font-ibm-plex)" }}
-          >
+          {/* 3 Suggestion Pills — glass row */}
+          <div className="flex gap-3 mb-8" style={{ fontFamily: "var(--font-ibm-plex)" }}>
             {suggestions.map((s, i) => (
               <button
                 key={i}
@@ -788,70 +685,232 @@ export default function Home() {
                     if (trigger) trigger.click();
                   }, 100);
                 }}
-                className="px-4 py-3 text-left text-sm border border-[#E5E7EB] bg-white rounded-lg hover:border-[#D1D5DB] hover:shadow-sm transition-all"
-                style={{ color: "#6B7280" }}
+                className="flex-1 px-4 py-3 text-left text-sm rounded-xl transition-all hover:shadow-md"
+                style={{
+                  color: "#4B5563",
+                  background: "rgba(255,255,255,0.6)",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  border: "1px solid rgba(229,231,235,0.7)",
+                }}
               >
                 {s.text}
               </button>
             ))}
           </div>
 
-          {error && (
+          {/* Two-column: USP Card (1/3) + Chat Input (2/3) */}
+          <div className="flex gap-6 mb-6 items-stretch">
+            {/* Left: USP Card */}
             <div
-              className="mt-4 p-4 rounded-lg flex items-start gap-3"
+              className="w-1/3 rounded-2xl p-6 flex flex-col justify-between"
               style={{
-                background: "#FEF2F2",
-                border: "1px solid #FCA5A5",
+                background: "rgba(255,255,255,0.55)",
+                backdropFilter: "blur(16px)",
+                WebkitBackdropFilter: "blur(16px)",
+                border: "1px solid rgba(229,231,235,0.6)",
+                boxShadow: "0 4px 24px rgba(37,99,235,0.06)",
               }}
             >
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p
-                className="text-sm"
+              <div>
+                <h2
+                  className="text-3xl mb-1"
+                  style={{
+                    fontFamily: "var(--font-cormorant)",
+                    fontWeight: 600,
+                    color: "#2A2A2A",
+                  }}
+                >
+                  Melvin.Chat
+                </h2>
+                <p
+                  className="text-sm mb-4"
+                  style={{
+                    fontFamily: "var(--font-ibm-plex)",
+                    color: "#2563EB",
+                    fontWeight: 500,
+                  }}
+                >
+                  Hybrid Product Intelligence
+                </p>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{
+                    fontFamily: "var(--font-ibm-plex)",
+                    color: "#4B5563",
+                  }}
+                >
+                  Search fire protection products, interrogate your project data, and become compliant — all through conversation. One AI that connects your product catalogue, regulations, and live project schedules.
+                </p>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {["Products", "Regulations", "Projects", "Compliance"].map((tag) => (
+                  <span
+                    key={tag}
+                    className="text-xs px-3 py-1 rounded-full"
+                    style={{
+                      fontFamily: "var(--font-ibm-plex)",
+                      color: "#2563EB",
+                      background: "rgba(37,99,235,0.08)",
+                      border: "1px solid rgba(37,99,235,0.15)",
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: Chat Input Card */}
+            <div className="w-2/3">
+              <div
+                className="rounded-2xl overflow-hidden transition-all hover:shadow-md h-full flex flex-col"
                 style={{
-                  fontFamily: "var(--font-ibm-plex)",
-                  color: "#991B1B",
+                  background: "rgba(255,255,255,0.85)",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  border: "1px solid rgba(229,231,235,0.7)",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
                 }}
               >
-                {error}
-              </p>
+                <div className="p-5 flex-1">
+                  <div className="flex gap-2 h-full">
+                    <textarea
+                      placeholder="How can Melvin help you today?"
+                      className="w-full resize-none outline-none text-base"
+                      style={{
+                        fontFamily: "var(--font-ibm-plex)",
+                        color: "#2A2A2A",
+                        minHeight: "100px",
+                        background: "transparent",
+                      }}
+                      rows={4}
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSend();
+                        }
+                      }}
+                    />
+                    <div className="flex items-end pb-1">
+                      <VoiceInput onTranscript={(text) => setMessage((prev) => prev + (prev ? " " : "") + text)} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* File upload bar */}
+                <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: "1px solid rgba(229,231,235,0.6)", background: "rgba(252,252,250,0.6)" }}>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="file"
+                      id="file-upload"
+                      className="hidden"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={handleFileSelect}
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className="p-2 hover:bg-white rounded-lg transition-colors cursor-pointer"
+                      title="Attach file"
+                    >
+                      {isUploading ? (
+                        <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+                      ) : (
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-gray-500">
+                          <path d="M10 4V14M10 4L13 7M10 4L7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M4 14V16C4 17.1046 4.89543 18 6 18H14C15.1046 18 16 17.1046 16 16V14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                        </svg>
+                      )}
+                    </label>
+                    <span className="text-xs" style={{ fontFamily: "var(--font-ibm-plex)", color: "#9CA3AF" }}>
+                      .xlsx, .xls, or .csv
+                    </span>
+                    {microsoftConnected ? (
+                      <div className="ml-3 flex items-center gap-2">
+                        <button
+                          onClick={() => { setShowM365Modal(true); loadM365Files(); }}
+                          className="px-3 py-1.5 text-xs font-medium text-white bg-[#107C10] rounded-lg hover:bg-[#0D6A0D] transition-colors flex items-center gap-1.5"
+                          style={{ fontFamily: "var(--font-ibm-plex)" }}
+                        >
+                          <Cloud className="w-3.5 h-3.5" />
+                          Import
+                        </button>
+                        <button
+                          onClick={handleDisconnectMicrosoft}
+                          className="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                          style={{ fontFamily: "var(--font-ibm-plex)" }}
+                          title="Disconnect Microsoft 365"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleConnectMicrosoft}
+                        className="ml-3 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                        style={{ fontFamily: "var(--font-ibm-plex)" }}
+                      >
+                        Connect M365
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleSend}
+                    className="px-5 py-2 bg-[#2563EB] text-white font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    style={{ fontFamily: "var(--font-ibm-plex)" }}
+                    disabled={!message.trim()}
+                  >
+                    Send
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Error / Success */}
+          {error && (
+            <div className="mb-4 p-4 rounded-lg flex items-start gap-3" style={{ background: "#FEF2F2", border: "1px solid #FCA5A5" }}>
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm" style={{ fontFamily: "var(--font-ibm-plex)", color: "#991B1B" }}>{error}</p>
             </div>
           )}
           {success && (
-            <div
-              className="mt-4 p-4 rounded-lg flex items-start gap-3"
-              style={{
-                background: "#F0FDF4",
-                border: "1px solid #86EFAC",
-              }}
-            >
+            <div className="mb-4 p-4 rounded-lg flex items-start gap-3" style={{ background: "#F0FDF4", border: "1px solid #86EFAC" }}>
               <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <p
-                className="text-sm"
-                style={{
-                  fontFamily: "var(--font-ibm-plex)",
-                  color: "#166534",
-                }}
-              >
-                {success}
-              </p>
+              <p className="text-sm" style={{ fontFamily: "var(--font-ibm-plex)", color: "#166534" }}>{success}</p>
             </div>
           )}
 
-          <div
-            className="mt-8 text-center text-sm"
-            style={{
-              fontFamily: "var(--font-ibm-plex)",
-              color: "#4B4B4B",
-            }}
-          >
-            <p className="mb-2">
-              Your file should contain at least 4 columns for: Category, Revision,
-              Status, and Comments
-            </p>
-            <p className="text-xs" style={{ color: "#6B7280" }}>
-              Supported formats: .xlsx, .xls, .csv • Column names will be
-              auto-detected or you can map them manually
-            </p>
+          {/* Bottom: App Icon Grid — single row */}
+          <div className="flex justify-center gap-5 mt-4">
+            {APP_ICONS.map((app) => (
+              <a
+                key={app.label}
+                href={app.href}
+                target={(app as any).target || "_self"}
+                className="flex flex-col items-center gap-1.5 group"
+                style={{ textDecoration: "none" }}
+              >
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center transition-all group-hover:shadow-md group-hover:scale-105"
+                  style={{
+                    background: "rgba(255,255,255,0.7)",
+                    backdropFilter: "blur(8px)",
+                    border: "1px solid rgba(229,231,235,0.6)",
+                  }}
+                >
+                  <app.icon className="w-5 h-5 text-gray-500 group-hover:text-[#2563EB] transition-colors" />
+                </div>
+                <span
+                  className="text-[10px] text-gray-400 group-hover:text-gray-600 transition-colors"
+                  style={{ fontFamily: "var(--font-ibm-plex)" }}
+                >
+                  {app.label}
+                </span>
+              </a>
+            ))}
           </div>
         </div>
 

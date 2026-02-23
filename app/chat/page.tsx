@@ -92,6 +92,19 @@ export default function ChatPage() {
   // ⭐ Task 8: Summary Report State
   const [generatingSummary, setGeneratingSummary] = useState(false);
 
+  // Refs to break dependency cycles
+  const messagesRef = useRef<Msg[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    messagesRef.current = messages;
+    // Auto-scroll to bottom on new messages
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   // ⭐ Task 9/10/11: Export dropdown state
   const [showExportDropdown, setShowExportDropdown] = useState(false);
 
@@ -365,7 +378,12 @@ export default function ChatPage() {
   }
 
   // ⭐ Task 7: Map API source to friendly mode name
-  function mapSourceToMode(source: string): "GENERAL" | "PROJECT" | "BOTH" | null {
+  function mapSourceToMode(source: string, mode?: string): "GENERAL" | "PROJECT" | "BOTH" | "PRODUCT" | "KNOWLEDGE" | "FULL" | null {
+    // If the API returns a mode field, use that directly
+    if (mode) {
+      const validModes = ["GENERAL", "PROJECT", "BOTH", "PRODUCT", "KNOWLEDGE", "FULL"];
+      if (validModes.includes(mode)) return mode as any;
+    }
     switch (source) {
       case "general_knowledge":
       case "general_fallback":
@@ -373,6 +391,12 @@ export default function ChatPage() {
       case "project_data":
       case "no_data":
         return "PROJECT";
+      case "product_catalog":
+        return "PRODUCT";
+      case "knowledge_base":
+        return "KNOWLEDGE";
+      case "full_combined":
+        return "FULL";
       case "hybrid":
         return "BOTH";
       default:
@@ -608,14 +632,14 @@ export default function ChatPage() {
 
   // ⭐ Task 4: Load a recent conversation
   function loadConversation(conv: RecentConversation) {
-    // Store in localStorage for the chat page to pick up
+    // Update state directly instead of reloading
+    setLoadedProjectId(conv.id);
+    setLoadedProjectName(conv.name);
+    setMessages(conv.chat_history || []);
     localStorage.setItem("loadedProjectId", conv.id);
     localStorage.setItem("loadedProjectName", conv.name);
-    localStorage.setItem("loadedChatHistory", JSON.stringify(conv.chat_history));
-    
-    // Close drawer and reload
     setShowRecentDrawer(false);
-    window.location.reload();
+    setSaveSuccess(`Loaded: ${conv.name}`);
   }
 
   const handleSend = useCallback(async (text: string) => {
@@ -642,26 +666,32 @@ export default function ChatPage() {
         }
       }
 
+      const session = (await supabase.auth.getSession()).data.session;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+
       const res = await fetch("/api/hybrid-chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           question: text,
-          history: messages,
+          history: messagesRef.current,
           dataset: parsedDataset,
           userId: user?.id || null,
           projectId: loadedProjectId,
-          token: (await supabase.auth.getSession()).data.session?.access_token || null,
+          token: session?.access_token || null,
           modeOverride: modeOverride !== "AUTO" ? modeOverride : null,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Chat failed");
-      
-      const mode = mapSourceToMode(data.source);
-      const reply: Msg = { 
-        role: "assistant", 
+
+      const mode = mapSourceToMode(data.source, data.mode);
+      const reply: Msg = {
+        role: "assistant",
         content: data.answer,
         mode: mode
       };
@@ -675,21 +705,25 @@ export default function ChatPage() {
     } finally {
       setLoading(false);
     }
-  }, [messages, user, loadedProjectId, modeOverride]);
+  }, [user, loadedProjectId, modeOverride]);
 
   // Load restored project data on mount
+  const handleSendRef = useRef(handleSend);
+  useEffect(() => { handleSendRef.current = handleSend; }, [handleSend]);
+
   useEffect(() => {
     const stored = localStorage.getItem("userMessage");
     if (stored) {
       localStorage.removeItem("userMessage");
-      setTimeout(() => handleSend(stored), 300);
+      // Use ref to avoid stale closure
+      setTimeout(() => handleSendRef.current(stored), 100);
     }
 
     const projectName = localStorage.getItem("loadedProjectName");
     const projectId = localStorage.getItem("loadedProjectId");
     const orgName = localStorage.getItem("loadedOrgName");
     const fileName = localStorage.getItem("loadedFileName");
-    
+
     if (projectName) setLoadedProjectName(projectName);
     if (projectId) setLoadedProjectId(projectId);
     if (orgName) setLoadedOrgName(orgName);
@@ -701,12 +735,13 @@ export default function ChatPage() {
         const parsedHistory = JSON.parse(loadedHistory);
         setMessages(parsedHistory);
         localStorage.removeItem("loadedChatHistory");
-        setSaveSuccess(`✅ Loaded project: ${projectName || "Unknown"}`);
+        setSaveSuccess(`Loaded: ${projectName || "Unknown"}`);
       } catch (err) {
         console.error("Failed to load chat history:", err);
       }
     }
-  }, [handleSend]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Smart Save shows after 8s of inactivity
   useEffect(() => {
@@ -736,7 +771,10 @@ export default function ChatPage() {
 
       const res = await fetch("/api/smart-save", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`,
+        },
         body: JSON.stringify({
           fileData,
           fileName,
@@ -750,7 +788,6 @@ export default function ChatPage() {
 
       setSaveSuccess(data.message);
       setShowPrompt(false);
-      setTimeout(() => window.location.reload(), 2000);
     } catch (err: any) {
       console.error("Save error:", err);
       setSaveSuccess(`❌ Failed to save: ${err.message}`);
@@ -1347,7 +1384,7 @@ export default function ChatPage() {
         )}
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4">
           {messages.length === 0 && (
             <div style={{
               display: "flex",
