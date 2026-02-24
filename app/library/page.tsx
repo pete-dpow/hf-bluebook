@@ -188,10 +188,10 @@ export default function LibraryPage() {
 
       if (res.ok) {
         const mode = data.mode || "unknown";
-        if (mode === "inngest") {
-          setScrapeStatus((s) => ({ ...s, [manufacturerId]: { msg: "Queued in Inngest — check back shortly", ok: true } }));
-        } else if (mode === "shopify") {
+        if (mode === "shopify" || mode === "html") {
           setScrapeStatus((s) => ({ ...s, [manufacturerId]: { msg: `Done: ${data.products_created || 0} created, ${data.products_updated || 0} updated, ${data.files_created || 0} files`, ok: true } }));
+        } else if (mode === "inngest") {
+          setScrapeStatus((s) => ({ ...s, [manufacturerId]: { msg: "Queued in Inngest — check back shortly", ok: true } }));
         } else {
           setScrapeStatus((s) => ({ ...s, [manufacturerId]: { msg: `Scrape started (${mode})`, ok: true } }));
         }
@@ -370,7 +370,10 @@ export default function LibraryPage() {
                     });
                     if (res.ok) {
                       const data = await res.json();
-                      alert(`Seeded ${data.created} suppliers`);
+                      const parts = [];
+                      if (data.created > 0) parts.push(`${data.created} created`);
+                      if (data.updated > 0) parts.push(`${data.updated} updated`);
+                      alert(parts.length > 0 ? `Suppliers: ${parts.join(", ")}` : "All suppliers already up to date");
                       await loadSuppliersData();
                     } else {
                       const err = await res.json();

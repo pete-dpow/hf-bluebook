@@ -103,19 +103,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Primary: try Inngest (async — supports Playwright for JS-heavy sites)
-  try {
-    await inngest.send({
-      name: "manufacturer/scrape.requested",
-      data: { manufacturer_id: params.id, job_id: job.id },
-    });
+  // ── Primary: run sync scrapers directly (Shopify & HTML) ──
+  // These don't need Playwright/browser, so run them inline for immediate results.
 
-    return NextResponse.json({ job, mode: "inngest" }, { status: 201 });
-  } catch (inngestError) {
-    console.warn(`[scrape] Inngest unavailable, checking for sync fallback:`, inngestError);
-  }
-
-  // Sync fallback: Shopify scraper
   if (isShopify && shopifyConfig) {
     return runSyncScrape(job.id, params.id, manufacturer, "shopify", async () => {
       const products = await scrapeShopifyProducts(shopifyConfig!);
@@ -123,7 +113,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }, shopifyConfig.default_pillar || "fire_stopping");
   }
 
-  // Sync fallback: HTML scraper (fetch-based, no Playwright needed)
   const isHtml = manufacturer.scraper_config?.type === "html";
   if (isHtml) {
     const htmlConfig = manufacturer.scraper_config as HtmlScraperConfig;
@@ -133,9 +122,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }, htmlConfig.default_pillar || "fire_stopping");
   }
 
-  // No sync scraper available — Inngest was unavailable and no fetch-based config
+  // ── Fallback: Inngest for Playwright-dependent sites ──
+  try {
+    await inngest.send({
+      name: "manufacturer/scrape.requested",
+      data: { manufacturer_id: params.id, job_id: job.id },
+    });
+
+    return NextResponse.json({ job, mode: "inngest" }, { status: 201 });
+  } catch (inngestError) {
+    console.warn(`[scrape] Inngest unavailable:`, inngestError);
+  }
+
+  // No scraper available
   const reason = manufacturer.website_url
-    ? "Inngest unavailable and no fetch-based scraper configured. This site may need Playwright (browser) scraping via Inngest."
+    ? "No scraper configured for this manufacturer. Add a scraper_config (shopify or html type) or set up Inngest for Playwright scraping."
     : "No website URL configured for this manufacturer";
 
   await supabaseAdmin.from("scrape_jobs").update({

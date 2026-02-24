@@ -222,10 +222,11 @@ export async function POST(req: NextRequest) {
   if (!auth.organizationId) return NextResponse.json({ error: "No organization" }, { status: 400 });
 
   let created = 0;
+  let updated = 0;
   const errors: string[] = [];
 
   for (const mfr of SEED_MANUFACTURERS) {
-    // Skip if already exists
+    // Check if already exists
     const { data: existing } = await supabaseAdmin
       .from("manufacturers")
       .select("id")
@@ -234,11 +235,20 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (existing) {
-      // Update scraper config for existing manufacturers
-      await supabaseAdmin
+      // Update scraper config + website_url for existing manufacturers
+      const { error: updateErr } = await supabaseAdmin
         .from("manufacturers")
-        .update({ scraper_config: mfr.scraper_config })
+        .update({
+          scraper_config: mfr.scraper_config,
+          website_url: mfr.website_url,
+        })
         .eq("id", existing.id);
+
+      if (updateErr) {
+        errors.push(`${mfr.name} (update): ${updateErr.message}`);
+      } else {
+        updated++;
+      }
       continue;
     }
 
@@ -258,7 +268,7 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json(
-    { created, errors: errors.length > 0 ? errors : undefined },
+    { created, updated, errors: errors.length > 0 ? errors : undefined },
     { status: 201 }
   );
 }
