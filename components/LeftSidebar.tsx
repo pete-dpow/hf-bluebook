@@ -23,6 +23,7 @@ import {
   Flame,
   BookOpen,
   Database,
+  Users,
 } from "lucide-react";
 import AppSwitcherBubble from "./AppSwitcherBubble";
 
@@ -314,6 +315,12 @@ export default function LeftSidebar() {
                 label="Quotes"
                 tooltip="Quotes"
                 onClick={() => router.push("/quotes")}
+              />
+              <IconButton
+                icon={<Users size={20} />}
+                label="Customers"
+                tooltip="Customers"
+                onClick={() => router.push("/customers")}
               />
               <IconButton
                 icon={<ShieldCheck size={20} />}

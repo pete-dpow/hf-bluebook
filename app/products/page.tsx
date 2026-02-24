@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Plus, LayoutGrid, List, CheckCircle } from "lucide-react";
+import { Loader2, Plus, LayoutGrid, List, CheckCircle, Package, AlertCircle, Building2 } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import ProductListRow from "@/components/ProductListRow";
 import ProductFilter from "@/components/ProductFilter";
@@ -23,10 +23,24 @@ export default function ProductsPage() {
   const [needsReview, setNeedsReview] = useState(false);
   const [search, setSearch] = useState("");
   const [activatingAll, setActivatingAll] = useState(false);
+  const [stats, setStats] = useState<{ total: number; active: number; needs_review: number; manufacturers: number } | null>(null);
 
   useEffect(() => {
     loadProducts();
   }, [pillar, status, needsReview, search, page]);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  async function loadStats() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const res = await fetch("/api/products/stats", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (res.ok) setStats(await res.json());
+  }
 
   async function loadProducts() {
     setLoading(true);
@@ -79,6 +93,7 @@ export default function ProductsPage() {
     setActivatingAll(false);
     if (failed > 0) alert(`${failed} product${failed !== 1 ? "s" : ""} failed to activate`);
     await loadProducts();
+    loadStats();
   }
 
   const totalPages = Math.ceil(total / limit);
@@ -117,6 +132,39 @@ export default function ProductsPage() {
             </button>
           </div>
         </div>
+
+        {stats && (
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Package size={16} className="text-blue-600" />
+                <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Total Products</span>
+              </div>
+              <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.total.toLocaleString()}</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle size={16} className="text-green-600" />
+                <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Active</span>
+              </div>
+              <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.active.toLocaleString()}</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle size={16} className="text-amber-500" />
+                <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Needs Review</span>
+              </div>
+              <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.needs_review.toLocaleString()}</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Building2 size={16} className="text-purple-600" />
+                <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Manufacturers</span>
+              </div>
+              <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.manufacturers.toLocaleString()}</p>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between mb-6">
           <ProductFilter

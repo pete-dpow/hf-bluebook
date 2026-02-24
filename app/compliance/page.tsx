@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   Loader2, ShieldCheck, AlertCircle, CheckCircle, RefreshCw,
-  Upload, BookOpen,
+  Upload, BookOpen, List as ListIcon,
 } from "lucide-react";
 import RegulationCard from "@/components/RegulationCard";
 
@@ -406,6 +406,46 @@ export default function CompliancePage() {
                 style={selectStyle}
               />
             </div>
+
+            {/* Stats Row */}
+            {regulations.length > 0 && (
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ShieldCheck size={16} className="text-blue-600" />
+                    <span className="text-sm text-gray-500" style={selectStyle}>Regulations</span>
+                  </div>
+                  <p className="text-2xl font-medium text-gray-900" style={selectStyle}>{total}</p>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle size={16} className="text-green-600" />
+                    <span className="text-sm text-gray-500" style={selectStyle}>In Force</span>
+                  </div>
+                  <p className="text-2xl font-medium text-gray-900" style={selectStyle}>
+                    {regulations.filter((r) => r.status === "in_force").length}
+                  </p>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen size={16} className="text-purple-600" />
+                    <span className="text-sm text-gray-500" style={selectStyle}>Sections Indexed</span>
+                  </div>
+                  <p className="text-2xl font-medium text-gray-900" style={selectStyle}>
+                    {regulations.reduce((sum, r) => sum + (r.regulation_sections?.[0]?.count || 0), 0).toLocaleString()}
+                  </p>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ListIcon size={16} className="text-gray-500" />
+                    <span className="text-sm text-gray-500" style={selectStyle}>Categories</span>
+                  </div>
+                  <p className="text-2xl font-medium text-gray-900" style={selectStyle}>
+                    {new Set(regulations.map((r) => r.category).filter(Boolean)).size}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Error/Success banners */}
             {error && (

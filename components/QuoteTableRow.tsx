@@ -44,8 +44,16 @@ export default function QuoteTableRow({ quote, onClick }: QuoteTableRowProps) {
           </span>
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-gray-700" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-        {quote.client_name}
+      <td className="px-4 py-3 text-sm" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+        <span
+          className="text-blue-600 hover:underline"
+          onClick={(e) => {
+            e.stopPropagation();
+            window.location.href = `/customers`;
+          }}
+        >
+          {quote.client_name}
+        </span>
       </td>
       <td className="px-4 py-3 text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>
         {quote.project_name || "—"}

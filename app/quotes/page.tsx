@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, FileText, Clock, CheckCircle, PoundSterling } from "lucide-react";
 import QuoteTableRow from "@/components/QuoteTableRow";
 
 const STATUSES = [
@@ -17,6 +17,7 @@ const STATUSES = [
 
 export default function QuotesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [quotes, setQuotes] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -24,11 +25,25 @@ export default function QuotesPage() {
   const limit = 50;
 
   const [status, setStatus] = useState("");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [stats, setStats] = useState<{ total: number; draft: number; approved: number; total_value: number } | null>(null);
 
   useEffect(() => {
     loadQuotes();
   }, [status, search, page]);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  async function loadStats() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const res = await fetch("/api/quotes/stats", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (res.ok) setStats(await res.json());
+  }
 
   async function loadQuotes() {
     setLoading(true);
@@ -76,6 +91,41 @@ export default function QuotesPage() {
             New Quote
           </button>
         </div>
+
+        {stats && (
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText size={16} className="text-blue-600" />
+                <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Total Quotes</span>
+              </div>
+              <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.total.toLocaleString()}</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock size={16} className="text-gray-500" />
+                <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Draft</span>
+              </div>
+              <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.draft.toLocaleString()}</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle size={16} className="text-green-600" />
+                <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Approved</span>
+              </div>
+              <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.approved.toLocaleString()}</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <PoundSterling size={16} className="text-blue-600" />
+                <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Pipeline Value</span>
+              </div>
+              <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+                £{stats.total_value.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex items-center gap-3 mb-6">

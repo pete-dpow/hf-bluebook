@@ -203,6 +203,15 @@ export default function ProductDetailPage() {
               {product.product_name}
             </h1>
             <div className="flex items-center gap-3 mt-2">
+              {product.manufacturers?.name && (
+                <span
+                  className="text-sm text-blue-600 hover:underline cursor-pointer"
+                  style={{ fontFamily: "var(--font-ibm-plex)" }}
+                  onClick={() => router.push(`/manufacturers/${product.manufacturer_id}`)}
+                >
+                  {product.manufacturers.name}
+                </span>
+              )}
               {product.product_code && (
                 <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>
                   {product.product_code}

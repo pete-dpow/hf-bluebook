@@ -332,7 +332,12 @@ export default function QuoteDetailPage() {
           <div className="grid grid-cols-3 gap-4 text-sm" style={{ fontFamily: "var(--font-ibm-plex)" }}>
             <div>
               <span className="text-gray-500">Name</span>
-              <p className="text-gray-900">{quote.client_name}</p>
+              <p
+                className="text-blue-600 hover:underline cursor-pointer"
+                onClick={() => router.push(`/customers`)}
+              >
+                {quote.client_name}
+              </p>
             </div>
             <div>
               <span className="text-gray-500">Email</span>
