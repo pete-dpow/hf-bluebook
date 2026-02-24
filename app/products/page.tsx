@@ -63,8 +63,9 @@ export default function ProductsPage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
+    let failed = 0;
     for (const p of draftProducts) {
-      await fetch(`/api/products/${p.id}/review`, {
+      const res = await fetch(`/api/products/${p.id}/review`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -72,9 +73,11 @@ export default function ProductsPage() {
         },
         body: JSON.stringify({ approve: true }),
       });
+      if (!res.ok) failed++;
     }
 
     setActivatingAll(false);
+    if (failed > 0) alert(`${failed} product${failed !== 1 ? "s" : ""} failed to activate`);
     await loadProducts();
   }
 
