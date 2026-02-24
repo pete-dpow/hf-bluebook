@@ -27,7 +27,7 @@ type ChatProduct = {
 type Msg = {
   role: "user" | "assistant";
   content: string;
-  mode?: "GENERAL" | "PROJECT" | "BOTH" | "PRODUCT" | "KNOWLEDGE" | "FULL" | null;
+  mode?: "GENERAL" | "PROJECT" | "BOTH" | "PRODUCT" | "KNOWLEDGE" | "FULL" | "QUOTE" | null;
   products?: ChatProduct[];
 };
 
@@ -426,10 +426,10 @@ export default function ChatPage() {
   }
 
   // ⭐ Task 7: Map API source to friendly mode name
-  function mapSourceToMode(source: string, mode?: string): "GENERAL" | "PROJECT" | "BOTH" | "PRODUCT" | "KNOWLEDGE" | "FULL" | null {
+  function mapSourceToMode(source: string, mode?: string): "GENERAL" | "PROJECT" | "BOTH" | "PRODUCT" | "KNOWLEDGE" | "FULL" | "QUOTE" | null {
     // If the API returns a mode field, use that directly
     if (mode) {
-      const validModes = ["GENERAL", "PROJECT", "BOTH", "PRODUCT", "KNOWLEDGE", "FULL"];
+      const validModes = ["GENERAL", "PROJECT", "BOTH", "PRODUCT", "KNOWLEDGE", "FULL", "QUOTE"];
       if (validModes.includes(mode)) return mode as any;
     }
     switch (source) {
@@ -745,6 +745,19 @@ export default function ChatPage() {
         products: data.products || undefined,
       };
       setMessages((m) => [...m, reply]);
+
+      // Handle QUOTE mode actions
+      if (data.mode === "QUOTE" && data.quoteAction) {
+        setActiveQuoteId(data.quoteAction.quoteId);
+        setActiveQuoteNumber(data.quoteAction.quoteNumber);
+        if (data.quoteAction.type === "add_item") {
+          setQuoteToast(`Added ${data.quoteAction.quantity}x ${data.quoteAction.productName} to ${data.quoteAction.quoteNumber}`);
+          setTimeout(() => setQuoteToast(null), 4000);
+        } else if (data.quoteAction.type === "create_quote") {
+          setQuoteToast(`Created ${data.quoteAction.quoteNumber}`);
+          setTimeout(() => setQuoteToast(null), 4000);
+        }
+      }
     } catch (err: any) {
       const errMsg = err.message || "Chat failed.";
       setMessages((m) => [
@@ -1087,7 +1100,7 @@ export default function ChatPage() {
   );
 
   // ⭐ Task 7: Mode Badge Component
-  const ModeBadge = ({ mode }: { mode: "GENERAL" | "PROJECT" | "BOTH" | "PRODUCT" | "KNOWLEDGE" | "FULL" | null }) => {
+  const ModeBadge = ({ mode }: { mode: "GENERAL" | "PROJECT" | "BOTH" | "PRODUCT" | "KNOWLEDGE" | "FULL" | "QUOTE" | null }) => {
     if (!mode) return null;
 
     const config: Record<string, { bg: string; color: string; border: string }> = {
@@ -1097,6 +1110,7 @@ export default function ChatPage() {
       KNOWLEDGE: { bg: "#FEE2E2", color: "#DC2626", border: "#FCA5A5" },
       FULL: { bg: "#F0FDFA", color: "#0D9488", border: "#5EEAD4" },
       BOTH: { bg: "#FEF3C7", color: "#D97706", border: "#FCD34D" },
+      QUOTE: { bg: "#FFF7ED", color: "#EA580C", border: "#FDBA74" },
     };
     
     const style = config[mode];

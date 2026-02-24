@@ -324,6 +324,69 @@ export default function QuoteDetailPage() {
           </div>
         </div>
 
+        {/* Quote Lifecycle Timeline */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+          <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+            Timeline
+          </h2>
+          {(() => {
+            const STATUS_ORDER = ["draft", "sent", "approved", "rejected", "cancelled"];
+            const currentIdx = STATUS_ORDER.indexOf(quote.status);
+            const isRejected = quote.status === "rejected";
+            const isCancelled = quote.status === "cancelled";
+            const steps = [
+              { label: "Created", date: quote.quote_date || quote.created_at, done: true },
+              { label: "Sent", date: quote.sent_at, done: currentIdx >= 1 },
+              {
+                label: isRejected ? "Rejected" : isCancelled ? "Cancelled" : "Approved",
+                date: quote.approved_at || quote.rejected_at,
+                done: currentIdx >= 2,
+              },
+            ];
+            const fmtDate = (d: string | null) => {
+              if (!d) return "";
+              return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+            };
+            return (
+              <div className="flex items-center gap-0">
+                {steps.map((step, i) => (
+                  <div key={i} className="flex items-center" style={{ flex: i < steps.length - 1 ? 1 : undefined }}>
+                    <div className="flex flex-col items-center">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium border-2"
+                        style={{
+                          borderColor: step.done
+                            ? (isRejected && i === 2) ? "#EF4444" : "#10B981"
+                            : i === currentIdx + 1 ? "#2563EB" : "#D1D5DB",
+                          background: step.done
+                            ? (isRejected && i === 2) ? "#FEF2F2" : "#F0FDF4"
+                            : "white",
+                          color: step.done
+                            ? (isRejected && i === 2) ? "#EF4444" : "#10B981"
+                            : "#9CA3AF",
+                        }}
+                      >
+                        {step.done ? "✓" : i + 1}
+                      </div>
+                      <span className="text-xs text-gray-700 mt-1.5 font-medium" style={{ fontFamily: "var(--font-ibm-plex)" }}>{step.label}</span>
+                      <span className="text-xs text-gray-400 mt-0.5" style={{ fontFamily: "var(--font-ibm-plex)" }}>{step.date ? fmtDate(step.date) : "—"}</span>
+                    </div>
+                    {i < steps.length - 1 && (
+                      <div
+                        className="h-0.5 flex-1 mx-2"
+                        style={{
+                          background: steps[i + 1].done ? "#10B981" : "#E5E7EB",
+                          marginTop: "-24px",
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+
         {/* Client Info */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>

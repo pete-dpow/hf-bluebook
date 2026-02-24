@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Plus, LayoutGrid, List, CheckCircle, Package, AlertCircle, Building2 } from "lucide-react";
+import { Loader2, Plus, LayoutGrid, List, CheckCircle, Package, AlertCircle, Building2, TrendingUp, TrendingDown } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import ProductListRow from "@/components/ProductListRow";
 import ProductFilter from "@/components/ProductFilter";
@@ -23,7 +23,7 @@ export default function ProductsPage() {
   const [needsReview, setNeedsReview] = useState(false);
   const [search, setSearch] = useState("");
   const [activatingAll, setActivatingAll] = useState(false);
-  const [stats, setStats] = useState<{ total: number; active: number; needs_review: number; manufacturers: number } | null>(null);
+  const [stats, setStats] = useState<{ total: number; active: number; needs_review: number; manufacturers: number; total_trend: number; active_trend: number; needs_review_trend: number } | null>(null);
 
   useEffect(() => {
     loadProducts();
@@ -141,6 +141,12 @@ export default function ProductsPage() {
                 <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Total Products</span>
               </div>
               <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.total.toLocaleString()}</p>
+              {stats.total_trend !== 0 && (
+                <div className={`flex items-center gap-1 mt-1 text-xs ${stats.total_trend > 0 ? "text-green-600" : "text-red-500"}`} style={{ fontFamily: "var(--font-ibm-plex)" }}>
+                  {stats.total_trend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  <span>{stats.total_trend > 0 ? "+" : ""}{stats.total_trend} this month</span>
+                </div>
+              )}
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-5">
               <div className="flex items-center gap-2 mb-2">
@@ -148,6 +154,12 @@ export default function ProductsPage() {
                 <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Active</span>
               </div>
               <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.active.toLocaleString()}</p>
+              {stats.active_trend !== 0 && (
+                <div className={`flex items-center gap-1 mt-1 text-xs ${stats.active_trend > 0 ? "text-green-600" : "text-red-500"}`} style={{ fontFamily: "var(--font-ibm-plex)" }}>
+                  {stats.active_trend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  <span>{stats.active_trend > 0 ? "+" : ""}{stats.active_trend} this month</span>
+                </div>
+              )}
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-5">
               <div className="flex items-center gap-2 mb-2">
@@ -155,6 +167,12 @@ export default function ProductsPage() {
                 <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Needs Review</span>
               </div>
               <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.needs_review.toLocaleString()}</p>
+              {stats.needs_review_trend !== 0 && (
+                <div className={`flex items-center gap-1 mt-1 text-xs ${stats.needs_review_trend > 0 ? "text-amber-600" : "text-green-600"}`} style={{ fontFamily: "var(--font-ibm-plex)" }}>
+                  {stats.needs_review_trend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  <span>{stats.needs_review_trend > 0 ? "+" : ""}{stats.needs_review_trend} this month</span>
+                </div>
+              )}
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-5">
               <div className="flex items-center gap-2 mb-2">

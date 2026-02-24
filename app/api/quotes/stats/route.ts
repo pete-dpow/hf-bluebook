@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from("quotes")
-    .select("status, total")
+    .select("status, total, created_at")
     .eq("organization_id", auth.organizationId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -27,5 +27,20 @@ export async function GET(req: NextRequest) {
   const approved = quotes.filter((q) => q.status === "approved").length;
   const total_value = quotes.reduce((sum, q) => sum + (parseFloat(q.total) || 0), 0);
 
-  return NextResponse.json({ total, draft, sent, approved, total_value });
+  // 30-day trend calculations
+  const now = Date.now();
+  const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+  const recent = quotes.filter((q) => now - new Date(q.created_at).getTime() < thirtyDays);
+  const previous = quotes.filter((q) => {
+    const age = now - new Date(q.created_at).getTime();
+    return age >= thirtyDays && age < thirtyDays * 2;
+  });
+
+  const total_trend = recent.length - previous.length;
+  const approved_trend = recent.filter((q) => q.status === "approved").length -
+    previous.filter((q) => q.status === "approved").length;
+  const value_trend = recent.reduce((s, q) => s + (parseFloat(q.total) || 0), 0) -
+    previous.reduce((s, q) => s + (parseFloat(q.total) || 0), 0);
+
+  return NextResponse.json({ total, draft, sent, approved, total_value, total_trend, approved_trend, value_trend });
 }

@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { generateEmbedding } from "@/lib/embeddingService";
+import { recalculateQuoteTotals } from "@/lib/quoteCalculations";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "sk-placeholder" });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || "sk-ant-placeholder" });
@@ -18,7 +19,7 @@ function getSupabaseAdmin() {
   return _supabaseAdmin;
 }
 
-type MelvinMode = "GENERAL" | "PROJECT" | "PRODUCT" | "KNOWLEDGE" | "FULL";
+type MelvinMode = "GENERAL" | "PROJECT" | "PRODUCT" | "KNOWLEDGE" | "FULL" | "QUOTE";
 
 export async function POST(req: Request) {
   try {
@@ -107,10 +108,10 @@ export async function POST(req: Request) {
       organizationId = userData?.active_organization_id || null;
     }
 
-    // === 8.2: 5-MODE CLASSIFIER ===
+    // === 8.2: 6-MODE CLASSIFIER ===
     let mode: MelvinMode;
 
-    const validModes: MelvinMode[] = ["GENERAL", "PROJECT", "PRODUCT", "KNOWLEDGE", "FULL"];
+    const validModes: MelvinMode[] = ["GENERAL", "PROJECT", "PRODUCT", "KNOWLEDGE", "FULL", "QUOTE"];
     if (modeOverride && validModes.includes(modeOverride)) {
       mode = modeOverride;
     } else {
@@ -133,6 +134,9 @@ export async function POST(req: Request) {
 
       case "FULL":
         return handleFull(question, history, dataset, memoryContext, organizationId);
+
+      case "QUOTE":
+        return handleQuote(question, history, memoryContext, organizationId, token);
 
       default:
         return handleGeneral(question, history, memoryContext);
@@ -157,10 +161,11 @@ Modes:
 - PRODUCT: Questions about specific fire protection products, manufacturers, pricing, specifications, product comparisons.
 - KNOWLEDGE: Questions requiring document reasoning — fire test certificates, regulation interpretation, BSA compliance, Approved Document B guidance, British Standards content.
 - FULL: Complex questions needing multiple data sources — "which products in my project meet BS EN 1366-3" or "compare my quoted products against regulation requirements".
+- QUOTE: Adding products to quotes, creating quotes, modifying quote items, listing quote contents. Examples: "add 24 Quelfire to the Byker Wall quote", "create a new quote for Smith Ltd", "what's on the current quote", "add fire doors to quote HF-Q-0012".
 
 Question: "${question}"
 
-Respond with ONLY the mode name (GENERAL, PROJECT, PRODUCT, KNOWLEDGE, or FULL):`;
+Respond with ONLY the mode name (GENERAL, PROJECT, PRODUCT, KNOWLEDGE, FULL, or QUOTE):`;
 
   const classification = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -170,7 +175,7 @@ Respond with ONLY the mode name (GENERAL, PROJECT, PRODUCT, KNOWLEDGE, or FULL):
   });
 
   const result = (classification.choices[0].message.content?.trim().toUpperCase() || "GENERAL") as MelvinMode;
-  const validModes: MelvinMode[] = ["GENERAL", "PROJECT", "PRODUCT", "KNOWLEDGE", "FULL"];
+  const validModes: MelvinMode[] = ["GENERAL", "PROJECT", "PRODUCT", "KNOWLEDGE", "FULL", "QUOTE"];
   return validModes.includes(result) ? result : "GENERAL";
 }
 
@@ -564,6 +569,299 @@ Rules:
     mode: "FULL",
     citations: citations.length > 0 ? Array.from(new Set(citations)) : undefined,
     products: structuredProducts.length > 0 ? structuredProducts : undefined,
+  });
+}
+
+// === QUOTE MODE — Natural language quote management ===
+async function handleQuote(
+  question: string,
+  history: any[],
+  memoryContext: string,
+  organizationId: string | null,
+  token: string | null
+) {
+  if (!organizationId) {
+    return NextResponse.json({
+      answer: "You need to be logged in with an organization to manage quotes.",
+      mode: "QUOTE",
+    });
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+
+  // Step 1: Extract structured intent from natural language
+  const extractionPrompt = `Extract the user's quote management intent from their message. Return valid JSON only.
+
+Actions:
+- "add_item": User wants to add a product to a quote. Extract product_query (product name/code), quantity (default 1), and quote_ref (quote number like HF-Q-0001, or project/client name).
+- "create_quote": User wants to create a new quote. Extract client_name and/or project_name.
+- "list_items": User wants to see what's on a quote. Extract quote_ref.
+
+Respond with ONLY valid JSON:
+{
+  "action": "add_item" | "create_quote" | "list_items",
+  "product_query": "string or null",
+  "quantity": number,
+  "quote_ref": "string or null",
+  "client_name": "string or null",
+  "project_name": "string or null"
+}`;
+
+  const extraction = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: extractionPrompt },
+      { role: "user", content: question },
+    ],
+    temperature: 0,
+    response_format: { type: "json_object" },
+  });
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(extraction.choices[0].message.content || "{}");
+  } catch {
+    return NextResponse.json({
+      answer: "I couldn't understand that quote request. Try something like: \"add 24x Quelfire QF60 to the Byker Wall quote\"",
+      mode: "QUOTE",
+    });
+  }
+
+  const { action, product_query, quantity = 1, quote_ref, client_name, project_name } = parsed;
+
+  // Step 2: Handle each action
+  if (action === "create_quote") {
+    const { data: quote, error } = await supabaseAdmin
+      .from("quotes")
+      .insert({
+        organization_id: organizationId,
+        quote_number: `HF-Q-${String(Date.now()).slice(-4)}`,
+        client_name: client_name || "Draft",
+        project_name: project_name || null,
+        status: "draft",
+        subtotal: 0,
+        vat_percent: 20,
+        vat_amount: 0,
+        total: 0,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({
+        answer: `Failed to create quote: ${error.message}`,
+        mode: "QUOTE",
+      });
+    }
+
+    return NextResponse.json({
+      answer: `Created new quote **${quote.quote_number}** for ${client_name || "Draft"}${project_name ? ` (${project_name})` : ""}. You can now add products to it.`,
+      mode: "QUOTE",
+      quoteAction: { type: "create_quote", quoteId: quote.id, quoteNumber: quote.quote_number },
+    });
+  }
+
+  if (action === "list_items") {
+    // Find the quote
+    let quoteQuery = supabaseAdmin
+      .from("quotes")
+      .select("id, quote_number, client_name, project_name, total, status")
+      .eq("organization_id", organizationId);
+
+    if (quote_ref) {
+      if (quote_ref.match(/^HF-Q-/i)) {
+        quoteQuery = quoteQuery.ilike("quote_number", `%${quote_ref}%`);
+      } else {
+        quoteQuery = quoteQuery.or(`project_name.ilike.%${quote_ref}%,client_name.ilike.%${quote_ref}%`);
+      }
+    }
+
+    const { data: quotes } = await quoteQuery.order("updated_at", { ascending: false }).limit(1);
+    if (!quotes || quotes.length === 0) {
+      return NextResponse.json({
+        answer: quote_ref ? `Couldn't find a quote matching "${quote_ref}".` : "No quotes found. Create one first.",
+        mode: "QUOTE",
+      });
+    }
+
+    const quote = quotes[0];
+    const { data: items } = await supabaseAdmin
+      .from("quote_line_items")
+      .select("description, quantity, unit_price, line_total, product_code")
+      .eq("quote_id", quote.id)
+      .order("sort_order", { ascending: true });
+
+    if (!items || items.length === 0) {
+      return NextResponse.json({
+        answer: `Quote **${quote.quote_number}** (${quote.client_name}) has no items yet.`,
+        mode: "QUOTE",
+        quoteAction: { type: "list_items", quoteId: quote.id, quoteNumber: quote.quote_number },
+      });
+    }
+
+    const itemList = items.map((it: any, i: number) =>
+      `${i + 1}. ${it.quantity}x ${it.description}${it.product_code ? ` (${it.product_code})` : ""} — £${(it.line_total || 0).toFixed(2)}`
+    ).join("\n");
+
+    return NextResponse.json({
+      answer: `**${quote.quote_number}** — ${quote.client_name}${quote.project_name ? ` / ${quote.project_name}` : ""}\n\n${itemList}\n\n**Total: £${(quote.total || 0).toFixed(2)}**`,
+      mode: "QUOTE",
+      quoteAction: { type: "list_items", quoteId: quote.id, quoteNumber: quote.quote_number },
+    });
+  }
+
+  if (action === "add_item") {
+    if (!product_query) {
+      return NextResponse.json({
+        answer: "I need a product name to add. Try: \"add 24x Quelfire QF60 to the Byker Wall quote\"",
+        mode: "QUOTE",
+      });
+    }
+
+    // Find the product via vector search
+    let matchedProduct: any = null;
+    try {
+      const embedding = await generateEmbedding(product_query);
+      const { data: products } = await supabaseAdmin.rpc("match_products", {
+        query_embedding: embedding,
+        match_org_id: organizationId,
+        match_count: 1,
+        match_threshold: 0.5,
+      });
+      if (products && products.length > 0) {
+        matchedProduct = products[0];
+      }
+    } catch { /* fall through */ }
+
+    // Keyword fallback
+    if (!matchedProduct) {
+      const { data: kwResults } = await supabaseAdmin
+        .from("products")
+        .select("id, product_name, product_code, sell_price, list_price, manufacturer_id")
+        .eq("organization_id", organizationId)
+        .or(`product_name.ilike.%${product_query}%,product_code.ilike.%${product_query}%`)
+        .limit(1);
+      if (kwResults && kwResults.length > 0) {
+        matchedProduct = kwResults[0];
+      }
+    }
+
+    if (!matchedProduct) {
+      return NextResponse.json({
+        answer: `Couldn't find a product matching "${product_query}" in your catalog. Check the product name or code and try again.`,
+        mode: "QUOTE",
+      });
+    }
+
+    // Find or create the target quote
+    let targetQuote: any = null;
+
+    if (quote_ref) {
+      let quoteQuery = supabaseAdmin
+        .from("quotes")
+        .select("id, quote_number, client_name, project_name")
+        .eq("organization_id", organizationId);
+
+      if (quote_ref.match(/^HF-Q-/i)) {
+        quoteQuery = quoteQuery.ilike("quote_number", `%${quote_ref}%`);
+      } else {
+        quoteQuery = quoteQuery.or(`project_name.ilike.%${quote_ref}%,client_name.ilike.%${quote_ref}%,quote_name.ilike.%${quote_ref}%`);
+      }
+
+      const { data: quotes } = await quoteQuery.order("updated_at", { ascending: false }).limit(1);
+      if (quotes && quotes.length > 0) {
+        targetQuote = quotes[0];
+      }
+    }
+
+    // If no quote found, get the most recent draft
+    if (!targetQuote) {
+      const { data: recentQuotes } = await supabaseAdmin
+        .from("quotes")
+        .select("id, quote_number, client_name, project_name")
+        .eq("organization_id", organizationId)
+        .eq("status", "draft")
+        .order("updated_at", { ascending: false })
+        .limit(1);
+
+      if (recentQuotes && recentQuotes.length > 0) {
+        targetQuote = recentQuotes[0];
+      }
+    }
+
+    // Still no quote? Create one
+    if (!targetQuote) {
+      const { data: newQuote, error: qErr } = await supabaseAdmin
+        .from("quotes")
+        .insert({
+          organization_id: organizationId,
+          quote_number: `HF-Q-${String(Date.now()).slice(-4)}`,
+          client_name: "Draft",
+          project_name: quote_ref || null,
+          status: "draft",
+          subtotal: 0,
+          vat_percent: 20,
+          vat_amount: 0,
+          total: 0,
+        })
+        .select()
+        .single();
+
+      if (qErr) {
+        return NextResponse.json({
+          answer: `Failed to create a new quote: ${qErr.message}`,
+          mode: "QUOTE",
+        });
+      }
+      targetQuote = newQuote;
+    }
+
+    // Add line item
+    const unitPrice = matchedProduct.sell_price || matchedProduct.list_price || 0;
+    const lineTotal = quantity * unitPrice;
+
+    const { error: liErr } = await supabaseAdmin
+      .from("quote_line_items")
+      .insert({
+        quote_id: targetQuote.id,
+        product_id: matchedProduct.id,
+        description: matchedProduct.product_name,
+        quantity,
+        unit_price: unitPrice,
+        line_total: lineTotal,
+        unit: "each",
+        product_code: matchedProduct.product_code || null,
+      });
+
+    if (liErr) {
+      return NextResponse.json({
+        answer: `Failed to add item: ${liErr.message}`,
+        mode: "QUOTE",
+      });
+    }
+
+    // Recalculate totals
+    await recalculateQuoteTotals(targetQuote.id);
+
+    const productName = matchedProduct.product_name;
+    const priceStr = unitPrice > 0 ? ` at £${unitPrice.toFixed(2)} each` : "";
+
+    return NextResponse.json({
+      answer: `Added **${quantity}x ${productName}**${matchedProduct.product_code ? ` (${matchedProduct.product_code})` : ""}${priceStr} to quote **${targetQuote.quote_number}**${targetQuote.project_name ? ` (${targetQuote.project_name})` : ""}. Line total: £${lineTotal.toFixed(2)}`,
+      mode: "QUOTE",
+      quoteAction: {
+        type: "add_item",
+        quoteId: targetQuote.id,
+        quoteNumber: targetQuote.quote_number,
+        productName,
+        quantity,
+      },
+    });
+  }
+
+  return NextResponse.json({
+    answer: "I'm not sure what you'd like to do with your quote. Try:\n- \"Add 24x [product] to [quote/project name]\"\n- \"Create a quote for [client name]\"\n- \"What's on the current quote?\"",
+    mode: "QUOTE",
   });
 }
 
