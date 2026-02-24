@@ -103,12 +103,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // ── Progress callback: throttled DB updates so the UI can track progress ──
+  let lastProgressUpdate = 0;
+  const updateProgress = async (progress: { stage: string; current: number; total: number; found: number }) => {
+    const now = Date.now();
+    if (now - lastProgressUpdate < 1500) return; // Throttle: max every 1.5s
+    lastProgressUpdate = now;
+    await supabaseAdmin.from("scrape_jobs").update({ progress }).eq("id", job.id).then(() => {});
+  };
+
   // ── Primary: run sync scrapers directly (Shopify & HTML) ──
   // These don't need Playwright/browser, so run them inline for immediate results.
 
   if (isShopify && shopifyConfig) {
     return runSyncScrape(job.id, params.id, manufacturer, "shopify", async () => {
-      const products = await scrapeShopifyProducts(shopifyConfig!);
+      const products = await scrapeShopifyProducts(shopifyConfig!, updateProgress);
       return products;
     }, shopifyConfig.default_pillar || "fire_stopping");
   }
@@ -117,7 +126,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (isHtml) {
     const htmlConfig = manufacturer.scraper_config as HtmlScraperConfig;
     return runSyncScrape(job.id, params.id, manufacturer, "html", async () => {
-      const products = await scrapeWithHtmlConfig(htmlConfig);
+      const products = await scrapeWithHtmlConfig(htmlConfig, updateProgress);
       return products;
     }, htmlConfig.default_pillar || "fire_stopping");
   }
@@ -160,22 +169,33 @@ async function runSyncScrape(
   scrapeFn: () => Promise<ScrapedProduct[]>,
   defaultPillar: string
 ) {
+  const scrapeStart = Date.now();
   try {
     await supabaseAdmin.from("scrape_jobs").update({
       status: "running",
       started_at: new Date().toISOString(),
+      progress: { stage: "Starting scrape", current: 0, total: 0, found: 0 },
     }).eq("id", jobId);
 
     const products = await scrapeFn();
+
+    // Update progress: saving products
+    await supabaseAdmin.from("scrape_jobs").update({
+      progress: { stage: `Saving ${products.length} products`, current: 0, total: products.length, found: products.length },
+    }).eq("id", jobId);
+
     const { created, updated, filesCreated } = await upsertScrapedProducts(
       products, manufacturerId, manufacturer.organization_id, defaultPillar
     );
 
+    const durationSeconds = Math.round((Date.now() - scrapeStart) / 1000);
     await supabaseAdmin.from("scrape_jobs").update({
       status: "completed",
       products_created: created,
       products_updated: updated,
       completed_at: new Date().toISOString(),
+      duration_seconds: durationSeconds,
+      progress: { stage: "Complete", current: products.length, total: products.length, found: products.length },
     }).eq("id", jobId);
 
     await supabaseAdmin.from("manufacturers").update({
@@ -183,6 +203,10 @@ async function runSyncScrape(
     }).eq("id", manufacturerId);
 
     // Generate embeddings for products that don't have them yet
+    await supabaseAdmin.from("scrape_jobs").update({
+      progress: { stage: "Generating embeddings", current: 0, total: products.length, found: products.length },
+    }).eq("id", jobId);
+
     let embedded = 0;
     try {
       const { data: unembedded } = await supabaseAdmin
@@ -222,13 +246,19 @@ async function runSyncScrape(
       total: products.length,
     });
   } catch (err: any) {
+    const durationSeconds = Math.round((Date.now() - scrapeStart) / 1000);
+    const errorMsg = err.message || "Scraping failed";
+    console.error(`[scrape] Failed after ${durationSeconds}s:`, errorMsg);
+
     await supabaseAdmin.from("scrape_jobs").update({
       status: "failed",
-      error_log: err.message || "Scraping failed",
+      error_log: errorMsg,
       completed_at: new Date().toISOString(),
+      duration_seconds: durationSeconds,
+      progress: { stage: `Failed: ${errorMsg}`, current: 0, total: 0, found: 0 },
     }).eq("id", jobId);
 
-    return NextResponse.json({ error: err.message || "Scraping failed" }, { status: 500 });
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
 

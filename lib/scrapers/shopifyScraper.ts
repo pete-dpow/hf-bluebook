@@ -159,15 +159,33 @@ async function fetchPageContent(storeUrl: string, pageHandle: string): Promise<s
   }
 }
 
+export type ScrapeProgressCallback = (progress: {
+  stage: string;
+  current: number;
+  total: number;
+  found: number;
+}) => void;
+
+const MAX_RUNTIME_MS = 50_000; // stop 10s before Vercel 60s limit
+
 export async function scrapeShopifyProducts(
-  config: ShopifyScraperConfig
+  config: ShopifyScraperConfig,
+  onProgress?: ScrapeProgressCallback
 ): Promise<ScrapedProduct[]> {
+  const startTime = Date.now();
   const storeUrl = config.store_url.replace(/\/+$/, "");
   const allProducts: ScrapedProduct[] = [];
   let page = 1;
 
   // Step 1: Fetch product catalogue from JSON API
+  onProgress?.({ stage: "Fetching product catalog", current: 0, total: 0, found: 0 });
+
   while (page <= 10) {
+    if (Date.now() - startTime > MAX_RUNTIME_MS) {
+      console.warn(`[shopifyScraper] Timeout approaching — stopping at page ${page}`);
+      break;
+    }
+
     const url = `${storeUrl}/products.json?limit=250&page=${page}`;
     const res = await fetch(url, {
       headers: {
@@ -191,14 +209,22 @@ export async function scrapeShopifyProducts(
       if (mapped) allProducts.push(mapped);
     }
 
+    onProgress?.({ stage: "Fetching product catalog", current: page, total: 10, found: allProducts.length });
+
     if (products.length < 250) break;
     page++;
   }
 
+  console.log(`[shopifyScraper] Fetched ${allProducts.length} products from ${page} pages`);
+
   // Step 2: Fetch each product's HTML page to extract PDF download links
-  // Do in batches of 5 to avoid overwhelming the server
   const batchSize = 5;
   for (let i = 0; i < allProducts.length; i += batchSize) {
+    if (Date.now() - startTime > MAX_RUNTIME_MS) {
+      console.warn(`[shopifyScraper] Timeout approaching — extracted PDFs for ${i}/${allProducts.length} products`);
+      break;
+    }
+
     const batch = allProducts.slice(i, i + batchSize);
     const results = await Promise.allSettled(
       batch.map((p) => extractPdfUrls(p.source_url))
@@ -208,11 +234,19 @@ export async function scrapeShopifyProducts(
         batch[j].pdf_urls = (results[j] as PromiseFulfilledResult<string[]>).value;
       }
     }
+
+    onProgress?.({ stage: "Extracting PDF links", current: Math.min(i + batchSize, allProducts.length), total: allProducts.length, found: allProducts.length });
   }
 
-  // Step 3: Enrich with install/application page content
-  await enrichWithInstallPages(allProducts, storeUrl);
+  // Step 3: Enrich with install/application page content (only if time remains)
+  if (Date.now() - startTime < MAX_RUNTIME_MS - 5000) {
+    onProgress?.({ stage: "Fetching install guides", current: 0, total: allProducts.length, found: allProducts.length });
+    await enrichWithInstallPages(allProducts, storeUrl);
+  } else {
+    console.warn(`[shopifyScraper] Skipping install page enrichment — low on time`);
+  }
 
+  onProgress?.({ stage: "Complete", current: allProducts.length, total: allProducts.length, found: allProducts.length });
   return allProducts;
 }
 

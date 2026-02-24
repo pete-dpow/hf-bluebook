@@ -370,16 +370,24 @@ function extractFromSitemapUrls(urls: string[], baseUrl: string): ScrapedProduct
 // Main entry point
 // ---------------------------------------------------------------------------
 
+export type ScrapeProgressCallback = (progress: {
+  stage: string;
+  current: number;
+  total: number;
+  found: number;
+}) => void;
+
 export async function scrapeWithHtmlConfig(
-  config: HtmlScraperConfig
+  config: HtmlScraperConfig,
+  onProgress?: ScrapeProgressCallback
 ): Promise<ScrapedProduct[]> {
   if (config.api) {
     return fetchFromApi(config);
   }
-  return discoverAndScrape(config);
+  return discoverAndScrape(config, onProgress);
 }
 
-async function discoverAndScrape(config: HtmlScraperConfig): Promise<ScrapedProduct[]> {
+async function discoverAndScrape(config: HtmlScraperConfig, onProgress?: ScrapeProgressCallback): Promise<ScrapedProduct[]> {
   const startTime = Date.now();
   const headers = { ...DEFAULT_HEADERS, ...config.request?.headers };
   const delay = config.request?.delay_ms ?? 500;
@@ -389,11 +397,16 @@ async function discoverAndScrape(config: HtmlScraperConfig): Promise<ScrapedProd
 
   // 1. Fetch all listing pages
   const listingHtmls: string[] = [];
+  const totalListingUrls = config.listing.urls.length;
 
-  for (const url of config.listing.urls) {
+  onProgress?.({ stage: "Fetching listing pages", current: 0, total: totalListingUrls, found: 0 });
+
+  for (let idx = 0; idx < config.listing.urls.length; idx++) {
     if (Date.now() - startTime > MAX_RUNTIME_MS) break;
+    const url = config.listing.urls[idx];
     const html = await safeFetch(url, headers, timeout);
     if (html) listingHtmls.push(html);
+    onProgress?.({ stage: "Fetching listing pages", current: idx + 1, total: totalListingUrls, found: 0 });
     if (delay > 0) await sleep(delay);
   }
 
@@ -404,8 +417,9 @@ async function discoverAndScrape(config: HtmlScraperConfig): Promise<ScrapedProd
       if (Date.now() - startTime > MAX_RUNTIME_MS) break;
       const url = config.listing.pagination.replace("{page}", String(page));
       const html = await safeFetch(url, headers, timeout);
-      if (!html) break; // stop pagination on first failure
+      if (!html) break;
       listingHtmls.push(html);
+      onProgress?.({ stage: `Fetching page ${page}/${maxPages}`, current: page, total: maxPages, found: 0 });
       if (delay > 0) await sleep(delay);
     }
   }
@@ -414,15 +428,18 @@ async function discoverAndScrape(config: HtmlScraperConfig): Promise<ScrapedProd
 
   // 2. For listing-only method, extract directly from listing HTML
   if (config.detail.method === "listing-only") {
+    onProgress?.({ stage: "Extracting from listings", current: 0, total: listingHtmls.length, found: 0 });
     for (const html of listingHtmls) {
       allProducts.push(...extractFromListingHtml(html, config));
     }
+    onProgress?.({ stage: "Complete", current: allProducts.length, total: allProducts.length, found: allProducts.length });
     console.log(`[htmlScraper] Extracted ${allProducts.length} products from listings`);
     return dedup(allProducts);
   }
 
   // 2b. For sitemap method, extract URLs from XML then parse product data from URLs
   if (config.detail.method === "sitemap") {
+    onProgress?.({ stage: "Parsing sitemap URLs", current: 0, total: listingHtmls.length, found: 0 });
     const productUrls: string[] = [];
     const linkRegex = new RegExp(config.listing.product_link_pattern, "gi");
 
@@ -435,7 +452,9 @@ async function discoverAndScrape(config: HtmlScraperConfig): Promise<ScrapedProd
     }
 
     console.log(`[htmlScraper] Found ${productUrls.length} URLs from sitemap`);
+    onProgress?.({ stage: "Extracting product data", current: 0, total: productUrls.length, found: 0 });
     const products = extractFromSitemapUrls(productUrls, config.base_url);
+    onProgress?.({ stage: "Complete", current: products.length, total: products.length, found: products.length });
     console.log(`[htmlScraper] Extracted ${products.length} products from sitemap URLs`);
     return dedup(products);
   }
@@ -453,7 +472,10 @@ async function discoverAndScrape(config: HtmlScraperConfig): Promise<ScrapedProd
   }
 
   console.log(`[htmlScraper] Found ${productUrls.size} product URLs`);
-  if (productUrls.size === 0) return [];
+  if (productUrls.size === 0) {
+    onProgress?.({ stage: "No products found", current: 0, total: 0, found: 0 });
+    return [];
+  }
 
   // 4. Scrape detail pages in batches
   const urls = Array.from(productUrls);
@@ -474,11 +496,14 @@ async function discoverAndScrape(config: HtmlScraperConfig): Promise<ScrapedProd
       }
     }
 
+    onProgress?.({ stage: "Scraping product pages", current: Math.min(i + batchSize, urls.length), total: urls.length, found: allProducts.length });
+
     if (delay > 0 && i + batchSize < urls.length) {
       await sleep(delay);
     }
   }
 
+  onProgress?.({ stage: "Complete", current: urls.length, total: urls.length, found: allProducts.length });
   console.log(`[htmlScraper] Scraped ${allProducts.length} products from ${urls.length} detail pages`);
   return dedup(allProducts);
 }

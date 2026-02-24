@@ -21,6 +21,32 @@ export default function ManufacturerDetailPage() {
     loadManufacturer();
   }, [params.id]);
 
+  // Poll for updates when a scrape is running or queued
+  useEffect(() => {
+    const hasActiveJob = scrapeJobs.some((j) => j.status === "running" || j.status === "queued");
+    if (!hasActiveJob && !scraping) return;
+
+    const interval = setInterval(async () => {
+      const { data: jobs } = await supabase
+        .from("scrape_jobs")
+        .select("*")
+        .eq("manufacturer_id", params.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (jobs) {
+        setScrapeJobs(jobs);
+        // If all jobs are done, reload manufacturer to get updated products
+        const stillActive = jobs.some((j: any) => j.status === "running" || j.status === "queued");
+        if (!stillActive) {
+          loadManufacturer();
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [scrapeJobs, scraping, params.id]);
+
   async function loadManufacturer() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { router.replace("/auth"); return; }
