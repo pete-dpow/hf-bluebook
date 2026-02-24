@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Plus, LayoutGrid, List } from "lucide-react";
+import { Loader2, Plus, LayoutGrid, List, CheckCircle } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import ProductListRow from "@/components/ProductListRow";
 import ProductFilter from "@/components/ProductFilter";
@@ -22,6 +22,7 @@ export default function ProductsPage() {
   const [status, setStatus] = useState("");
   const [needsReview, setNeedsReview] = useState(false);
   const [search, setSearch] = useState("");
+  const [activatingAll, setActivatingAll] = useState(false);
 
   useEffect(() => {
     loadProducts();
@@ -52,6 +53,31 @@ export default function ProductsPage() {
     setLoading(false);
   }
 
+  const draftProducts = products.filter((p) => p.status === "draft" || p.needs_review);
+
+  async function handleActivateAll() {
+    if (draftProducts.length === 0) return;
+    if (!confirm(`Activate ${draftProducts.length} draft product${draftProducts.length !== 1 ? "s" : ""}?`)) return;
+
+    setActivatingAll(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    for (const p of draftProducts) {
+      await fetch(`/api/products/${p.id}/review`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ approve: true }),
+      });
+    }
+
+    setActivatingAll(false);
+    await loadProducts();
+  }
+
   const totalPages = Math.ceil(total / limit);
 
   return (
@@ -66,14 +92,27 @@ export default function ProductsPage() {
               {total} product{total !== 1 ? "s" : ""} in catalog
             </p>
           </div>
-          <button
-            onClick={() => router.push("/products/new")}
-            className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white text-sm font-medium rounded-lg hover:opacity-90 transition"
-            style={{ fontFamily: "var(--font-ibm-plex)" }}
-          >
-            <Plus size={16} />
-            Add Product
-          </button>
+          <div className="flex items-center gap-2">
+            {draftProducts.length > 0 && (
+              <button
+                onClick={handleActivateAll}
+                disabled={activatingAll}
+                className="flex items-center gap-2 px-4 py-2 text-green-700 border border-green-200 text-sm font-medium rounded-lg hover:bg-green-50 transition disabled:opacity-50"
+                style={{ fontFamily: "var(--font-ibm-plex)" }}
+              >
+                {activatingAll ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                Activate {draftProducts.length} Draft{draftProducts.length !== 1 ? "s" : ""}
+              </button>
+            )}
+            <button
+              onClick={() => router.push("/products/new")}
+              className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white text-sm font-medium rounded-lg hover:opacity-90 transition"
+              style={{ fontFamily: "var(--font-ibm-plex)" }}
+            >
+              <Plus size={16} />
+              Add Product
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center justify-between mb-6">

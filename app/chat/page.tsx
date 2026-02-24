@@ -3,20 +3,32 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ChatInput from "@/components/ChatInput";
-import { 
-  Loader2, X, FileSpreadsheet, Calendar, HardDrive, AlertCircle, Cloud, 
+import {
+  Loader2, X, FileSpreadsheet, Calendar, HardDrive, AlertCircle, Cloud,
   Folder, ChevronRight, Info, Download, FileText, ChevronDown, History,
-  FileDown, FileType, Sparkles, Clock, MessageSquare
+  FileDown, FileType, Sparkles, Clock, MessageSquare, ShoppingCart, ExternalLink
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 
 // ⭐ Task 7: Updated message type with mode
+type ChatProduct = {
+  id: string;
+  product_name: string;
+  product_code?: string;
+  pillar: string;
+  description?: string;
+  sell_price?: number;
+  list_price?: number;
+  manufacturer_id?: string;
+};
+
 type Msg = {
   role: "user" | "assistant";
   content: string;
   mode?: "GENERAL" | "PROJECT" | "BOTH" | "PRODUCT" | "KNOWLEDGE" | "FULL" | null;
+  products?: ChatProduct[];
 };
 
 interface OneDriveFile {
@@ -92,18 +104,49 @@ export default function ChatPage() {
   // ⭐ Task 8: Summary Report State
   const [generatingSummary, setGeneratingSummary] = useState(false);
 
+  // Quote integration state
+  const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null);
+  const [activeQuoteNumber, setActiveQuoteNumber] = useState<string | null>(null);
+  const [quoteToast, setQuoteToast] = useState<string | null>(null);
+
+  // Chat persistence state
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [localConversations, setLocalConversations] = useState<{ id: string; title: string; messages: Msg[]; updatedAt: string }[]>([]);
+
   // Refs to break dependency cycles
   const messagesRef = useRef<Msg[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Keep ref in sync with state
+  // Keep ref in sync with state + persist to localStorage
   useEffect(() => {
     messagesRef.current = messages;
     // Auto-scroll to bottom on new messages
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+    // Persist conversation to localStorage
+    if (messages.length > 0) {
+      let convId = conversationId;
+      if (!convId) {
+        convId = `conv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        setConversationId(convId);
+      }
+      const title = messages[0]?.content?.slice(0, 60) || "Untitled";
+      try {
+        const stored = localStorage.getItem("melvin-conversations");
+        const convs: { id: string; title: string; messages: Msg[]; updatedAt: string }[] = stored ? JSON.parse(stored) : [];
+        const idx = convs.findIndex((c) => c.id === convId);
+        const entry = { id: convId, title, messages, updatedAt: new Date().toISOString() };
+        if (idx >= 0) {
+          convs[idx] = entry;
+        } else {
+          convs.unshift(entry);
+        }
+        // Keep max 20 conversations
+        localStorage.setItem("melvin-conversations", JSON.stringify(convs.slice(0, 20)));
+      } catch { /* localStorage full or unavailable */ }
+    }
+  }, [messages, conversationId]);
 
   // ⭐ Task 9/10/11: Export dropdown state
   const [showExportDropdown, setShowExportDropdown] = useState(false);
@@ -138,6 +181,11 @@ export default function ChatPage() {
   // Check if user is authenticated
   useEffect(() => {
     checkAuth();
+    // Load local conversations from localStorage
+    try {
+      const stored = localStorage.getItem("melvin-conversations");
+      if (stored) setLocalConversations(JSON.parse(stored));
+    } catch { /* ignore */ }
   }, []);
 
   // Listen for M365 status changes from ProfileDrawer
@@ -693,7 +741,8 @@ export default function ChatPage() {
       const reply: Msg = {
         role: "assistant",
         content: data.answer,
-        mode: mode
+        mode: mode,
+        products: data.products || undefined,
       };
       setMessages((m) => [...m, reply]);
     } catch (err: any) {
@@ -706,6 +755,63 @@ export default function ChatPage() {
       setLoading(false);
     }
   }, [user, loadedProjectId, modeOverride]);
+
+  // Add product to quote from chat
+  const handleAddToQuote = useCallback(async (product: ChatProduct) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    };
+
+    let quoteId = activeQuoteId;
+    let quoteNum = activeQuoteNumber;
+
+    // Create a new quote if we don't have one
+    if (!quoteId) {
+      const qRes = await fetch("/api/quotes", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          client_name: "Draft",
+          quote_name: "From Melvin Chat",
+        }),
+      });
+      if (!qRes.ok) {
+        setQuoteToast("Failed to create quote");
+        setTimeout(() => setQuoteToast(null), 3000);
+        return;
+      }
+      const qData = await qRes.json();
+      quoteId = qData.quote.id;
+      quoteNum = qData.quote.quote_number;
+      setActiveQuoteId(quoteId);
+      setActiveQuoteNumber(quoteNum);
+    }
+
+    // Add line item
+    const liRes = await fetch(`/api/quotes/${quoteId}/line-items`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        product_id: product.id,
+        description: product.product_name,
+        quantity: 1,
+        unit_price: product.sell_price || product.list_price || 0,
+        unit: "each",
+        product_code: product.product_code || null,
+      }),
+    });
+
+    if (liRes.ok) {
+      setQuoteToast(`Added to ${quoteNum}`);
+    } else {
+      setQuoteToast("Failed to add to quote");
+    }
+    setTimeout(() => setQuoteToast(null), 4000);
+  }, [activeQuoteId, activeQuoteNumber]);
 
   // Load restored project data on mount
   const handleSendRef = useRef(handleSend);
@@ -938,9 +1044,9 @@ export default function ChatPage() {
               { value: "AUTO", label: "Auto (Smart)", desc: "AI decides best mode", color: "#6B7280", disabled: false },
               { value: "GENERAL", label: "General", desc: "Industry knowledge only", color: "#1D4ED8", disabled: false },
               { value: "PROJECT", label: "Project", desc: "Your Excel data", color: "#059669", disabled: false },
-              { value: "PRODUCT", label: "Product", desc: "Product catalog search — coming soon", color: "#7C3AED", disabled: true },
-              { value: "KNOWLEDGE", label: "Knowledge", desc: "Bluebook PDFs + compliance — coming soon", color: "#DC2626", disabled: true },
-              { value: "FULL", label: "Full", desc: "Everything combined — coming soon", color: "#0D9488", disabled: true },
+              { value: "PRODUCT", label: "Product", desc: "Product catalog search", color: "#7C3AED", disabled: false },
+              { value: "KNOWLEDGE", label: "Knowledge", desc: "Bluebook PDFs + compliance", color: "#DC2626", disabled: false },
+              { value: "FULL", label: "Full", desc: "Everything combined", color: "#0D9488", disabled: false },
               { value: "BOTH", label: "Both (Legacy)", desc: "Knowledge + your data", color: "#D97706", disabled: false },
             ].map((option) => (
               <button
@@ -1263,7 +1369,7 @@ export default function ChatPage() {
           justifyContent: "space-between",
           gap: "12px",
         }}>
-          {/* Left: Project info */}
+          {/* Left: Project info + New Chat */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
             {(loadedProjectName || loadedFileName) ? (
               <div style={{
@@ -1290,6 +1396,34 @@ export default function ChatPage() {
                 New conversation
               </div>
             )}
+            {messages.length > 0 && (
+              <button
+                onClick={() => {
+                  setMessages([]);
+                  setConversationId(null);
+                  setActiveQuoteId(null);
+                  setActiveQuoteNumber(null);
+                  setLoadedProjectId(null);
+                  setLoadedProjectName(null);
+                  setLoadedFileName(null);
+                  setSaveSuccess(null);
+                  setShowPrompt(false);
+                }}
+                style={{
+                  padding: "4px 10px",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  fontFamily: "var(--font-ibm-plex)",
+                  background: "#F3F4F6",
+                  color: "#6B7280",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                }}
+              >
+                + New Chat
+              </button>
+            )}
           </div>
 
           {/* Right: Action buttons */}
@@ -1300,6 +1434,11 @@ export default function ChatPage() {
                 onClick={() => {
                   setShowRecentDrawer(true);
                   loadRecentConversations();
+                  // Refresh local conversations
+                  try {
+                    const stored = localStorage.getItem("melvin-conversations");
+                    if (stored) setLocalConversations(JSON.parse(stored));
+                  } catch { /* ignore */ }
                 }}
                 style={{
                   display: "flex",
@@ -1414,13 +1553,96 @@ export default function ChatPage() {
                     ? "bg-[#2563EB] text-white rounded-br-none"
                     : "bg-white border border-gray-200 rounded-bl-none text-gray-800"
                 }`}
-                style={{ 
+                style={{
                   fontFamily: "var(--font-ibm-plex)",
                   whiteSpace: "pre-wrap"
                 }}
               >
                 {m.content}
                 {m.role === "assistant" && m.mode && <ModeBadge mode={m.mode} />}
+
+                {/* Product cards from PRODUCT/FULL mode */}
+                {m.products && m.products.length > 0 && (
+                  <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                    {m.products.map((p) => (
+                      <div
+                        key={p.id}
+                        style={{
+                          border: "1px solid #E5E7EB",
+                          borderRadius: 8,
+                          padding: "10px 12px",
+                          background: "#FAFAFA",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            <span style={{ fontWeight: 600, fontSize: 13, color: "#1F2937" }}>
+                              {p.product_name}
+                            </span>
+                            {p.product_code && (
+                              <span style={{
+                                fontFamily: "monospace",
+                                fontSize: 11,
+                                color: "#6B7280",
+                                background: "#F3F4F6",
+                                padding: "1px 6px",
+                                borderRadius: 4,
+                              }}>
+                                {p.product_code}
+                              </span>
+                            )}
+                            <span style={{
+                              fontSize: 10,
+                              fontWeight: 600,
+                              padding: "2px 6px",
+                              borderRadius: 4,
+                              background: "#EDE9FE",
+                              color: "#7C3AED",
+                              border: "1px solid #C4B5FD",
+                            }}>
+                              {p.pillar}
+                            </span>
+                          </div>
+                          {(p.sell_price || p.list_price) && (
+                            <div style={{ fontSize: 12, color: "#374151", marginTop: 4, fontWeight: 500 }}>
+                              £{(p.sell_price || p.list_price || 0).toFixed(2)}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToQuote(p);
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            padding: "6px 10px",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            fontFamily: "var(--font-ibm-plex)",
+                            background: "#059669",
+                            color: "white",
+                            border: "none",
+                            borderRadius: 6,
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            transition: "opacity 0.2s",
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                        >
+                          <ShoppingCart size={12} />
+                          Add to Quote
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -1433,6 +1655,52 @@ export default function ChatPage() {
 
           {showPrompt && <SmartSaveBubble />}
           {saveSuccess && <SuccessMessage message={saveSuccess} />}
+
+          {/* Quote toast notification */}
+          {quoteToast && (
+            <div style={{
+              position: "fixed",
+              bottom: 90,
+              right: 24,
+              background: quoteToast.includes("Failed") ? "#FEE2E2" : "#D1FAE5",
+              border: `1px solid ${quoteToast.includes("Failed") ? "#FCA5A5" : "#6EE7B7"}`,
+              borderRadius: 8,
+              padding: "10px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+              zIndex: 100,
+              fontFamily: "var(--font-ibm-plex)",
+              fontSize: 13,
+              color: quoteToast.includes("Failed") ? "#991B1B" : "#065F46",
+              fontWeight: 500,
+            }}>
+              <ShoppingCart size={14} />
+              {quoteToast}
+              {activeQuoteId && !quoteToast.includes("Failed") && (
+                <button
+                  onClick={() => router.push(`/quotes/${activeQuoteId}`)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    marginLeft: 4,
+                    padding: "2px 8px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    background: "#059669",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                  }}
+                >
+                  View <ExternalLink size={10} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ⭐ Task 6: Mode Override + Chat Input */}
@@ -1529,7 +1797,7 @@ export default function ChatPage() {
                 }}>
                   <Loader2 className="w-5 h-5 animate-spin" />
                 </div>
-              ) : recentConversations.length === 0 ? (
+              ) : recentConversations.length === 0 && localConversations.length === 0 ? (
                 <div style={{
                   textAlign: "center",
                   padding: "40px 20px",
@@ -1542,60 +1810,154 @@ export default function ChatPage() {
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {recentConversations.map((conv) => (
-                    <button
-                      key={conv.id}
-                      onClick={() => loadConversation(conv)}
-                      style={{
-                        width: "100%",
-                        padding: "12px 16px",
-                        background: "white",
-                        border: "1px solid #E5E7EB",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        textAlign: "left",
-                        transition: "all 0.2s",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#F9FAFB";
-                        e.currentTarget.style.borderColor = "#2563EB";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "white";
-                        e.currentTarget.style.borderColor = "#E5E7EB";
-                      }}
-                    >
+                  {/* Local (unsaved) conversations */}
+                  {localConversations.length > 0 && (
+                    <>
                       <div style={{
                         fontFamily: "var(--font-ibm-plex)",
-                        fontSize: "14px",
-                        fontWeight: 500,
-                        color: "#2A2A2A",
-                        marginBottom: "4px",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: "#9CA3AF",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        padding: "8px 4px 4px",
                       }}>
-                        {conv.name}
+                        Recent Chats
                       </div>
+                      {localConversations.map((conv) => (
+                        <button
+                          key={conv.id}
+                          onClick={() => {
+                            setMessages(conv.messages);
+                            setConversationId(conv.id);
+                            setLoadedProjectId(null);
+                            setLoadedProjectName(null);
+                            setShowRecentDrawer(false);
+                            setSaveSuccess(`Loaded: ${conv.title.slice(0, 40)}`);
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "12px 16px",
+                            background: "white",
+                            border: "1px solid #E5E7EB",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            textAlign: "left",
+                            transition: "all 0.2s",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "#F9FAFB";
+                            e.currentTarget.style.borderColor = "#2563EB";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "white";
+                            e.currentTarget.style.borderColor = "#E5E7EB";
+                          }}
+                        >
+                          <div style={{
+                            fontFamily: "var(--font-ibm-plex)",
+                            fontSize: "14px",
+                            fontWeight: 500,
+                            color: "#2A2A2A",
+                            marginBottom: "4px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}>
+                            {conv.title}
+                          </div>
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "12px",
+                            fontFamily: "var(--font-ibm-plex)",
+                            fontSize: "12px",
+                            color: "#6B7280",
+                          }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                              <Clock size={12} />
+                              {formatDate(conv.updatedAt)}
+                            </span>
+                            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                              <MessageSquare size={12} />
+                              {conv.messages.length} messages
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Project-linked conversations */}
+                  {recentConversations.length > 0 && (
+                    <>
                       <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
                         fontFamily: "var(--font-ibm-plex)",
-                        fontSize: "12px",
-                        color: "#6B7280",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: "#9CA3AF",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        padding: "8px 4px 4px",
                       }}>
-                        <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                          <Clock size={12} />
-                          {formatDate(conv.updated_at)}
-                        </span>
-                        <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                          <MessageSquare size={12} />
-                          {conv.chat_history.length} messages
-                        </span>
+                        Project Conversations
                       </div>
-                    </button>
-                  ))}
+                      {recentConversations.map((conv) => (
+                        <button
+                          key={conv.id}
+                          onClick={() => loadConversation(conv)}
+                          style={{
+                            width: "100%",
+                            padding: "12px 16px",
+                            background: "white",
+                            border: "1px solid #E5E7EB",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            textAlign: "left",
+                            transition: "all 0.2s",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "#F9FAFB";
+                            e.currentTarget.style.borderColor = "#2563EB";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "white";
+                            e.currentTarget.style.borderColor = "#E5E7EB";
+                          }}
+                        >
+                          <div style={{
+                            fontFamily: "var(--font-ibm-plex)",
+                            fontSize: "14px",
+                            fontWeight: 500,
+                            color: "#2A2A2A",
+                            marginBottom: "4px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}>
+                            {conv.name}
+                          </div>
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "12px",
+                            fontFamily: "var(--font-ibm-plex)",
+                            fontSize: "12px",
+                            color: "#6B7280",
+                          }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                              <Clock size={12} />
+                              {formatDate(conv.updated_at)}
+                            </span>
+                            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                              <MessageSquare size={12} />
+                              {conv.chat_history.length} messages
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
             </div>

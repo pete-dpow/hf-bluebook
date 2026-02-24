@@ -280,6 +280,35 @@ async function handleProduct(question: string, history: any[], memoryContext: st
     }
   }
 
+  // Collect structured product data for client-side rendering
+  let structuredProducts: any[] = [];
+  if (organizationId) {
+    try {
+      const embedding = await generateEmbedding(question);
+      const { data: products } = await getSupabaseAdmin().rpc("match_products", {
+        query_embedding: embedding,
+        match_org_id: organizationId,
+        match_count: 8,
+        match_threshold: 0.6,
+      });
+      if (products && products.length > 0) {
+        structuredProducts = products.map((p: any) => ({
+          id: p.id,
+          product_name: p.product_name,
+          product_code: p.product_code,
+          pillar: p.pillar,
+          description: p.description,
+          sell_price: p.sell_price,
+          list_price: p.list_price,
+          manufacturer_id: p.manufacturer_id,
+          similarity: p.similarity,
+        }));
+      }
+    } catch {
+      // Already caught above — structuredProducts stays empty
+    }
+  }
+
   const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — helping find and compare fire protection products.
 
 ${productContext}
@@ -309,6 +338,7 @@ Rules:
     answer: response.choices[0].message.content,
     source: productContext ? "product_catalog" : "general_knowledge",
     mode: "PRODUCT",
+    products: structuredProducts.length > 0 ? structuredProducts : undefined,
   });
 }
 
@@ -414,6 +444,7 @@ async function handleFull(
 ) {
   let fullContext = "";
   const citations: string[] = [];
+  let structuredProducts: any[] = [];
 
   // Project data
   if (dataset?.rows && dataset.rows.length > 0) {
@@ -441,6 +472,18 @@ async function handleFull(
           if (p.specifications) fullContext += `  Specs: ${JSON.stringify(p.specifications).slice(0, 150)}\n`;
         }
         fullContext += "--- End Products ---\n";
+
+        structuredProducts = products.map((p: any) => ({
+          id: p.id,
+          product_name: p.product_name,
+          product_code: p.product_code,
+          pillar: p.pillar,
+          description: p.description,
+          sell_price: p.sell_price,
+          list_price: p.list_price,
+          manufacturer_id: p.manufacturer_id,
+          similarity: p.similarity,
+        }));
       }
 
       // Bluebook chunks
@@ -520,6 +563,7 @@ Rules:
     source: fullContext ? "full_combined" : "general_knowledge",
     mode: "FULL",
     citations: citations.length > 0 ? Array.from(new Set(citations)) : undefined,
+    products: structuredProducts.length > 0 ? structuredProducts : undefined,
   });
 }
 

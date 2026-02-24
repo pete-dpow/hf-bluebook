@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Loader2, Globe, FileText, Trash2, Upload, ShieldCheck, Plus, ExternalLink } from "lucide-react";
+import { ArrowLeft, Loader2, Globe, FileText, Trash2, Upload, ShieldCheck, Plus, ExternalLink, CheckCircle } from "lucide-react";
 import RegulationLinkModal from "@/components/RegulationLinkModal";
 
 const PILLAR_LABELS: Record<string, string> = {
@@ -23,6 +23,7 @@ export default function ProductDetailPage() {
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [fileTypeFilter, setFileTypeFilter] = useState("all");
   const [deleting, setDeleting] = useState(false);
+  const [activating, setActivating] = useState(false);
 
   useEffect(() => {
     loadProduct();
@@ -129,6 +130,29 @@ export default function ProductDetailPage() {
     }
   }
 
+  async function handleActivate() {
+    setActivating(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const res = await fetch(`/api/products/${params.id}/review`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ approve: true }),
+    });
+
+    if (res.ok) {
+      await loadProduct();
+    } else {
+      const err = await res.json();
+      alert(err.error || "Failed to activate product");
+    }
+    setActivating(false);
+  }
+
   async function handleUnlinkRegulation(regulationId: string) {
     if (!confirm("Remove this regulation link?")) return;
 
@@ -201,15 +225,28 @@ export default function ProductDetailPage() {
               )}
             </div>
           </div>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-200 text-sm font-medium rounded-lg hover:bg-red-50 transition disabled:opacity-50"
-            style={{ fontFamily: "var(--font-ibm-plex)" }}
-          >
-            {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-            Delete
-          </button>
+          <div className="flex items-center gap-2">
+            {product.status !== "active" && (
+              <button
+                onClick={handleActivate}
+                disabled={activating}
+                className="flex items-center gap-2 px-4 py-2 text-green-700 border border-green-200 text-sm font-medium rounded-lg hover:bg-green-50 transition disabled:opacity-50"
+                style={{ fontFamily: "var(--font-ibm-plex)" }}
+              >
+                {activating ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                Activate
+              </button>
+            )}
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-200 text-sm font-medium rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+              style={{ fontFamily: "var(--font-ibm-plex)" }}
+            >
+              {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              Delete
+            </button>
+          </div>
         </div>
 
         {/* Source link */}
