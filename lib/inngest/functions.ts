@@ -2,7 +2,8 @@ import { inngest } from "./client";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { scrapeManufacturerProducts } from "@/lib/scrapers/playwrightScraper";
-import { scrapeShopifyProducts } from "@/lib/scrapers/shopifyScraper";
+import { scrapeShopifyProducts, categorizePdf } from "@/lib/scrapers/shopifyScraper";
+import { scrapeWithHtmlConfig, type HtmlScraperConfig } from "@/lib/scrapers/htmlScraper";
 import { generateQuotePdf } from "@/lib/quoteGenerator";
 import { scrapeAndStoreRegulation } from "@/lib/compliance/regulationScraper";
 import { extractPagesFromPdf, chunkPages } from "@/lib/bluebook/chunker";
@@ -39,13 +40,15 @@ const scrapeManufacturer = inngest.createFunction(
       return data;
     });
 
+    const configType = manufacturer?.scraper_config?.type;
     const hasPlaywrightConfig = !!manufacturer?.scraper_config?.product_list_url;
-    const hasShopifyConfig = manufacturer?.scraper_config?.type === "shopify" && !!manufacturer?.scraper_config?.store_url;
+    const hasShopifyConfig = configType === "shopify" && !!manufacturer?.scraper_config?.store_url;
+    const hasHtmlConfig = configType === "html";
 
-    if (!hasPlaywrightConfig && !hasShopifyConfig) {
+    if (!hasPlaywrightConfig && !hasShopifyConfig && !hasHtmlConfig) {
       await supabaseAdmin.from("scrape_jobs").update({
         status: "failed",
-        error_log: "No scraper config set (need product_list_url for Playwright or type:'shopify' with store_url)",
+        error_log: "No scraper config set. Supported types: 'shopify', 'html', or Playwright (product_list_url).",
         completed_at: new Date().toISOString(),
       }).eq("id", job_id);
       return { error: "No scraper config" };
@@ -61,20 +64,28 @@ const scrapeManufacturer = inngest.createFunction(
 
     // Run scraper — route based on config type
     const products = await step.run("scrape-products", async () => {
-      if (manufacturer.scraper_config.type === "shopify") {
-        return scrapeShopifyProducts(manufacturer.scraper_config);
+      if (hasShopifyConfig) {
+        return scrapeShopifyProducts(manufacturer.scraper_config, async (progress) => {
+          await supabaseAdmin.from("scrape_jobs").update({ progress }).eq("id", job_id);
+        });
       }
+      if (hasHtmlConfig) {
+        return scrapeWithHtmlConfig(manufacturer.scraper_config as HtmlScraperConfig, async (progress) => {
+          await supabaseAdmin.from("scrape_jobs").update({ progress }).eq("id", job_id);
+        });
+      }
+      // Playwright path — browser-based scraping
       return scrapeManufacturerProducts(
         manufacturer.scraper_config,
         async (current, total, found) => {
           await supabaseAdmin.from("scrape_jobs").update({
-            progress: { current_page: current, total_pages: total, products_found: found },
+            progress: { stage: "Scraping pages", current_page: current, total_pages: total, products_found: found },
           }).eq("id", job_id);
         }
       );
     });
 
-    // Upsert products
+    // Upsert products + save PDF files
     const { created, updated } = await step.run("upsert-products", async () => {
       let created = 0;
       let updated = 0;
@@ -89,6 +100,8 @@ const scrapeManufacturer = inngest.createFunction(
           .eq("product_code", productCode)
           .single();
 
+        let productId: string | undefined;
+
         if (existing) {
           await supabaseAdmin.from("products").update({
             product_name: p.product_name,
@@ -98,9 +111,10 @@ const scrapeManufacturer = inngest.createFunction(
             needs_review: true,
             updated_at: new Date().toISOString(),
           }).eq("id", existing.id);
+          productId = existing.id;
           updated++;
         } else {
-          await supabaseAdmin.from("products").insert({
+          const { data: newProduct } = await supabaseAdmin.from("products").insert({
             manufacturer_id,
             organization_id: manufacturer.organization_id,
             pillar: manufacturer.scraper_config?.default_pillar || "fire_stopping",
@@ -111,8 +125,29 @@ const scrapeManufacturer = inngest.createFunction(
             scraped_data: p,
             needs_review: true,
             status: "draft",
-          });
+          }).select("id").single();
+          productId = newProduct?.id;
           created++;
+        }
+
+        // Save PDF files
+        if (productId && p.pdf_urls && p.pdf_urls.length > 0) {
+          await supabaseAdmin
+            .from("product_files")
+            .delete()
+            .eq("product_id", productId)
+            .is("uploaded_by", null);
+
+          for (const pdfUrl of p.pdf_urls) {
+            const { type, name } = categorizePdf(pdfUrl);
+            await supabaseAdmin.from("product_files").insert({
+              product_id: productId,
+              file_type: type,
+              file_name: name,
+              file_url: pdfUrl,
+              mime_type: "application/pdf",
+            });
+          }
         }
       }
 
