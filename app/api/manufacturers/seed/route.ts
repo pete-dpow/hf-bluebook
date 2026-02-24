@@ -8,6 +8,20 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
+// Aliases map: canonical name → known duplicates (lowercase)
+const ALIASES: Record<string, string[]> = {
+  "Quelfire": ["quelfire"],
+  "Hilti": ["hilti", "hilti library", "hilti technical"],
+  "British Gypsum": ["bg", "british gypsum"],
+  "Rockwool": ["rockwool"],
+  "Siderise": ["siderise"],
+  "Promat (Etex)": ["promat", "promat (etex)", "etex"],
+  "Knauf": ["knauf"],
+  "Siniat": ["siniat"],
+  "Lorient": ["lorient"],
+  "Kingspan": ["kingspan"],
+};
+
 const SEED_MANUFACTURERS = [
   // ── Shopify store (already working) ──
   {
@@ -119,14 +133,30 @@ const SEED_MANUFACTURERS = [
       listing: {
         urls: [
           "https://www.british-gypsum.com/sitemap.xml?page=1",
+          "https://www.british-gypsum.com/sitemap.xml?page=2",
           "https://www.british-gypsum.com/sitemap.xml?page=3",
         ],
         product_link_pattern: "<loc>(https://www\\.british-gypsum\\.com/(?:products/[^/]+/[^<]+|Specification/White-Book-Specification-Selector/[^/]+/[^/]+/[^<]+))</loc>",
       },
       detail: {
-        method: "sitemap",
+        method: "sitemap-fetch",
+        name_pattern: "<h1[^>]*>([\\s\\S]*?)</h1>",
+        description_pattern: "<meta[^>]*name=\"description\"[^>]*content=\"([^\"]+)\"",
+        spec_table_pattern: "<tr[^>]*>\\s*<t[dh][^>]*>([\\s\\S]*?)</t[dh]>\\s*<t[dh][^>]*>([\\s\\S]*?)</t[dh]>\\s*</tr>",
+        pdf_pattern: "href=\"([^\"]+\\.pdf)\"",
       },
-      request: { delay_ms: 300 },
+      request: {
+        delay_ms: 200,
+        headers: {
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-GB,en;q=0.9",
+          "Sec-Fetch-Dest": "document",
+          "Sec-Fetch-Mode": "navigate",
+          "Sec-Fetch-Site": "none",
+          "Sec-Fetch-User": "?1",
+          "Upgrade-Insecure-Requests": "1",
+        },
+      },
     },
   },
   {
@@ -223,26 +253,42 @@ export async function POST(req: NextRequest) {
 
   let created = 0;
   let updated = 0;
+  let merged = 0;
   const errors: string[] = [];
 
-  for (const mfr of SEED_MANUFACTURERS) {
-    // Check if already exists
-    const { data: existing } = await supabaseAdmin
-      .from("manufacturers")
-      .select("id")
-      .eq("organization_id", auth.organizationId)
-      .eq("name", mfr.name)
-      .single();
+  // Fetch ALL existing manufacturers once for alias matching
+  const { data: allExisting } = await supabaseAdmin
+    .from("manufacturers")
+    .select("id, name")
+    .eq("organization_id", auth.organizationId);
 
-    if (existing) {
-      // Update scraper config + website_url for existing manufacturers
+  const existingList = allExisting || [];
+
+  for (const mfr of SEED_MANUFACTURERS) {
+    const aliases = ALIASES[mfr.name] || [mfr.name.toLowerCase()];
+
+    // Find existing manufacturer by canonical name or any alias (case-insensitive)
+    const match = existingList.find(
+      (e) => e.name === mfr.name || aliases.includes(e.name.toLowerCase())
+    );
+
+    if (match) {
+      // Update existing: scraper config, website_url, and rename to canonical name
+      const updates: Record<string, any> = {
+        scraper_config: mfr.scraper_config,
+        website_url: mfr.website_url,
+      };
+
+      // Rename to canonical name if it was a duplicate/alias
+      if (match.name !== mfr.name) {
+        updates.name = mfr.name;
+        merged++;
+      }
+
       const { error: updateErr } = await supabaseAdmin
         .from("manufacturers")
-        .update({
-          scraper_config: mfr.scraper_config,
-          website_url: mfr.website_url,
-        })
-        .eq("id", existing.id);
+        .update(updates)
+        .eq("id", match.id);
 
       if (updateErr) {
         errors.push(`${mfr.name} (update): ${updateErr.message}`);
@@ -268,7 +314,7 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json(
-    { created, updated, errors: errors.length > 0 ? errors : undefined },
+    { created, updated, merged, errors: errors.length > 0 ? errors : undefined },
     { status: 201 }
   );
 }

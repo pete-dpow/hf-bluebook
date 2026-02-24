@@ -132,21 +132,32 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   // ── Fallback: Inngest for Playwright-dependent sites ──
-  try {
-    await inngest.send({
-      name: "manufacturer/scrape.requested",
-      data: { manufacturer_id: params.id, job_id: job.id },
-    });
+  const inngestConfigured = !!process.env.INNGEST_EVENT_KEY;
 
-    return NextResponse.json({ job, mode: "inngest" }, { status: 201 });
-  } catch (inngestError) {
-    console.warn(`[scrape] Inngest unavailable:`, inngestError);
+  if (inngestConfigured) {
+    try {
+      await inngest.send({
+        name: "manufacturer/scrape.requested",
+        data: { manufacturer_id: params.id, job_id: job.id },
+      });
+
+      return NextResponse.json({ job, mode: "inngest" }, { status: 201 });
+    } catch (inngestError: any) {
+      console.warn(`[scrape] Inngest send failed:`, inngestError.message);
+    }
   }
 
-  // No scraper available
-  const reason = manufacturer.website_url
-    ? "No scraper configured for this manufacturer. Add a scraper_config (shopify or html type) or set up Inngest for Playwright scraping."
-    : "No website URL configured for this manufacturer";
+  // No scraper available — provide clear error
+  let reason: string;
+  if (!manufacturer.website_url) {
+    reason = "No website URL configured for this manufacturer.";
+  } else if (!manufacturer.scraper_config?.type) {
+    reason = "No scraper configured. Click 'Seed Suppliers' to set up scraper configs, or add a scraper_config with type 'shopify' or 'html'.";
+  } else if (!inngestConfigured) {
+    reason = `Scraper type "${manufacturer.scraper_config.type}" requires Inngest (not configured). Set INNGEST_EVENT_KEY in environment variables, or switch to 'shopify' or 'html' scraper type.`;
+  } else {
+    reason = "Scraping failed — no compatible scraper could process this manufacturer.";
+  }
 
   await supabaseAdmin.from("scrape_jobs").update({
     status: "failed",

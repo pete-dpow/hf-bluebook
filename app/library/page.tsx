@@ -42,7 +42,6 @@ export default function LibraryPage() {
 
   // Suppliers tab state
   const [manufacturers, setManufacturers] = useState<any[]>([]);
-  const [scrapeJobs, setScrapeJobs] = useState<any[]>([]);
   const [supplierRequests, setSupplierRequests] = useState<any[]>([]);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [mfgSearch, setMfgSearch] = useState("");
@@ -65,6 +64,19 @@ export default function LibraryPage() {
   useEffect(() => {
     loadSuppliersData();
   }, []);
+
+  // Poll for updates when any scrape is running
+  useEffect(() => {
+    const hasActiveJob = manufacturers.some(
+      (m) => m.scrape_jobs?.[0]?.status === "running" || m.scrape_jobs?.[0]?.status === "queued"
+    ) || scrapingId !== null;
+    if (!hasActiveJob) return;
+
+    const interval = setInterval(() => {
+      loadSuppliersData();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [manufacturers, scrapingId]);
 
   useEffect(() => {
     if (tab === "products") {
@@ -94,16 +106,6 @@ export default function LibraryPage() {
           setManufacturers(data.manufacturers || []);
         }
       } catch { /* manufacturers endpoint may not be ready */ }
-
-      // Load recent scrape jobs
-      try {
-        const { data: jobs } = await supabase
-          .from("scrape_jobs")
-          .select("*, manufacturers(name)")
-          .order("created_at", { ascending: false })
-          .limit(20);
-        setScrapeJobs(jobs || []);
-      } catch { /* scrape_jobs table may not exist yet */ }
 
       // Load supplier requests
       try {
@@ -287,8 +289,12 @@ export default function LibraryPage() {
     );
   }
 
-  const runningJobs = scrapeJobs.filter((j) => j.status === "running" || j.status === "queued");
-  const completedJobs = scrapeJobs.filter((j) => j.status === "completed" || j.status === "failed");
+  // Derive active/completed jobs from manufacturer-embedded scrape_jobs
+  const allJobs = manufacturers
+    .map((m) => ({ ...(m.scrape_jobs?.[0] || null), manufacturer_name: m.name }))
+    .filter((j) => j.id);
+  const runningJobs = allJobs.filter((j) => j.status === "running" || j.status === "queued");
+  const completedJobs = allJobs.filter((j) => j.status === "completed" || j.status === "failed");
   const totalPages = Math.ceil(total / limit);
 
   const filteredManufacturers = mfgSearch
@@ -373,6 +379,7 @@ export default function LibraryPage() {
                       const parts = [];
                       if (data.created > 0) parts.push(`${data.created} created`);
                       if (data.updated > 0) parts.push(`${data.updated} updated`);
+                      if (data.merged > 0) parts.push(`${data.merged} duplicates merged`);
                       alert(parts.length > 0 ? `Suppliers: ${parts.join(", ")}` : "All suppliers already up to date");
                       await loadSuppliersData();
                     } else {
@@ -385,6 +392,34 @@ export default function LibraryPage() {
                 >
                   Seed Suppliers
                 </button>
+                {isAdmin && (
+                  <button
+                    onClick={async () => {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (!session) return;
+                      const res = await fetch("/api/manufacturers/cleanup", {
+                        method: "POST",
+                        headers: { Authorization: `Bearer ${session.access_token}` },
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        if (data.archived > 0) {
+                          alert(`Cleaned up ${data.archived} duplicate(s), moved ${data.products_moved} products.\n\n${data.report.join("\n")}`);
+                        } else {
+                          alert("No duplicates found");
+                        }
+                        await loadSuppliersData();
+                      } else {
+                        const err = await res.json();
+                        alert(err.error || "Cleanup failed");
+                      }
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+                    style={selectStyle}
+                  >
+                    Clean Duplicates
+                  </button>
+                )}
                 <button
                   onClick={() => setShowRequestModal(true)}
                   className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
@@ -408,8 +443,9 @@ export default function LibraryPage() {
               {filteredManufacturers.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filteredManufacturers.map((m) => {
-                    const lastJob = scrapeJobs.find((j: any) => j.manufacturer_id === m.id);
+                    const lastJob = m.scrape_jobs?.[0] || null;
                     const statusMsg = scrapeStatus[m.id];
+                    const productCount = m.products?.[0]?.count || 0;
                     return (
                       <div key={m.id} className="p-3 border border-gray-100 rounded-lg hover:border-gray-200 transition">
                         <div className="flex items-center justify-between">
@@ -422,6 +458,9 @@ export default function LibraryPage() {
                             >
                               {m.name}
                             </span>
+                            {productCount > 0 && (
+                              <span className="text-xs text-gray-400 flex-shrink-0">{productCount}</span>
+                            )}
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <label
@@ -465,10 +504,13 @@ export default function LibraryPage() {
                             <span className={statusMsg.ok ? "text-green-600" : "text-red-500"}>{statusMsg.msg}</span>
                           ) : lastJob ? (
                             <span className={lastJob.status === "completed" ? "text-green-600" : lastJob.status === "failed" ? "text-red-500" : "text-amber-500"}>
-                              {lastJob.status === "completed" && `Last scrape: ${lastJob.products_created || 0} products · ${new Date(lastJob.completed_at).toLocaleDateString()}`}
-                              {lastJob.status === "failed" && `Failed: ${lastJob.error_log || "Unknown error"}`}
-                              {(lastJob.status === "running" || lastJob.status === "queued") && `${lastJob.status}...`}
+                              {lastJob.status === "completed" && `${lastJob.products_created || 0} created, ${lastJob.products_updated || 0} updated · ${new Date(lastJob.completed_at).toLocaleDateString()}`}
+                              {lastJob.status === "failed" && `Failed: ${(lastJob.error_log || "Unknown error").slice(0, 60)}`}
+                              {lastJob.status === "running" && `Scraping${lastJob.progress?.stage ? `: ${lastJob.progress.stage}` : "..."}`}
+                              {lastJob.status === "queued" && "Queued..."}
                             </span>
+                          ) : m.last_scraped_at ? (
+                            <span className="text-gray-400">Last scraped: {new Date(m.last_scraped_at).toLocaleDateString()}</span>
                           ) : (
                             <span className="text-gray-300">Not scraped yet</span>
                           )}
@@ -493,9 +535,9 @@ export default function LibraryPage() {
                 <div className="space-y-3">
                   {runningJobs.map((job) => (
                     <div key={job.id}>
-                      {job.manufacturers?.name && (
+                      {job.manufacturer_name && (
                         <p className="text-xs text-gray-500 mb-1" style={selectStyle}>
-                          {job.manufacturers.name}
+                          {job.manufacturer_name}
                         </p>
                       )}
                       <ScraperProgress job={job} />
@@ -514,9 +556,9 @@ export default function LibraryPage() {
                 <div className="space-y-3">
                   {completedJobs.map((job) => (
                     <div key={job.id}>
-                      {job.manufacturers?.name && (
+                      {job.manufacturer_name && (
                         <p className="text-xs text-gray-500 mb-1" style={selectStyle}>
-                          {job.manufacturers.name}
+                          {job.manufacturer_name}
                         </p>
                       )}
                       <ScraperProgress job={job} />

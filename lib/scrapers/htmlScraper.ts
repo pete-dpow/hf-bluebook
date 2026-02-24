@@ -22,7 +22,7 @@ export interface HtmlScraperConfig {
     product_link_pattern: string;  // regex string
   };
   detail: {
-    method: "html" | "json-ld" | "listing-only" | "sitemap";
+    method: "html" | "json-ld" | "listing-only" | "sitemap" | "sitemap-fetch";
     name_pattern?: string;
     description_pattern?: string;
     spec_table_pattern?: string;
@@ -273,8 +273,34 @@ function titleCase(slug: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// Known BG product ranges for richer descriptions
+const BG_RANGES: Record<string, string> = {
+  "gyproc": "Gyproc plasterboard range — high-performance plasterboard solutions for walls and ceilings",
+  "gypframe": "GypFrame metal framing — steel stud and track systems for partition and lining frameworks",
+  "glasroc": "Glasroc specialist boards — moisture, fire and impact resistant boards for demanding applications",
+  "thistle": "Thistle plaster range — gypsum plasters for internal plastering and finishing",
+  "gypliner": "GypLiner independent wall lining system — metal frame lining for masonry walls",
+  "gypwall": "GypWall partition system — high-performance internal partitions",
+  "gyptone": "Gyptone acoustic ceiling tiles — perforated plasterboard for sound absorption",
+  "rigidur": "Rigidur flooring board — high-density gypsum fibreboard for floor applications",
+  "habito": "Habito high-strength wall board — heavy-duty plasterboard for direct fixing",
+  "soundbloc": "SoundBloc acoustic board — enhanced sound insulation plasterboard",
+  "fireline": "Fireline fire-resistant board — plasterboard providing 30 and 60 minute fire resistance",
+  "duraline": "DuraLine moisture-resistant board — plasterboard for high humidity areas",
+  "cove": "Gyproc Cove — decorative plaster coving",
+};
+
+function detectBgRange(slug: string): string | null {
+  const lower = slug.toLowerCase();
+  for (const [key, desc] of Object.entries(BG_RANGES)) {
+    if (lower.includes(key)) return desc;
+  }
+  return null;
+}
+
 function extractFromSitemapUrls(urls: string[], baseUrl: string): ScrapedProduct[] {
   const products: ScrapedProduct[] = [];
+  const isBG = baseUrl.includes("british-gypsum");
 
   for (const url of urls) {
     let path: string;
@@ -311,16 +337,21 @@ function extractFromSitemapUrls(urls: string[], baseUrl: string): ScrapedProduct
 
       const systemName = titleCase(system);
       const categoryName = titleCase(category);
+      const rangeInfo = detectBgRange(system);
 
       products.push({
         product_name: `${systemName} ${code}`,
         product_code: code,
-        description: `${systemName} system specification — ${categoryName}. British Gypsum White Book reference ${code}.`,
+        description: rangeInfo
+          ? `${rangeInfo}. ${systemName} system specification — ${categoryName}. White Book reference ${code}.`
+          : `${systemName} system specification — ${categoryName}. British Gypsum White Book reference ${code}.`,
         specifications: {
           Category: categoryName,
           System: systemName,
           "Reference Code": code,
           "White Book Section": categoryName,
+          ...(rangeInfo ? { "Product Range": systemName } : {}),
+          "Source": "British Gypsum White Book",
         },
         pdf_urls: [],
         source_url: url,
@@ -338,14 +369,19 @@ function extractFromSitemapUrls(urls: string[], baseUrl: string): ScrapedProduct
 
       const productName = titleCase(productSlug);
       const categoryName = titleCase(category);
+      const rangeInfo = isBG ? detectBgRange(productSlug) : null;
+
+      const specs: Record<string, string> = { Category: categoryName };
+      if (rangeInfo) specs["Product Range"] = productName.split(" ")[0];
+      if (isBG) specs["Manufacturer"] = "British Gypsum";
 
       products.push({
         product_name: productName,
         product_code: productSlug,
-        description: `${productName} — ${categoryName}. British Gypsum product.`,
-        specifications: {
-          Category: categoryName,
-        },
+        description: rangeInfo
+          ? `${rangeInfo}. ${productName} — ${categoryName}.`
+          : `${productName} — ${categoryName}.${isBG ? " British Gypsum product." : ""}`,
+        specifications: specs,
         pdf_urls: [],
         source_url: url,
       });
@@ -457,6 +493,86 @@ async function discoverAndScrape(config: HtmlScraperConfig, onProgress?: ScrapeP
     onProgress?.({ stage: "Complete", current: products.length, total: products.length, found: products.length });
     console.log(`[htmlScraper] Extracted ${products.length} products from sitemap URLs`);
     return dedup(products);
+  }
+
+  // 2c. For sitemap-fetch method: extract URLs from XML, then try to fetch each page
+  if (config.detail.method === "sitemap-fetch") {
+    onProgress?.({ stage: "Parsing sitemap URLs", current: 0, total: listingHtmls.length, found: 0 });
+    const productUrls: string[] = [];
+    const linkRegex = new RegExp(config.listing.product_link_pattern, "gi");
+
+    for (const xml of listingHtmls) {
+      let m;
+      while ((m = linkRegex.exec(xml)) !== null) {
+        const url = resolveUrl(m[1], config.base_url);
+        if (!productUrls.includes(url)) productUrls.push(url);
+      }
+    }
+
+    console.log(`[htmlScraper] Found ${productUrls.length} URLs from sitemap for fetch`);
+    onProgress?.({ stage: `Fetching ${productUrls.length} product pages`, current: 0, total: productUrls.length, found: 0 });
+
+    let fetched = 0;
+    let blocked = 0;
+
+    for (let i = 0; i < productUrls.length; i += batchSize) {
+      if (Date.now() - startTime > MAX_RUNTIME_MS) {
+        console.warn(`[htmlScraper] Timeout — fetched ${fetched}/${productUrls.length}`);
+        break;
+      }
+
+      const batch = productUrls.slice(i, i + batchSize);
+      const results = await Promise.allSettled(
+        batch.map(async (url) => {
+          const html = await safeFetch(url, headers, timeout);
+          if (!html) {
+            blocked++;
+            return null;
+          }
+
+          fetched++;
+          const name = firstMatch(html, config.detail.name_pattern);
+          const description = firstMatch(html, config.detail.description_pattern);
+          const specs = extractSpecTable(html, config.detail.spec_table_pattern);
+          const pdfUrls = allMatches(html, config.detail.pdf_pattern).map((u) => resolveUrl(u, config.base_url));
+
+          if (!name) return null;
+
+          return {
+            product_name: name,
+            description: description || undefined,
+            specifications: specs,
+            pdf_urls: pdfUrls,
+            source_url: url,
+          } as ScrapedProduct;
+        })
+      );
+
+      for (const result of results) {
+        if (result.status === "fulfilled" && result.value) {
+          allProducts.push(result.value);
+        }
+      }
+
+      onProgress?.({ stage: `Fetching pages (${blocked} blocked)`, current: i + batch.length, total: productUrls.length, found: allProducts.length });
+      if (delay > 0 && i + batchSize < productUrls.length) await sleep(delay);
+    }
+
+    // For URLs we couldn't fetch (blocked by Cloudflare etc), fall back to URL extraction
+    if (allProducts.length < productUrls.length) {
+      const fetchedUrls = new Set(allProducts.map((p) => p.source_url));
+      const unfetchedUrls = productUrls.filter((u) => !fetchedUrls.has(u));
+
+      if (unfetchedUrls.length > 0) {
+        onProgress?.({ stage: `URL fallback for ${unfetchedUrls.length} blocked pages`, current: allProducts.length, total: productUrls.length, found: allProducts.length });
+        const fallbackProducts = extractFromSitemapUrls(unfetchedUrls, config.base_url);
+        allProducts.push(...fallbackProducts);
+      }
+    }
+
+    onProgress?.({ stage: "Complete", current: allProducts.length, total: allProducts.length, found: allProducts.length });
+    console.log(`[htmlScraper] sitemap-fetch: ${fetched} fetched, ${blocked} blocked, ${allProducts.length} total products`);
+    return dedup(allProducts);
   }
 
   // 3. Extract product detail URLs from listing HTML

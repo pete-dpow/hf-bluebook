@@ -19,9 +19,11 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from("manufacturers")
-    .select("*, products(count)")
+    .select("*, products(count), scrape_jobs(id, status, products_created, products_updated, error_log, completed_at, progress, duration_seconds, created_at)")
     .eq("organization_id", auth.organizationId)
-    .order("name");
+    .order("name")
+    .order("created_at", { referencedTable: "scrape_jobs", ascending: false })
+    .limit(1, { referencedTable: "scrape_jobs" });
 
   if (!showArchived) {
     query = query.eq("is_archived", false);
