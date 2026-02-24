@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import ScheduleVisitModal from "@/components/cde/ScheduleVisitModal";
+import SendNotifModal from "@/components/cde/SendNotifModal";
 
 const MONO = "'DM Mono',monospace";
 const FONT = "'Futura PT','Century Gothic','Futura',system-ui,sans-serif";
@@ -15,6 +16,7 @@ export default function ResidentsStaffPage() {
   const [residents, setResidents] = useState<any[]>([]);
   const [notifLog, setNotifLog] = useState<any[]>([]);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [showNotify, setShowNotify] = useState(false);
   const [projectId, setProjectId] = useState<string>("");
 
   // Load first available project for now
@@ -77,7 +79,13 @@ export default function ResidentsStaffPage() {
         ))}
         <div style={{ flex: 1 }} />
         {activeTab === "visits" && (
-          <button onClick={() => setShowSchedule(true)} style={{ ...toolBtn, background: "#4d7c0f", color: "#fff", borderColor: "#4d7c0f" }}>+ Schedule Visit</button>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={() => setShowNotify(true)} style={toolBtn}>Notify Residents</button>
+            <button onClick={() => setShowSchedule(true)} style={{ ...toolBtn, background: "#4d7c0f", color: "#fff", borderColor: "#4d7c0f" }}>+ Schedule Visit</button>
+          </div>
+        )}
+        {activeTab === "notifications" && (
+          <button onClick={() => setShowNotify(true)} style={{ ...toolBtn, background: "#4d7c0f", color: "#fff", borderColor: "#4d7c0f" }}>Send Notification</button>
         )}
       </div>
 
@@ -91,6 +99,9 @@ export default function ResidentsStaffPage() {
 
       {showSchedule && projectId && (
         <ScheduleVisitModal projectId={projectId} onClose={() => setShowSchedule(false)} onCreated={loadAll} />
+      )}
+      {showNotify && projectId && (
+        <SendNotifModal projectId={projectId} onClose={() => setShowNotify(false)} onSent={loadAll} />
       )}
     </div>
   );

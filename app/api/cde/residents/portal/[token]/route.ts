@@ -37,6 +37,14 @@ export async function GET(
     !v.buildings || v.buildings.length === 0 || v.buildings.includes(resident.building)
   );
 
+  // Get recent notifications sent to this resident
+  const { data: notifications } = await supabase
+    .from("cde_notifications_log")
+    .select("subject, sent_at, channel")
+    .contains("resident_ids", [resident.id])
+    .order("sent_at", { ascending: false })
+    .limit(20);
+
   return NextResponse.json({
     resident: {
       first_name: resident.first_name,
@@ -48,5 +56,6 @@ export async function GET(
       availability_notes: resident.availability_notes,
     },
     visits: relevantVisits,
+    notifications: notifications || [],
   });
 }

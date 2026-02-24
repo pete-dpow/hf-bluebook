@@ -8,7 +8,7 @@ import { useParams } from "next/navigation";
 const FONT = "'Futura PT','Century Gothic','Futura',system-ui,sans-serif";
 const GRN = "#4d7c0f";
 
-type Tab = "visits" | "availability" | "preferences";
+type Tab = "visits" | "availability" | "preferences" | "updates";
 
 export default function ResidentPortalPage() {
   const routeParams = useParams();
@@ -16,6 +16,7 @@ export default function ResidentPortalPage() {
 
   const [resident, setResident] = useState<any>(null);
   const [visits, setVisits] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("visits");
@@ -31,6 +32,7 @@ export default function ResidentPortalPage() {
         const data = await res.json();
         setResident(data.resident);
         setVisits(data.visits);
+        setNotifications(data.notifications || []);
         setAvailNotes(data.resident.availability_notes || "");
         setSmsOpt(data.resident.sms_opt_in);
         setEmailOpt(data.resident.email_opt_in);
@@ -72,6 +74,7 @@ export default function ResidentPortalPage() {
     { key: "visits", label: "Upcoming Visits" },
     { key: "availability", label: "Availability" },
     { key: "preferences", label: "Preferences" },
+    { key: "updates", label: "Updates" },
   ];
 
   return (
@@ -165,6 +168,26 @@ export default function ResidentPortalPage() {
                 {saving ? "Saving..." : "Save Preferences"}
               </button>
             </div>
+          </div>
+        )}
+
+        {activeTab === "updates" && (
+          <div>
+            {notifications.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 40, color: "#9ca3af", fontSize: 12 }}>No updates yet</div>
+            ) : notifications.map((n: any, i: number) => (
+              <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 6, padding: 14, marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: "#111827", flex: 1 }}>{n.subject || "Notification"}</div>
+                  <div style={{ fontSize: 10, color: "#9ca3af", flexShrink: 0, marginLeft: 8 }}>
+                    {new Date(n.sent_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                  </div>
+                </div>
+                <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>
+                  via {n.channel === "BOTH" ? "Email & SMS" : n.channel === "EMAIL" ? "Email" : "SMS"}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
