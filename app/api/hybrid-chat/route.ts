@@ -181,17 +181,18 @@ Respond with ONLY the mode name (GENERAL, PROJECT, PRODUCT, KNOWLEDGE, FULL, or 
 
 // === GENERAL MODE — GPT-4o-mini, model knowledge only ===
 async function handleGeneral(question: string, history: any[], memoryContext: string) {
-  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — a knowledgeable assistant for fire protection and construction professionals.
+  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — a sharp, friendly expert for fire protection and construction professionals. You know your stuff and talk like a trusted colleague, not a textbook.
 
 ${memoryContext}
 
 Rules:
-1. Answer in 2-4 sentences for most questions
-2. Start with the key point immediately
-3. Use short words: "use" not "utilize"
-4. Active voice always
-5. Keep industry terms (FD30, RRO, BSA, etc.)
-6. Answer confidently based on fire protection industry standards`;
+1. Lead with the answer — no preamble, no "Great question!"
+2. Keep it concise (2-4 sentences) but genuinely helpful
+3. Use plain English: "use" not "utilize", "about" not "approximately"
+4. Active voice, direct address — talk TO them, not AT them
+5. Keep industry terms natural (FD30, RRO, BSA, AP-B, etc.)
+6. If something is commonly misunderstood, flag it
+7. Be warm but professional — you're their go-to expert, not a search engine`;
 
   const messages: any[] = [
     { role: "system", content: systemPrompt },
@@ -223,17 +224,18 @@ async function handleProject(question: string, history: any[], dataset: any, mem
     });
   }
 
-  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — analyzing the user's project data.
+  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — analyzing the user's project data. You're precise with numbers and help them spot what matters.
 
 Dataset: ${dataset.rows.length} rows. Sample: ${JSON.stringify(dataset.rows.slice(0, 10), null, 2)}
 
 ${memoryContext}
 
 Rules:
-1. Answer in 2-3 sentences MAX
-2. Start with the NUMBER or FACT immediately
-3. Be precise with data
-4. Active voice, no fluff`;
+1. Lead with the number or key finding immediately
+2. Keep it tight — 2-3 sentences MAX
+3. If something in the data looks unusual or concerning, mention it
+4. Reference specific rows/values when relevant
+5. Active voice, no filler`;
 
   const messages: any[] = [
     { role: "system", content: systemPrompt },
@@ -258,6 +260,7 @@ Rules:
 // === 8.3: PRODUCT MODE — GPT-4o-mini, product catalog via match_products RPC ===
 async function handleProduct(question: string, history: any[], memoryContext: string, organizationId: string | null) {
   let productContext = "";
+  let structuredProducts: any[] = [];
 
   if (organizationId) {
     try {
@@ -279,24 +282,7 @@ async function handleProduct(question: string, history: any[], memoryContext: st
             (p.specifications ? `   Specs: ${JSON.stringify(p.specifications).slice(0, 200)}\n` : "")
           ).join("\n") +
           "\n--- End Results ---\n";
-      }
-    } catch {
-      // Non-critical — fall back to general knowledge
-    }
-  }
 
-  // Collect structured product data for client-side rendering
-  let structuredProducts: any[] = [];
-  if (organizationId) {
-    try {
-      const embedding = await generateEmbedding(question);
-      const { data: products } = await getSupabaseAdmin().rpc("match_products", {
-        query_embedding: embedding,
-        match_org_id: organizationId,
-        match_count: 8,
-        match_threshold: 0.6,
-      });
-      if (products && products.length > 0) {
         structuredProducts = products.map((p: any) => ({
           id: p.id,
           product_name: p.product_name,
@@ -310,11 +296,11 @@ async function handleProduct(question: string, history: any[], memoryContext: st
         }));
       }
     } catch {
-      // Already caught above — structuredProducts stays empty
+      // Non-critical — fall back to general knowledge
     }
   }
 
-  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — helping find and compare fire protection products.
+  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — a sharp, friendly expert who helps fire protection professionals find the right products fast.
 
 ${productContext}
 ${memoryContext}
@@ -322,9 +308,10 @@ ${memoryContext}
 Rules:
 1. Reference specific products from the catalog results when available
 2. Include product codes and prices when showing results
-3. If no catalog results, use general product knowledge
-4. Keep answers concise (3-5 sentences)
-5. Active voice, industry terminology`;
+3. If no catalog results, use your general fire protection product knowledge
+4. Keep answers concise but helpful (3-5 sentences)
+5. Use direct, active language — talk like a knowledgeable colleague, not a chatbot
+6. If you recommend a product, briefly explain WHY it fits their needs`;
 
   const messages: any[] = [
     { role: "system", content: systemPrompt },
@@ -400,18 +387,19 @@ async function handleKnowledge(question: string, history: any[], memoryContext: 
     ? `\nWhen referencing information from the sources, cite them inline like [Source: filename, p.X] or [Reg: BS EN 1366-3 §4.2]. Always cite your sources.`
     : "";
 
-  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — an expert in fire protection regulations, British Standards, and building safety compliance. You use Claude for deep document reasoning.
+  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — a deep expert in fire protection regulations, British Standards, and building safety compliance. You reason carefully through technical details and explain them clearly.
 
 ${knowledgeContext}
 ${memoryContext}
 ${citationInstruction}
 
 Rules:
-1. Reason carefully about fire test configurations, regulation clauses, and conditional requirements
-2. Reference specific sections, clause numbers, and page numbers when available
-3. Distinguish between mandatory requirements and guidance
-4. If sources don't cover the question, say so clearly
-5. Keep answers thorough but focused (4-8 sentences)`;
+1. Reason through fire test configurations, regulation clauses, and conditional requirements step by step
+2. Always cite specific sections, clause numbers, and page numbers when available
+3. Clearly distinguish between mandatory requirements ("must") and guidance ("should")
+4. If the sources don't fully cover the question, be upfront about it
+5. Be thorough but focused (4-8 sentences) — these are professionals who need precise answers
+6. Flag common pitfalls or misinterpretations where relevant`;
 
   // Use Claude for knowledge mode
   const claudeMessages: Anthropic.MessageParam[] = [
@@ -533,18 +521,19 @@ async function handleFull(
     ? "\nCite sources inline: [Source: filename, p.X] or [Reg: reference §section]."
     : "";
 
-  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — combining all available data: project data, product catalog, technical documents, and fire safety regulations.
+  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — your strongest mode. You cross-reference project data, product catalogs, technical documents, and fire safety regulations to give comprehensive answers.
 
 ${fullContext}
 ${memoryContext}
 ${citationInstruction}
 
 Rules:
-1. Cross-reference data sources to give complete answers
-2. If the question involves products AND regulations, show which products meet which standards
-3. Cite sources when referencing specific documents or regulations
-4. Be thorough but structured (use bullet points for complex answers)
-5. Keep total length reasonable (5-10 sentences or equivalent)`;
+1. Cross-reference data sources — connect the dots between products, regulations, and project requirements
+2. If products AND regulations are relevant, show specifically which products meet which standards
+3. Always cite sources when referencing documents or regulations
+4. Structure complex answers with bullet points or numbered lists
+5. Be thorough but not bloated (5-10 sentences or equivalent)
+6. Give actionable recommendations, not just information`;
 
   const claudeMessages: Anthropic.MessageParam[] = [
     ...history.slice(-6).map((m: any) => ({
@@ -860,7 +849,7 @@ Respond with ONLY valid JSON:
   }
 
   return NextResponse.json({
-    answer: "I'm not sure what you'd like to do with your quote. Try:\n- \"Add 24x [product] to [quote/project name]\"\n- \"Create a quote for [client name]\"\n- \"What's on the current quote?\"",
+    answer: "Not sure what you need on the quote side — here's what I can do:\n\n- **Add items**: \"Add 24x Quelfire QF60 to the Byker Wall quote\"\n- **New quote**: \"Create a quote for Smith Ltd\"\n- **Check contents**: \"What's on the current quote?\"\n\nJust tell me what you need.",
     mode: "QUOTE",
   });
 }

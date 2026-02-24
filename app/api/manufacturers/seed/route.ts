@@ -118,17 +118,15 @@ const SEED_MANUFACTURERS = [
       default_pillar: "fire_stopping",
       listing: {
         urls: [
-          "https://www.british-gypsum.com/products",
-          "https://www.british-gypsum.com/documents",
+          "https://www.british-gypsum.com/sitemap.xml?page=1",
+          "https://www.british-gypsum.com/sitemap.xml?page=3",
         ],
-        product_link_pattern: "href=\"(/products/[a-z0-9-]+)\"",
+        product_link_pattern: "<loc>(https://www\\.british-gypsum\\.com/(?:products/[^/]+/[^<]+|Specification/White-Book-Specification-Selector/[^/]+/[^/]+/[^<]+))</loc>",
       },
       detail: {
-        method: "html",
-        name_pattern: "<h1[^>]*>([\\s\\S]*?)</h1>",
-        pdf_pattern: "href=\"([^\"]+\\.pdf)\"",
+        method: "sitemap",
       },
-      request: { delay_ms: 1000 },
+      request: { delay_ms: 300 },
     },
   },
   {
@@ -235,7 +233,14 @@ export async function POST(req: NextRequest) {
       .eq("name", mfr.name)
       .single();
 
-    if (existing) continue;
+    if (existing) {
+      // Update scraper config for existing manufacturers
+      await supabaseAdmin
+        .from("manufacturers")
+        .update({ scraper_config: mfr.scraper_config })
+        .eq("id", existing.id);
+      continue;
+    }
 
     const { error } = await supabaseAdmin
       .from("manufacturers")

@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Loader2, FileDown, Send, FileSpreadsheet } from "lucide-react";
+import { ArrowLeft, Loader2, FileDown, Send, FileSpreadsheet, Eye } from "lucide-react";
 import QuoteBuilder from "@/components/QuoteBuilder";
 import ComplianceTab from "@/components/ComplianceTab";
+import QuotePreviewDrawer from "@/components/QuotePreviewDrawer";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600",
@@ -27,6 +28,7 @@ export default function QuoteDetailPage() {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [generatingExcel, setGeneratingExcel] = useState(false);
   const [sending, setSending] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
@@ -277,6 +279,14 @@ export default function QuoteDetailPage() {
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setShowPreview(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+              style={{ fontFamily: "var(--font-ibm-plex)" }}
+            >
+              <Eye size={14} />
+              Preview
+            </button>
+            <button
               onClick={handleGeneratePdf}
               disabled={generatingPdf}
               className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
@@ -477,6 +487,16 @@ export default function QuoteDetailPage() {
             />
           </div>
         </div>
+
+        {/* Quote Preview Drawer */}
+        <QuotePreviewDrawer
+          open={showPreview}
+          onClose={() => setShowPreview(false)}
+          quote={quote}
+          lineItems={lineItems}
+          onExportPdf={handleGeneratePdf}
+          onSend={quote.client_email ? handleSendQuote : undefined}
+        />
       </div>
     </div>
   );

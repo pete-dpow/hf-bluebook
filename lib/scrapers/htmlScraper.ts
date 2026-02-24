@@ -1,10 +1,11 @@
 /**
  * Generic HTML scraper engine.
  * Works on Vercel serverless — no Playwright needed.
- * Supports three extraction methods:
+ * Supports four extraction methods:
  *   - "html"         : regex-based extraction from product detail pages
  *   - "json-ld"      : parse <script type="application/ld+json"> from detail pages
  *   - "listing-only" : extract all data from listing page cards (no detail page fetch)
+ *   - "sitemap"      : extract product data from sitemap XML URLs (no page fetch needed)
  * Also supports a JSON API mode via the optional `api` config.
  */
 
@@ -21,7 +22,7 @@ export interface HtmlScraperConfig {
     product_link_pattern: string;  // regex string
   };
   detail: {
-    method: "html" | "json-ld" | "listing-only";
+    method: "html" | "json-ld" | "listing-only" | "sitemap";
     name_pattern?: string;
     description_pattern?: string;
     spec_table_pattern?: string;
@@ -263,6 +264,109 @@ function extractFromListingHtml(
 }
 
 // ---------------------------------------------------------------------------
+// Sitemap-based extraction (for sites behind Cloudflare / JS walls)
+// ---------------------------------------------------------------------------
+
+function titleCase(slug: string): string {
+  return slug
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function extractFromSitemapUrls(urls: string[], baseUrl: string): ScrapedProduct[] {
+  const products: ScrapedProduct[] = [];
+
+  for (const url of urls) {
+    let path: string;
+    try {
+      path = new URL(url).pathname;
+    } catch {
+      continue;
+    }
+
+    const segments = path.split("/").filter(Boolean);
+    if (segments.length < 2) continue;
+
+    const lastSegment = segments[segments.length - 1];
+
+    // White Book Specification URLs:
+    // /Specification/White-Book-Specification-Selector/{category}/{system}/{code}
+    if (path.toLowerCase().includes("/white-book-specification-selector/")) {
+      const selectorIdx = segments.findIndex(
+        (s) => s.toLowerCase() === "white-book-specification-selector"
+      );
+      if (selectorIdx < 0 || selectorIdx + 3 > segments.length) continue;
+
+      // Skip overview pages
+      if (segments[selectorIdx + 1]?.toLowerCase() === "white-book-overview") continue;
+
+      const category = segments[selectorIdx + 1]; // e.g. "shaftwall"
+      const system = segments[selectorIdx + 2]; // e.g. "gypwall-shaft"
+      const codeRaw = segments[selectorIdx + 3] || lastSegment; // e.g. "a306005-a-en"
+
+      // Clean up code: remove -en suffix and -mr1 variants
+      const code = codeRaw
+        .replace(/-en$/, "")
+        .toUpperCase();
+
+      const systemName = titleCase(system);
+      const categoryName = titleCase(category);
+
+      products.push({
+        product_name: `${systemName} ${code}`,
+        product_code: code,
+        description: `${systemName} system specification — ${categoryName}. British Gypsum White Book reference ${code}.`,
+        specifications: {
+          Category: categoryName,
+          System: systemName,
+          "Reference Code": code,
+          "White Book Section": categoryName,
+        },
+        pdf_urls: [],
+        source_url: url,
+      });
+      continue;
+    }
+
+    // Standard product URLs: /products/{category}/{product-slug}
+    if (path.toLowerCase().includes("/products/")) {
+      const prodIdx = segments.findIndex((s) => s.toLowerCase() === "products");
+      if (prodIdx < 0) continue;
+
+      const category = segments[prodIdx + 1] || "";
+      const productSlug = segments[prodIdx + 2] || segments[prodIdx + 1] || lastSegment;
+
+      const productName = titleCase(productSlug);
+      const categoryName = titleCase(category);
+
+      products.push({
+        product_name: productName,
+        product_code: productSlug,
+        description: `${productName} — ${categoryName}. British Gypsum product.`,
+        specifications: {
+          Category: categoryName,
+        },
+        pdf_urls: [],
+        source_url: url,
+      });
+      continue;
+    }
+
+    // Generic fallback: use last URL segment as product name
+    const productName = titleCase(lastSegment);
+    products.push({
+      product_name: productName,
+      product_code: lastSegment,
+      specifications: {},
+      pdf_urls: [],
+      source_url: url,
+    });
+  }
+
+  return products;
+}
+
+// ---------------------------------------------------------------------------
 // Main entry point
 // ---------------------------------------------------------------------------
 
@@ -315,6 +419,25 @@ async function discoverAndScrape(config: HtmlScraperConfig): Promise<ScrapedProd
     }
     console.log(`[htmlScraper] Extracted ${allProducts.length} products from listings`);
     return dedup(allProducts);
+  }
+
+  // 2b. For sitemap method, extract URLs from XML then parse product data from URLs
+  if (config.detail.method === "sitemap") {
+    const productUrls: string[] = [];
+    const linkRegex = new RegExp(config.listing.product_link_pattern, "gi");
+
+    for (const xml of listingHtmls) {
+      let m;
+      while ((m = linkRegex.exec(xml)) !== null) {
+        const url = resolveUrl(m[1], config.base_url);
+        if (!productUrls.includes(url)) productUrls.push(url);
+      }
+    }
+
+    console.log(`[htmlScraper] Found ${productUrls.length} URLs from sitemap`);
+    const products = extractFromSitemapUrls(productUrls, config.base_url);
+    console.log(`[htmlScraper] Extracted ${products.length} products from sitemap URLs`);
+    return dedup(products);
   }
 
   // 3. Extract product detail URLs from listing HTML
