@@ -5,6 +5,7 @@ import { inngest } from "@/lib/inngest/client";
 import { scrapeShopifyProducts, categorizePdf, type ShopifyScraperConfig } from "@/lib/scrapers/shopifyScraper";
 import { scrapeWithHtmlConfig, type HtmlScraperConfig } from "@/lib/scrapers/htmlScraper";
 import type { ScrapedProduct } from "@/lib/scrapers/playwrightScraper";
+import { generateEmbeddingsBatch } from "@/lib/embeddingService";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://odhvxoelxiffhocrgtll.supabase.co",
@@ -180,12 +181,43 @@ async function runSyncScrape(
       last_scraped_at: new Date().toISOString(),
     }).eq("id", manufacturerId);
 
+    // Generate embeddings for products that don't have them yet
+    let embedded = 0;
+    try {
+      const { data: unembedded } = await supabaseAdmin
+        .from("products")
+        .select("id, product_name, description, pillar, specifications")
+        .eq("manufacturer_id", manufacturerId)
+        .is("embedding", null)
+        .limit(100);
+
+      if (unembedded && unembedded.length > 0) {
+        const texts = unembedded.map((p: any) =>
+          [p.product_name, p.description, p.pillar, p.specifications ? JSON.stringify(p.specifications) : ""]
+            .filter(Boolean).join(" — ")
+        );
+
+        const embeddings = await generateEmbeddingsBatch(texts);
+
+        for (let i = 0; i < embeddings.length; i++) {
+          await supabaseAdmin
+            .from("products")
+            .update({ embedding: embeddings[i].embedding })
+            .eq("id", unembedded[i].id);
+          embedded++;
+        }
+      }
+    } catch (embErr: any) {
+      console.warn(`[scrape] Embedding generation failed (non-fatal):`, embErr.message);
+    }
+
     return NextResponse.json({
       job: { id: jobId },
       mode,
       products_created: created,
       products_updated: updated,
       files_created: filesCreated,
+      products_embedded: embedded,
       total: products.length,
     });
   } catch (err: any) {

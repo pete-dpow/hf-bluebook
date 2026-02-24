@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Fallback: synchronous fetch-based scraping (sequential)
-  const results: { id: string; status: string; sections?: number }[] = [];
+  const results: { id: string; status: string; sections?: number; error?: string }[] = [];
 
   for (const reg of scrapeable) {
     const sourceUrl = reg.scraper_config?.source_url || reg.source_url;
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       results.push({ id: reg.id, status: "ok", sections: result.sections_stored });
     } catch (err: any) {
       console.error(`[scrape-all] Error scraping ${reg.id}:`, err.message);
-      results.push({ id: reg.id, status: "error" });
+      results.push({ id: reg.id, status: "error", error: err.message || "Unknown error" });
     }
   }
 

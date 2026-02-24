@@ -100,7 +100,20 @@ async function fetchLegislationSections(
   }
 
   const html = await res.text();
-  return parseLegislationHtml(html, provisionType);
+
+  if (html.length < 1000) {
+    throw new Error(`legislation.gov.uk returned very short response (${html.length} chars) — possibly a redirect or empty page`);
+  }
+
+  const sections = parseLegislationHtml(html, provisionType);
+
+  // Fallback: if heading-based parser found nothing, try generic HTML extraction
+  if (sections.length === 0) {
+    console.warn(`[legislation] Heading-based parser found 0 sections for ${url}, falling back to generic HTML extraction`);
+    return extractSectionsFromHtml(html);
+  }
+
+  return sections;
 }
 
 /**
