@@ -277,6 +277,7 @@ export async function POST(req: NextRequest) {
       const updates: Record<string, any> = {
         scraper_config: mfr.scraper_config,
         website_url: mfr.website_url,
+        is_archived: false,
       };
 
       // Rename to canonical name if it was a duplicate/alias
@@ -304,6 +305,7 @@ export async function POST(req: NextRequest) {
         ...mfr,
         organization_id: auth.organizationId,
         created_by: auth.user.id,
+        is_archived: false,
       });
 
     if (error) {

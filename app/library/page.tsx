@@ -152,7 +152,9 @@ export default function LibraryPage() {
           const data = await mfgRes.json();
           setManufacturers(data.manufacturers || []);
         } else {
-          console.warn("[library] manufacturers API:", mfgRes.status);
+          const errData = await mfgRes.json().catch(() => ({}));
+          console.warn("[library] manufacturers API:", mfgRes.status, errData);
+          setError(`Failed to load suppliers (${mfgRes.status}): ${errData.error || "Unknown error"}`);
         }
       } catch (e) { console.warn("[library] manufacturers fetch failed:", e); }
 
@@ -454,8 +456,8 @@ export default function LibraryPage() {
   }
 
   function SortIcon({ field }: { field: SortField }) {
-    if (supplierSort.field !== field) return <span className="ml-1 text-gray-300">&#8597;</span>;
-    return <span className="ml-1">{supplierSort.dir === "asc" ? "&#8593;" : "&#8595;"}</span>;
+    if (supplierSort.field !== field) return <span className="ml-1 text-gray-300">{"\u2195"}</span>;
+    return <span className="ml-1">{supplierSort.dir === "asc" ? "\u2191" : "\u2193"}</span>;
   }
 
   function StarRating({ count }: { count: number }) {
