@@ -12,6 +12,7 @@ const config: Config = {
       fontFamily: {
         cormorant: ['var(--font-cormorant)'],
         'ibm-plex': ['var(--font-ibm-plex)'],
+        inter: ['var(--font-inter)'],
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',

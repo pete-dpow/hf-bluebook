@@ -1,5 +1,5 @@
 import "./globals.css";
-import { Cormorant_Garamond, IBM_Plex_Sans } from "next/font/google";
+import { Cormorant_Garamond, IBM_Plex_Sans, Inter } from "next/font/google";
 import LeftSidebar from "@/components/LeftSidebar";
 import RightSidebar from "@/components/RightSidebar";
 import ProfileDrawer from "@/components/ProfileDrawer";
@@ -24,6 +24,13 @@ const ibmPlex = IBM_Plex_Sans({
   fallback: ["system-ui", "-apple-system", "sans-serif"],
 });
 
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export const metadata = {
   title: "hf.bluebook",
   description: "Fire Protection Product Intelligence by Harmony Fire",
@@ -34,7 +41,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${cormorant.variable} ${ibmPlex.variable}`}>
+    <html lang="en" className={`${cormorant.variable} ${ibmPlex.variable} ${inter.variable}`}>
       <body style={{ background: "#FCFCFA", color: "#111" }}>
         <LeftSidebar />
         <ProjectsPanel />
