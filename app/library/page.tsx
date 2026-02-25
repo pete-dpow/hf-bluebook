@@ -104,8 +104,10 @@ export default function LibraryPage() {
         if (mfgRes.ok) {
           const data = await mfgRes.json();
           setManufacturers(data.manufacturers || []);
+        } else {
+          console.warn("[library] manufacturers API:", mfgRes.status);
         }
-      } catch { /* manufacturers endpoint may not be ready */ }
+      } catch (e) { console.warn("[library] manufacturers fetch failed:", e); }
 
       // Load supplier requests
       try {
@@ -113,8 +115,10 @@ export default function LibraryPage() {
         if (srRes.ok) {
           const data = await srRes.json();
           setSupplierRequests(data.requests || []);
+        } else {
+          console.warn("[library] supplier-requests API:", srRes.status);
         }
-      } catch { /* supplier_requests may not exist yet */ }
+      } catch (e) { console.warn("[library] supplier-requests fetch failed:", e); }
 
       // Check admin status
       try {

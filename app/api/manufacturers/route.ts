@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     .limit(1, { referencedTable: "scrape_jobs" });
 
   if (!showArchived) {
-    query = query.eq("is_archived", false);
+    query = query.or("is_archived.eq.false,is_archived.is.null");
   }
 
   if (search) {
