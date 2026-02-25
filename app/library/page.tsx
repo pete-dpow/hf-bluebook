@@ -869,7 +869,7 @@ export default function LibraryPage() {
                                   <Upload size={14} /> Upload Files
                                 </button>
                                 <button
-                                  onClick={() => { router.push(`/manufacturers/${m.id}/edit`); setOpenActionMenu(null); }}
+                                  onClick={() => { router.push(`/manufacturers/${m.id}`); setOpenActionMenu(null); }}
                                   className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
                                 >
                                   <Pencil size={14} /> Edit Supplier
@@ -1068,9 +1068,9 @@ export default function LibraryPage() {
                     const productCount = m.products?.[0]?.count || 0;
                     const supplierStatus = getSupplierStatus(m);
                     return (
-                      <div key={m.id} className="bg-white border border-gray-200 rounded-xl p-4">
+                      <div key={m.id} className="bg-white border border-gray-200 rounded-xl p-4 cursor-pointer hover:border-gray-300 hover:shadow-sm transition" onClick={() => router.push(`/manufacturers/${m.id}`)}>
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-sm font-semibold text-gray-900 truncate mr-2">{m.name}</h3>
+                          <h3 className="text-sm font-semibold text-gray-900 truncate mr-2 hover:text-blue-600">{m.name}</h3>
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${getStatusBadge(supplierStatus)}`}>
                             {supplierStatus}
                           </span>
@@ -1117,6 +1117,7 @@ export default function LibraryPage() {
                               href={m.website_url}
                               target="_blank"
                               rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
                               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition text-gray-700"
                             >
                               <ExternalLink size={12} />
