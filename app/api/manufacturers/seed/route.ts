@@ -121,6 +121,15 @@ const SEED_MANUFACTURERS = [
         description_pattern: "<div[^>]*class=\"[^\"]*product-intro[^\"]*\"[^>]*>([\\s\\S]*?)</div>",
         pdf_pattern: "href=\"([^\"]+\\.pdf)\"",
       },
+      request: {
+        delay_ms: 300,
+        headers: {
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-GB,en;q=0.9",
+          "Sec-Fetch-Dest": "document",
+          "Sec-Fetch-Mode": "navigate",
+        },
+      },
     },
   },
   {
@@ -132,11 +141,18 @@ const SEED_MANUFACTURERS = [
       default_pillar: "fire_stopping",
       listing: {
         urls: [
+          // Sitemaps (page 2 removed — only merchant/service pages, 0 products)
           "https://www.british-gypsum.com/sitemap.xml?page=1",
-          "https://www.british-gypsum.com/sitemap.xml?page=2",
           "https://www.british-gypsum.com/sitemap.xml?page=3",
+          // White Book category listing pages (direct discovery)
+          "https://www.british-gypsum.com/specification/white-book-specification-selector/internal-partitions-walls",
+          "https://www.british-gypsum.com/specification/white-book-specification-selector/shaftwall",
+          "https://www.british-gypsum.com/specification/white-book-specification-selector/wall-linings",
+          "https://www.british-gypsum.com/specification/white-book-specification-selector/steel-protection",
+          "https://www.british-gypsum.com/specification/white-book-specification-selector/horizontal-shaftwall",
+          "https://www.british-gypsum.com/specification/white-book-specification-selector/ceilings",
         ],
-        product_link_pattern: "<loc>(https://www\\.british-gypsum\\.com/(?:products/[^/]+/[^<]+|Specification/White-Book-Specification-Selector/[^/]+/[^/]+/[^<]+))</loc>",
+        product_link_pattern: "(?:<loc>|href=[\"'])(https?://(?:www\\.)?british-gypsum\\.com/[Ss]pecification/[Ww]hite-[Bb]ook-[Ss]pecification-[Ss]elector/[^/]+/[^/]+/[^<\"']+)(?:</loc>|[\"'])",
       },
       detail: {
         method: "sitemap-fetch",
@@ -175,6 +191,15 @@ const SEED_MANUFACTURERS = [
         name_pattern: "<h1[^>]*>([\\s\\S]*?)</h1>",
         description_pattern: "<meta[^>]*name=\"description\"[^>]*content=\"([^\"]+)\"",
         pdf_pattern: "href=\"([^\"]+\\.pdf)\"",
+      },
+      request: {
+        delay_ms: 300,
+        headers: {
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-GB,en;q=0.9",
+          "Sec-Fetch-Dest": "document",
+          "Sec-Fetch-Mode": "navigate",
+        },
       },
     },
   },
@@ -235,6 +260,15 @@ const SEED_MANUFACTURERS = [
           "https://www.kingspan.com/gb/en-gb/products/insulation",
         ],
         product_link_pattern: "href=\"(/gb/en-gb/products/[a-z0-9-]+/[a-z0-9-]+)\"",
+      },
+      request: {
+        delay_ms: 300,
+        headers: {
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-GB,en;q=0.9",
+          "Sec-Fetch-Dest": "document",
+          "Sec-Fetch-Mode": "navigate",
+        },
       },
       detail: {
         method: "html",

@@ -10,6 +10,7 @@
  */
 
 import type { ScrapedProduct } from "./playwrightScraper";
+import { lookupSystem, lookupCategory } from "./bgWhiteBookData";
 
 export interface HtmlScraperConfig {
   type: "html";
@@ -86,26 +87,58 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+const ROTATED_USER_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+];
+
 async function safeFetch(
   url: string,
   headers: Record<string, string>,
-  timeoutMs: number
+  timeoutMs: number,
+  maxRetries: number = 2
 ): Promise<string | null> {
-  try {
-    const res = await fetch(url, {
-      headers,
-      signal: AbortSignal.timeout(timeoutMs),
-      redirect: "follow",
-    });
-    if (!res.ok) {
-      console.warn(`[htmlScraper] ${res.status} ${res.statusText} — ${url}`);
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const reqHeaders = attempt > 0
+        ? { ...headers, "User-Agent": ROTATED_USER_AGENTS[attempt % ROTATED_USER_AGENTS.length], "Cache-Control": "no-cache" }
+        : headers;
+
+      const res = await fetch(url, {
+        headers: reqHeaders,
+        signal: AbortSignal.timeout(timeoutMs),
+        redirect: "follow",
+      });
+
+      // Rate limited — wait and retry
+      if (res.status === 429 && attempt < maxRetries) {
+        const retryAfter = parseInt(res.headers.get("retry-after") || "5", 10);
+        await sleep(Math.min(retryAfter * 1000, 10_000));
+        continue;
+      }
+
+      // Cloudflare/WAF block — retry with different headers
+      if (res.status === 403 && attempt < maxRetries) {
+        await sleep(1000 * (attempt + 1));
+        continue;
+      }
+
+      if (!res.ok) {
+        console.warn(`[htmlScraper] ${res.status} ${res.statusText} — ${url}`);
+        return null;
+      }
+      return await res.text();
+    } catch (err: any) {
+      if (attempt < maxRetries) {
+        await sleep(1000 * (attempt + 1));
+        continue;
+      }
+      console.warn(`[htmlScraper] Fetch failed — ${url}: ${err.message}`);
       return null;
     }
-    return await res.text();
-  } catch (err: any) {
-    console.warn(`[htmlScraper] Fetch failed — ${url}: ${err.message}`);
-    return null;
   }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -339,20 +372,50 @@ function extractFromSitemapUrls(urls: string[], baseUrl: string): ScrapedProduct
       const categoryName = titleCase(category);
       const rangeInfo = detectBgRange(system);
 
+      // Enrich with BG knowledge base
+      const sysInfo = lookupSystem(system);
+      const catInfo = lookupCategory(category);
+
+      const specs: Record<string, string> = {
+        Category: catInfo?.displayName || categoryName,
+        System: sysInfo?.displayName || systemName,
+        "Reference Code": code,
+        "White Book Section": catInfo?.displayName || categoryName,
+        "Source": "British Gypsum White Book",
+      };
+
+      if (sysInfo) {
+        specs["System Type"] = sysInfo.systemType;
+        specs["Fire Rating Range"] = sysInfo.fireRatingRange;
+        specs["Board Type"] = sysInfo.typicalBoards;
+        specs["Framing"] = sysInfo.typicalFraming;
+        specs["Test Standard"] = sysInfo.testStandard;
+        if (sysInfo.acousticRange) specs["Acoustic Rating"] = sysInfo.acousticRange;
+        if (sysInfo.heightRange) specs["Max Height"] = sysInfo.heightRange;
+      } else if (rangeInfo) {
+        specs["Product Range"] = systemName;
+      }
+
+      if (catInfo) {
+        specs["Typical Fire Ratings"] = catInfo.typicalFireRatings;
+      }
+
+      const descParts: string[] = [];
+      if (sysInfo) {
+        descParts.push(sysInfo.description);
+        descParts.push(`Fire rating: ${sysInfo.fireRatingRange}.`);
+        descParts.push(`Boards: ${sysInfo.typicalBoards}.`);
+      } else if (rangeInfo) {
+        descParts.push(rangeInfo);
+      }
+      descParts.push(`${sysInfo?.displayName || systemName} system specification — ${catInfo?.displayName || categoryName}.`);
+      descParts.push(`British Gypsum White Book reference ${code}.`);
+
       products.push({
-        product_name: `${systemName} ${code}`,
+        product_name: `${sysInfo?.displayName || systemName} ${code}`,
         product_code: code,
-        description: rangeInfo
-          ? `${rangeInfo}. ${systemName} system specification — ${categoryName}. White Book reference ${code}.`
-          : `${systemName} system specification — ${categoryName}. British Gypsum White Book reference ${code}.`,
-        specifications: {
-          Category: categoryName,
-          System: systemName,
-          "Reference Code": code,
-          "White Book Section": categoryName,
-          ...(rangeInfo ? { "Product Range": systemName } : {}),
-          "Source": "British Gypsum White Book",
-        },
+        description: descParts.join(" "),
+        specifications: specs,
         pdf_urls: [],
         source_url: url,
       });
@@ -406,11 +469,21 @@ function extractFromSitemapUrls(urls: string[], baseUrl: string): ScrapedProduct
 // Main entry point
 // ---------------------------------------------------------------------------
 
+export interface ScrapeStats {
+  listingsFetched?: number;
+  detailsFetched?: number;
+  detailsBlocked?: number;
+  productsFromFetch?: number;
+  productsFromFallback?: number;
+  enrichedWithKnowledgeBase?: number;
+}
+
 export type ScrapeProgressCallback = (progress: {
   stage: string;
   current: number;
   total: number;
   found: number;
+  stats?: ScrapeStats;
 }) => void;
 
 export async function scrapeWithHtmlConfig(
@@ -570,8 +643,20 @@ async function discoverAndScrape(config: HtmlScraperConfig, onProgress?: ScrapeP
       }
     }
 
-    onProgress?.({ stage: "Complete", current: allProducts.length, total: allProducts.length, found: allProducts.length });
-    console.log(`[htmlScraper] sitemap-fetch: ${fetched} fetched, ${blocked} blocked, ${allProducts.length} total products`);
+    const fallbackCount = allProducts.length - fetched;
+    const enrichedCount = allProducts.filter((p) =>
+      p.specifications && ("Fire Rating Range" in p.specifications || "System Type" in p.specifications)
+    ).length;
+    const finalStats: ScrapeStats = {
+      listingsFetched: listingHtmls.length,
+      detailsFetched: fetched,
+      detailsBlocked: blocked,
+      productsFromFetch: fetched,
+      productsFromFallback: fallbackCount > 0 ? fallbackCount : 0,
+      enrichedWithKnowledgeBase: enrichedCount,
+    };
+    onProgress?.({ stage: "Complete", current: allProducts.length, total: allProducts.length, found: allProducts.length, stats: finalStats });
+    console.log(`[htmlScraper] sitemap-fetch: ${fetched} fetched, ${blocked} blocked, ${allProducts.length} total products, ${enrichedCount} enriched`);
     return dedup(allProducts);
   }
 

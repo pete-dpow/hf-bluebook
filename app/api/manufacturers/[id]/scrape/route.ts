@@ -58,6 +58,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const body = await req.json().catch(() => ({}));
   const scrapeType = body.scrape_type || "full";
+  const dryRun = body.dry_run === true;
 
   // Get manufacturer
   const { data: manufacturer } = await supabaseAdmin
@@ -93,6 +94,60 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
   }
 
+  // ── Dry run: scrape without writing to DB ──
+  if (dryRun) {
+    const noopProgress = () => {};
+    let products: ScrapedProduct[] = [];
+
+    try {
+      if (isShopify && shopifyConfig) {
+        products = await scrapeShopifyProducts(shopifyConfig, noopProgress);
+      } else if (manufacturer.scraper_config?.type === "html") {
+        products = await scrapeWithHtmlConfig(manufacturer.scraper_config as HtmlScraperConfig, noopProgress);
+      } else {
+        return NextResponse.json({ error: "Dry run only supports shopify and html scrapers" }, { status: 400 });
+      }
+    } catch (err: any) {
+      return NextResponse.json({ dry_run: true, error: err.message, total_products: 0 }, { status: 500 });
+    }
+
+    // Check which would be new vs update
+    const existingCodes = new Set<string>();
+    for (const p of products) {
+      const code = p.product_code || p.product_name.toLowerCase().replace(/\s+/g, "-").slice(0, 50);
+      const { data } = await supabaseAdmin
+        .from("products")
+        .select("id")
+        .eq("manufacturer_id", params.id)
+        .eq("product_code", code)
+        .single();
+      if (data) existingCodes.add(code);
+    }
+
+    // Group by category from specifications
+    const categories: Record<string, number> = {};
+    for (const p of products) {
+      const cat = (p.specifications as any)?.Category || (p.specifications as any)?.["White Book Section"] || "Uncategorized";
+      categories[cat] = (categories[cat] || 0) + 1;
+    }
+
+    return NextResponse.json({
+      dry_run: true,
+      total_products: products.length,
+      would_create: products.length - existingCodes.size,
+      would_update: existingCodes.size,
+      categories,
+      sample_products: products.slice(0, 25).map((p) => ({
+        product_name: p.product_name,
+        product_code: p.product_code,
+        has_description: !!p.description,
+        spec_count: Object.keys(p.specifications || {}).length,
+        pdf_count: p.pdf_urls?.length || 0,
+        source_url: p.source_url,
+      })),
+    });
+  }
+
   // Create scrape job
   const { data: job, error } = await supabaseAdmin.from("scrape_jobs").insert({
     manufacturer_id: params.id,
@@ -105,7 +160,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   // ── Progress callback: throttled DB updates so the UI can track progress ──
   let lastProgressUpdate = 0;
-  const updateProgress = async (progress: { stage: string; current: number; total: number; found: number }) => {
+  let lastStats: Record<string, any> | undefined;
+  const updateProgress = async (progress: { stage: string; current: number; total: number; found: number; stats?: Record<string, any> }) => {
+    if (progress.stats) lastStats = progress.stats;
     const now = Date.now();
     if (now - lastProgressUpdate < 1500) return; // Throttle: max every 1.5s
     lastProgressUpdate = now;
@@ -119,7 +176,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return runSyncScrape(job.id, params.id, manufacturer, "shopify", async () => {
       const products = await scrapeShopifyProducts(shopifyConfig!, updateProgress);
       return products;
-    }, shopifyConfig.default_pillar || "fire_stopping");
+    }, shopifyConfig.default_pillar || "fire_stopping", () => lastStats);
   }
 
   const isHtml = manufacturer.scraper_config?.type === "html";
@@ -128,7 +185,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return runSyncScrape(job.id, params.id, manufacturer, "html", async () => {
       const products = await scrapeWithHtmlConfig(htmlConfig, updateProgress);
       return products;
-    }, htmlConfig.default_pillar || "fire_stopping");
+    }, htmlConfig.default_pillar || "fire_stopping", () => lastStats);
   }
 
   // ── Fallback: Inngest for Playwright-dependent sites ──
@@ -178,7 +235,8 @@ async function runSyncScrape(
   manufacturer: { id: string; organization_id: string },
   mode: string,
   scrapeFn: () => Promise<ScrapedProduct[]>,
-  defaultPillar: string
+  defaultPillar: string,
+  getLastStats?: () => Record<string, any> | undefined
 ) {
   const scrapeStart = Date.now();
   try {
@@ -200,13 +258,20 @@ async function runSyncScrape(
     );
 
     const durationSeconds = Math.round((Date.now() - scrapeStart) / 1000);
+    const scrapeStats = getLastStats?.();
     await supabaseAdmin.from("scrape_jobs").update({
       status: "completed",
       products_created: created,
       products_updated: updated,
       completed_at: new Date().toISOString(),
       duration_seconds: durationSeconds,
-      progress: { stage: "Complete", current: products.length, total: products.length, found: products.length },
+      progress: {
+        stage: "Complete",
+        current: products.length,
+        total: products.length,
+        found: products.length,
+        ...(scrapeStats ? { stats: scrapeStats } : {}),
+      },
     }).eq("id", jobId);
 
     await supabaseAdmin.from("manufacturers").update({
