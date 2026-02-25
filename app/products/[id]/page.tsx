@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Loader2, Globe, FileText, Trash2, Upload, ShieldCheck, Plus, ExternalLink, CheckCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Globe, FileText, Trash2, Upload, ShieldCheck, Plus, ExternalLink, CheckCircle, Package } from "lucide-react";
 import RegulationLinkModal from "@/components/RegulationLinkModal";
 
 const PILLAR_LABELS: Record<string, string> = {
@@ -13,6 +13,8 @@ const PILLAR_LABELS: Record<string, string> = {
   retro_fire_stopping: "Retro Fire Stopping",
   auro_lume: "Auro Lume",
 };
+
+const fontInter = { fontFamily: "var(--font-inter)" };
 
 export default function ProductDetailPage() {
   const router = useRouter();
@@ -180,58 +182,58 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCFCFA]">
-        <p className="text-gray-500">Product not found</p>
+        <p className="text-gray-500" style={fontInter}>Product not found</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px" }}>
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px", ...fontInter }}>
+      <div className="max-w-5xl mx-auto">
         <button
           onClick={() => router.push("/library?tab=products")}
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6"
-          style={{ fontFamily: "var(--font-ibm-plex)" }}
         >
           <ArrowLeft size={16} />
           All Products
         </button>
 
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <h1 className="text-3xl" style={{ fontFamily: "var(--font-cormorant)", fontWeight: 500, color: "#2A2A2A" }}>
-              {product.product_name}
-            </h1>
-            <div className="flex items-center gap-3 mt-2">
-              {product.manufacturers?.name && (
-                <span
-                  className="text-sm text-blue-600 hover:underline cursor-pointer"
-                  style={{ fontFamily: "var(--font-ibm-plex)" }}
-                  onClick={() => router.push(`/manufacturers/${product.manufacturer_id}`)}
-                >
-                  {product.manufacturers.name}
+        {/* Header */}
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+              <Package size={20} className="text-gray-600" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">{product.product_name}</h1>
+              <div className="flex items-center gap-2 mt-1">
+                {product.manufacturers?.name && (
+                  <span
+                    className="text-xs text-blue-600 hover:underline cursor-pointer"
+                    onClick={() => router.push(`/manufacturers/${product.manufacturer_id}`)}
+                  >
+                    {product.manufacturers.name}
+                  </span>
+                )}
+                {product.product_code && (
+                  <span className="text-xs text-gray-500 font-mono">{product.product_code}</span>
+                )}
+                <span className="px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-700 font-medium">
+                  {PILLAR_LABELS[product.pillar] || product.pillar}
                 </span>
-              )}
-              {product.product_code && (
-                <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-                  {product.product_code}
+                <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                  product.status === "active" ? "bg-green-50 text-green-700"
+                  : product.status === "discontinued" ? "bg-red-50 text-red-600"
+                  : "bg-gray-100 text-gray-600"
+                }`}>
+                  {product.status}
                 </span>
-              )}
-              <span className="px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-700">
-                {PILLAR_LABELS[product.pillar] || product.pillar}
-              </span>
-              <span className={`px-2 py-0.5 text-xs rounded-full ${
-                product.status === "active" ? "bg-green-50 text-green-700"
-                : product.status === "discontinued" ? "bg-red-50 text-red-600"
-                : "bg-gray-100 text-gray-600"
-              }`}>
-                {product.status}
-              </span>
-              {product.needs_review && (
-                <span className="px-2 py-0.5 text-xs rounded-full bg-amber-50 text-amber-700">
-                  Needs review
-                </span>
-              )}
+                {product.needs_review && (
+                  <span className="px-2 py-0.5 text-xs rounded-full bg-amber-50 text-amber-700 font-medium">
+                    Needs review
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -240,7 +242,6 @@ export default function ProductDetailPage() {
                 onClick={handleActivate}
                 disabled={activating}
                 className="flex items-center gap-2 px-4 py-2 text-green-700 border border-green-200 text-sm font-medium rounded-lg hover:bg-green-50 transition disabled:opacity-50"
-                style={{ fontFamily: "var(--font-ibm-plex)" }}
               >
                 {activating ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                 Activate
@@ -250,7 +251,6 @@ export default function ProductDetailPage() {
               onClick={handleDelete}
               disabled={deleting}
               className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-200 text-sm font-medium rounded-lg hover:bg-red-50 transition disabled:opacity-50"
-              style={{ fontFamily: "var(--font-ibm-plex)" }}
             >
               {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
               Delete
@@ -265,10 +265,9 @@ export default function ProductDetailPage() {
               href={product.scraped_data.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition"
-              style={{ fontFamily: "var(--font-ibm-plex)" }}
+              className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 transition"
             >
-              <ExternalLink size={14} />
+              <ExternalLink size={13} />
               View on manufacturer website
             </a>
           </div>
@@ -276,10 +275,8 @@ export default function ProductDetailPage() {
 
         {/* Product images */}
         {product.scraped_data?.image_urls?.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              Images
-            </h2>
+          <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Images</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {product.scraped_data.image_urls.slice(0, 8).map((url: string, i: number) => (
                 <div key={i} className="aspect-square rounded-lg border border-gray-100 overflow-hidden bg-gray-50">
@@ -296,61 +293,57 @@ export default function ProductDetailPage() {
 
         {/* Description */}
         {product.description && (
-          <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-2" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              Description
-            </h2>
-            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+          <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
+            <h2 className="text-sm font-semibold text-gray-900 mb-2">Description</h2>
+            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
               {product.description}
             </p>
           </div>
         )}
 
         {/* Pricing & Details */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-            Details
-          </h2>
-          <div className="grid grid-cols-3 md:grid-cols-4 gap-4 text-sm" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
+          <h2 className="text-sm font-semibold text-gray-900 mb-3">Details</h2>
+          <div className="grid grid-cols-3 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <span className="text-gray-500">Manufacturer</span>
-              <p className="text-gray-900">{product.manufacturers?.name || "—"}</p>
+              <span className="text-xs text-gray-500 block">Manufacturer</span>
+              <p className="text-gray-900 mt-0.5">{product.manufacturers?.name || "—"}</p>
             </div>
             <div>
-              <span className="text-gray-500">Price</span>
-              <p className="text-gray-900">
+              <span className="text-xs text-gray-500 block">Price</span>
+              <p className="text-gray-900 mt-0.5">
                 {product.list_price
                   ? `${product.currency || "GBP"} ${product.list_price.toFixed(2)}`
                   : product.scraped_data?.price_text || "—"}
               </p>
             </div>
             <div>
-              <span className="text-gray-500">Unit</span>
-              <p className="text-gray-900">{product.unit || "each"}</p>
+              <span className="text-xs text-gray-500 block">Unit</span>
+              <p className="text-gray-900 mt-0.5">{product.unit || "each"}</p>
             </div>
             <div>
-              <span className="text-gray-500">Lead Time</span>
-              <p className="text-gray-900">{product.lead_time_days ? `${product.lead_time_days} days` : "—"}</p>
+              <span className="text-xs text-gray-500 block">Lead Time</span>
+              <p className="text-gray-900 mt-0.5">{product.lead_time_days ? `${product.lead_time_days} days` : "—"}</p>
             </div>
           </div>
           {(product.trade_price || product.sell_price || product.certifications?.length > 0) && (
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-4 text-sm mt-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-4 text-sm mt-4 pt-4 border-t border-gray-100">
               {product.trade_price && (
                 <div>
-                  <span className="text-gray-500">Trade Price</span>
-                  <p className="text-gray-900">{`${product.currency || "GBP"} ${product.trade_price.toFixed(2)}`}</p>
+                  <span className="text-xs text-gray-500 block">Trade Price</span>
+                  <p className="text-gray-900 mt-0.5">{`${product.currency || "GBP"} ${product.trade_price.toFixed(2)}`}</p>
                 </div>
               )}
               {product.sell_price && (
                 <div>
-                  <span className="text-gray-500">Sell Price</span>
-                  <p className="text-gray-900">{`${product.currency || "GBP"} ${product.sell_price.toFixed(2)}`}</p>
+                  <span className="text-xs text-gray-500 block">Sell Price</span>
+                  <p className="text-gray-900 mt-0.5">{`${product.currency || "GBP"} ${product.sell_price.toFixed(2)}`}</p>
                 </div>
               )}
               {product.certifications?.length > 0 && (
                 <div>
-                  <span className="text-gray-500">Certifications</span>
-                  <p className="text-gray-900">{product.certifications.join(", ")}</p>
+                  <span className="text-xs text-gray-500 block">Certifications</span>
+                  <p className="text-gray-900 mt-0.5">{product.certifications.join(", ")}</p>
                 </div>
               )}
             </div>
@@ -359,30 +352,32 @@ export default function ProductDetailPage() {
 
         {/* Specifications */}
         {product.specifications && Object.keys(product.specifications).length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              Specifications
-            </h2>
-            <div className="grid grid-cols-2 gap-3 text-sm" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              {Object.entries(product.specifications).map(([key, value]) => (
-                <div key={key} className="flex justify-between py-1 border-b border-gray-50">
-                  <span className="text-gray-500">{key}</span>
-                  <span className="text-gray-900">{String(value)}</span>
-                </div>
-              ))}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h2 className="text-sm font-semibold text-gray-900">Specifications</h2>
             </div>
+            <table className="w-full">
+              <tbody>
+                {Object.entries(product.specifications).map(([key, value]) => (
+                  <tr key={key} className="border-b border-gray-50">
+                    <td className="px-5 py-2.5 text-xs text-gray-500 w-1/3">{key}</td>
+                    <td className="px-5 py-2.5 text-sm text-gray-900">{String(value)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
         {/* Files */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-900">
               Files ({product.product_files?.length || 0})
             </h2>
-            <label className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer transition">
-              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-              <span style={{ fontFamily: "var(--font-ibm-plex)" }}>Upload</span>
+            <label className="flex items-center gap-2 px-3 py-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer transition">
+              {uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+              Upload
               <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
             </label>
           </div>
@@ -397,15 +392,14 @@ export default function ProductDetailPage() {
             const types = Object.keys(typeCounts);
             if (types.length <= 1) return null;
             return (
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex flex-wrap gap-2 mb-3">
                 <button
                   onClick={() => setFileTypeFilter("all")}
                   className={`px-3 py-1 text-xs rounded-full border transition ${
                     fileTypeFilter === "all"
-                      ? "bg-blue-50 border-blue-200 text-blue-700"
+                      ? "bg-gray-900 text-white border-gray-900"
                       : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
                   }`}
-                  style={{ fontFamily: "var(--font-ibm-plex)" }}
                 >
                   All ({files.length})
                 </button>
@@ -415,10 +409,9 @@ export default function ProductDetailPage() {
                     onClick={() => setFileTypeFilter(type)}
                     className={`px-3 py-1 text-xs rounded-full border transition ${
                       fileTypeFilter === type
-                        ? "bg-blue-50 border-blue-200 text-blue-700"
+                        ? "bg-gray-900 text-white border-gray-900"
                         : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
                     }`}
-                    style={{ fontFamily: "var(--font-ibm-plex)" }}
                   >
                     {type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())} ({typeCounts[type]})
                   </button>
@@ -431,7 +424,7 @@ export default function ProductDetailPage() {
               {product.product_files.filter((f: any) => fileTypeFilter === "all" || f.file_type === fileTypeFilter).map((f: any) => (
                 <div key={f.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2 min-w-0">
-                    <FileText size={16} className="text-blue-500 flex-shrink-0" />
+                    <FileText size={15} className="text-blue-500 flex-shrink-0" />
                     <div className="min-w-0">
                       {f.file_url ? (
                         <a
@@ -439,14 +432,11 @@ export default function ProductDetailPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-blue-600 hover:text-blue-800 hover:underline truncate block"
-                          style={{ fontFamily: "var(--font-ibm-plex)" }}
                         >
                           {f.file_name}
                         </a>
                       ) : (
-                        <span className="text-sm text-gray-900 truncate block" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-                          {f.file_name}
-                        </span>
+                        <span className="text-sm text-gray-900 truncate block">{f.file_name}</span>
                       )}
                       <span className="text-xs text-gray-400">{f.file_type?.replace(/_/g, " ")}</span>
                     </div>
@@ -474,24 +464,21 @@ export default function ProductDetailPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              No files yet
-            </p>
+            <p className="text-sm text-gray-400">No files yet</p>
           )}
         </div>
 
         {/* Linked Regulations */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-900">
               Linked Regulations ({product.product_regulations?.length || 0})
             </h2>
             <button
               onClick={() => setShowLinkModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition"
-              style={{ fontFamily: "var(--font-ibm-plex)" }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition"
             >
-              <Plus size={14} />
+              <Plus size={13} />
               Link
             </button>
           </div>
@@ -500,11 +487,9 @@ export default function ProductDetailPage() {
               {product.product_regulations.map((pr: any) => (
                 <div key={pr.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <ShieldCheck size={16} className="text-blue-600" />
+                    <ShieldCheck size={15} className="text-blue-600" />
                     <div>
-                      <span className="text-sm font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-                        {pr.regulations?.name}
-                      </span>
+                      <span className="text-sm font-medium text-gray-900">{pr.regulations?.name}</span>
                       {pr.regulations?.reference && (
                         <span className="ml-2 text-xs text-gray-500">{pr.regulations.reference}</span>
                       )}
@@ -520,9 +505,7 @@ export default function ProductDetailPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              No linked regulations — click Link to add
-            </p>
+            <p className="text-sm text-gray-400">No linked regulations — click Link to add</p>
           )}
         </div>
 

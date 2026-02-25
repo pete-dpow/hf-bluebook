@@ -8,6 +8,8 @@ import ProductCard from "@/components/ProductCard";
 import ProductListRow from "@/components/ProductListRow";
 import ProductFilter from "@/components/ProductFilter";
 
+const fontInter = { fontFamily: "var(--font-inter)" };
+
 export default function ProductsPage() {
   const router = useRouter();
   const [products, setProducts] = useState<any[]>([]);
@@ -99,16 +101,20 @@ export default function ProductsPage() {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px" }}>
+    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px", ...fontInter }}>
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl" style={{ fontFamily: "var(--font-cormorant)", fontWeight: 500, color: "#2A2A2A" }}>
-              Products
-            </h1>
-            <p className="text-sm text-gray-500 mt-1" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              {total} product{total !== 1 ? "s" : ""} in catalog
-            </p>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Package size={20} className="text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Products</h1>
+              <p className="text-xs text-gray-500">
+                {total} product{total !== 1 ? "s" : ""} in catalog
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {draftProducts.length > 0 && (
@@ -116,7 +122,6 @@ export default function ProductsPage() {
                 onClick={handleActivateAll}
                 disabled={activatingAll}
                 className="flex items-center gap-2 px-4 py-2 text-green-700 border border-green-200 text-sm font-medium rounded-lg hover:bg-green-50 transition disabled:opacity-50"
-                style={{ fontFamily: "var(--font-ibm-plex)" }}
               >
                 {activatingAll ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                 Activate {draftProducts.length} Draft{draftProducts.length !== 1 ? "s" : ""}
@@ -124,8 +129,7 @@ export default function ProductsPage() {
             )}
             <button
               onClick={() => router.push("/products/new")}
-              className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white text-sm font-medium rounded-lg hover:opacity-90 transition"
-              style={{ fontFamily: "var(--font-ibm-plex)" }}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition"
             >
               <Plus size={16} />
               Add Product
@@ -133,57 +137,71 @@ export default function ProductsPage() {
           </div>
         </div>
 
+        {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <div className="bg-white border border-gray-200 rounded-xl p-4 relative">
               <div className="flex items-center gap-2 mb-2">
-                <Package size={16} className="text-blue-600" />
-                <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Total Products</span>
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Products</span>
               </div>
-              <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.total.toLocaleString()}</p>
+              <div className="text-2xl font-bold text-gray-900">{stats.total.toLocaleString()}</div>
               {stats.total_trend !== 0 && (
-                <div className={`flex items-center gap-1 mt-1 text-xs ${stats.total_trend > 0 ? "text-green-600" : "text-red-500"}`} style={{ fontFamily: "var(--font-ibm-plex)" }}>
+                <div className={`flex items-center gap-1 mt-1 text-xs ${stats.total_trend > 0 ? "text-green-600" : "text-red-500"}`}>
                   {stats.total_trend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                   <span>{stats.total_trend > 0 ? "+" : ""}{stats.total_trend} this month</span>
                 </div>
               )}
-            </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle size={16} className="text-green-600" />
-                <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Active</span>
+              <div className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Package size={16} className="text-blue-500" />
               </div>
-              <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.active.toLocaleString()}</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 relative">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Active</span>
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{stats.active.toLocaleString()}</div>
               {stats.active_trend !== 0 && (
-                <div className={`flex items-center gap-1 mt-1 text-xs ${stats.active_trend > 0 ? "text-green-600" : "text-red-500"}`} style={{ fontFamily: "var(--font-ibm-plex)" }}>
+                <div className={`flex items-center gap-1 mt-1 text-xs ${stats.active_trend > 0 ? "text-green-600" : "text-red-500"}`}>
                   {stats.active_trend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                   <span>{stats.active_trend > 0 ? "+" : ""}{stats.active_trend} this month</span>
                 </div>
               )}
-            </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle size={16} className="text-amber-500" />
-                <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Needs Review</span>
+              <div className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+                <CheckCircle size={16} className="text-green-500" />
               </div>
-              <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.needs_review.toLocaleString()}</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 relative">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Needs Review</span>
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{stats.needs_review.toLocaleString()}</div>
               {stats.needs_review_trend !== 0 && (
-                <div className={`flex items-center gap-1 mt-1 text-xs ${stats.needs_review_trend > 0 ? "text-amber-600" : "text-green-600"}`} style={{ fontFamily: "var(--font-ibm-plex)" }}>
+                <div className={`flex items-center gap-1 mt-1 text-xs ${stats.needs_review_trend > 0 ? "text-amber-600" : "text-green-600"}`}>
                   {stats.needs_review_trend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                   <span>{stats.needs_review_trend > 0 ? "+" : ""}{stats.needs_review_trend} this month</span>
                 </div>
               )}
-            </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <Building2 size={16} className="text-purple-600" />
-                <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>Manufacturers</span>
+              <div className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                <AlertCircle size={16} className="text-amber-500" />
               </div>
-              <p className="text-2xl font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>{stats.manufacturers.toLocaleString()}</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 relative">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-2 h-2 rounded-full bg-purple-500" />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Manufacturers</span>
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{stats.manufacturers.toLocaleString()}</div>
+              <div className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
+                <Building2 size={16} className="text-purple-500" />
+              </div>
             </div>
           </div>
         )}
 
+        {/* Filters + View Toggle */}
         <div className="flex items-center justify-between mb-6">
           <ProductFilter
             pillar={pillar}
@@ -198,31 +216,28 @@ export default function ProductsPage() {
           <div className="flex items-center gap-1 ml-4">
             <button
               onClick={() => setView("grid")}
-              className={`p-2 rounded-lg transition ${view === "grid" ? "bg-blue-50 text-blue-600" : "text-gray-400 hover:text-gray-600"}`}
+              className={`p-2 rounded-lg transition ${view === "grid" ? "bg-gray-900 text-white" : "text-gray-400 hover:text-gray-600"}`}
             >
               <LayoutGrid size={18} />
             </button>
             <button
               onClick={() => setView("list")}
-              className={`p-2 rounded-lg transition ${view === "list" ? "bg-blue-50 text-blue-600" : "text-gray-400 hover:text-gray-600"}`}
+              className={`p-2 rounded-lg transition ${view === "list" ? "bg-gray-900 text-white" : "text-gray-400 hover:text-gray-600"}`}
             >
               <List size={18} />
             </button>
           </div>
         </div>
 
+        {/* Content */}
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-gray-500 mb-2" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              No products found
-            </p>
-            <p className="text-sm text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              Add products manually or scrape from a manufacturer
-            </p>
+            <p className="text-gray-500 mb-2">No products found</p>
+            <p className="text-sm text-gray-400">Add products manually or scrape from a manufacturer</p>
           </div>
         ) : view === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -238,13 +253,13 @@ export default function ProductsPage() {
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ fontFamily: "var(--font-ibm-plex)" }}>Product</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ fontFamily: "var(--font-ibm-plex)" }}>Code</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ fontFamily: "var(--font-ibm-plex)" }}>Manufacturer</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ fontFamily: "var(--font-ibm-plex)" }}>Pillar</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" style={{ fontFamily: "var(--font-ibm-plex)" }}>Status</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase" style={{ fontFamily: "var(--font-ibm-plex)" }}>Price</th>
+                <tr className="border-b border-gray-200 bg-gray-50/50">
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Product</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Code</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Manufacturer</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Pillar</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
+                  <th className="px-5 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">Price</th>
                 </tr>
               </thead>
               <tbody>
@@ -262,26 +277,29 @@ export default function ProductsPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-6">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
-              style={{ fontFamily: "var(--font-ibm-plex)" }}
-            >
-              Previous
-            </button>
-            <span className="text-sm text-gray-500" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              Page {page} of {totalPages}
+          <div className="flex items-center justify-between mt-6 text-sm text-gray-500">
+            <span>
+              Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
             </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
-              style={{ fontFamily: "var(--font-ibm-plex)" }}
-            >
-              Next
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
+              >
+                Previous
+              </button>
+              <span>
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

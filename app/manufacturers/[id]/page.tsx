@@ -3,8 +3,18 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Loader2, Play, Globe, Trash2, Pencil, Check, X } from "lucide-react";
+import { ArrowLeft, Loader2, Play, Globe, Trash2, Pencil, Check, X, Factory, Package, RefreshCw, Mail, Phone, MapPin, ExternalLink } from "lucide-react";
 import ScraperProgress from "@/components/ScraperProgress";
+
+const PILLAR_LABELS: Record<string, string> = {
+  fire_doors: "Fire Doors",
+  dampers: "Dampers",
+  fire_stopping: "Fire Stopping",
+  retro_fire_stopping: "Retro Fire Stopping",
+  auro_lume: "Auro Lume",
+};
+
+const fontInter = { fontFamily: "var(--font-inter)" };
 
 export default function ManufacturerDetailPage() {
   const router = useRouter();
@@ -31,12 +41,11 @@ export default function ManufacturerDetailPage() {
         .from("scrape_jobs")
         .select("*")
         .eq("manufacturer_id", params.id)
-        .order("created_at", { ascending: false })
+        .order("started_at", { ascending: false })
         .limit(5);
 
       if (jobs) {
         setScrapeJobs(jobs);
-        // If all jobs are done, reload manufacturer to get updated products
         const stillActive = jobs.some((j: any) => j.status === "running" || j.status === "queued");
         if (!stillActive) {
           loadManufacturer();
@@ -60,12 +69,11 @@ export default function ManufacturerDetailPage() {
       setManufacturer(data.manufacturer);
     }
 
-    // Load scrape jobs
     const { data: jobs } = await supabase
       .from("scrape_jobs")
       .select("*")
       .eq("manufacturer_id", params.id)
-      .order("created_at", { ascending: false })
+      .order("started_at", { ascending: false })
       .limit(5);
 
     setScrapeJobs(jobs || []);
@@ -107,7 +115,7 @@ export default function ManufacturerDetailPage() {
     });
 
     if (res.ok) {
-      router.push("/library");
+      router.push("/library?tab=suppliers");
     } else {
       const err = await res.json();
       alert(err.error || "Failed to delete");
@@ -143,77 +151,74 @@ export default function ManufacturerDetailPage() {
   if (!manufacturer) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCFCFA]">
-        <p className="text-gray-500">Manufacturer not found</p>
+        <p className="text-gray-500" style={fontInter}>Manufacturer not found</p>
       </div>
     );
   }
 
+  const productCount = manufacturer.products?.length || 0;
+  const completedJobs = scrapeJobs.filter((j) => j.status === "completed").length;
+
   return (
-    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px" }}>
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px", ...fontInter }}>
+      <div className="max-w-5xl mx-auto">
         <button
-          onClick={() => router.push("/manufacturers")}
+          onClick={() => router.push("/library?tab=suppliers")}
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6"
-          style={{ fontFamily: "var(--font-ibm-plex)" }}
         >
           <ArrowLeft size={16} />
-          All Manufacturers
+          All Suppliers
         </button>
 
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <h1 className="text-3xl" style={{ fontFamily: "var(--font-cormorant)", fontWeight: 500, color: "#2A2A2A" }}>
-              {manufacturer.name}
-            </h1>
-            <div className="flex items-center gap-1 mt-1">
-              <Globe size={14} className="text-gray-400 flex-shrink-0" />
-              {editingUrl ? (
-                <div className="flex items-center gap-1">
-                  <input
-                    type="url"
-                    value={urlDraft}
-                    onChange={(e) => setUrlDraft(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") saveUrl(); if (e.key === "Escape") setEditingUrl(false); }}
-                    className="px-2 py-0.5 border border-blue-300 rounded text-sm focus:outline-none focus:border-blue-500 w-80"
-                    style={{ fontFamily: "var(--font-ibm-plex)" }}
-                    autoFocus
-                    placeholder="https://..."
-                  />
-                  <button onClick={saveUrl} className="p-0.5 text-green-600 hover:text-green-700"><Check size={14} /></button>
-                  <button onClick={() => setEditingUrl(false)} className="p-0.5 text-gray-400 hover:text-gray-600"><X size={14} /></button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1">
-                  {manufacturer.website_url ? (
-                    <a
-                      href={manufacturer.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:underline"
-                      style={{ fontFamily: "var(--font-ibm-plex)" }}
+        {/* Header */}
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+              <Factory size={20} className="text-gray-600" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">{manufacturer.name}</h1>
+              <div className="flex items-center gap-1 mt-0.5">
+                <Globe size={13} className="text-gray-400 flex-shrink-0" />
+                {editingUrl ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="url"
+                      value={urlDraft}
+                      onChange={(e) => setUrlDraft(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") saveUrl(); if (e.key === "Escape") setEditingUrl(false); }}
+                      className="px-2 py-0.5 border border-blue-300 rounded text-xs focus:outline-none focus:border-blue-500 w-72"
+                      autoFocus
+                      placeholder="https://..."
+                    />
+                    <button onClick={saveUrl} className="p-0.5 text-green-600 hover:text-green-700"><Check size={13} /></button>
+                    <button onClick={() => setEditingUrl(false)} className="p-0.5 text-gray-400 hover:text-gray-600"><X size={13} /></button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    {manufacturer.website_url ? (
+                      <a href={manufacturer.website_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                        {manufacturer.website_url.replace(/^https?:\/\//, "")}
+                      </a>
+                    ) : (
+                      <span className="text-xs text-gray-400">No URL set</span>
+                    )}
+                    <button
+                      onClick={() => { setUrlDraft(manufacturer.website_url || ""); setEditingUrl(true); }}
+                      className="p-0.5 text-gray-400 hover:text-blue-600 transition"
                     >
-                      {manufacturer.website_url}
-                    </a>
-                  ) : (
-                    <span className="text-sm text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>No URL set</span>
-                  )}
-                  <button
-                    onClick={() => { setUrlDraft(manufacturer.website_url || ""); setEditingUrl(true); }}
-                    className="p-0.5 text-gray-400 hover:text-blue-600 transition"
-                    title="Edit URL"
-                  >
-                    <Pencil size={12} />
-                  </button>
-                </div>
-              )}
+                      <Pencil size={11} />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={triggerScrape}
               disabled={scraping}
-              className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white text-sm font-medium rounded-lg hover:opacity-90 transition disabled:opacity-50"
-              style={{ fontFamily: "var(--font-ibm-plex)" }}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
             >
               {scraping ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
               Scrape Products
@@ -222,7 +227,6 @@ export default function ManufacturerDetailPage() {
               onClick={handleDelete}
               disabled={deleting}
               className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-200 text-sm font-medium rounded-lg hover:bg-red-50 transition disabled:opacity-50"
-              style={{ fontFamily: "var(--font-ibm-plex)" }}
             >
               {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
               Delete
@@ -230,78 +234,131 @@ export default function ManufacturerDetailPage() {
           </div>
         </div>
 
-        {/* Contact Info */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-            Contact Details
-          </h2>
-          <div className="grid grid-cols-3 gap-4 text-sm" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-            <div>
-              <span className="text-gray-500">Name</span>
-              <p className="text-gray-900">{manufacturer.contact_name || "—"}</p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white border border-gray-200 rounded-xl p-4 relative">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Products</span>
             </div>
-            <div>
-              <span className="text-gray-500">Email</span>
-              <p className="text-gray-900">{manufacturer.contact_email || "—"}</p>
+            <div className="text-2xl font-bold text-gray-900">{productCount}</div>
+            <div className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Package size={16} className="text-blue-500" />
             </div>
-            <div>
-              <span className="text-gray-500">Phone</span>
-              <p className="text-gray-900">{manufacturer.contact_phone || "—"}</p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl p-4 relative">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full bg-green-500" />
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Scrapes Completed</span>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{completedJobs}</div>
+            <div className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+              <RefreshCw size={16} className="text-green-500" />
+            </div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl p-4 relative">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Category</span>
+            </div>
+            <div className="text-lg font-bold text-gray-900">{PILLAR_LABELS[manufacturer.scraper_config?.default_pillar] || "—"}</div>
+            <div className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
+              <Factory size={16} className="text-purple-500" />
             </div>
           </div>
         </div>
 
-        {/* Products */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              Products ({manufacturer.products?.length || 0})
-            </h2>
+        {/* Contact Details */}
+        {(manufacturer.contact_name || manufacturer.contact_email || manufacturer.contact_phone) && (
+          <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Contact Details</h2>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <MapPin size={14} className="text-gray-400" />
+                <div>
+                  <span className="text-xs text-gray-500 block">Name</span>
+                  <span className="text-gray-900">{manufacturer.contact_name || "—"}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Mail size={14} className="text-gray-400" />
+                <div>
+                  <span className="text-xs text-gray-500 block">Email</span>
+                  <span className="text-gray-900">{manufacturer.contact_email || "—"}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone size={14} className="text-gray-400" />
+                <div>
+                  <span className="text-xs text-gray-500 block">Phone</span>
+                  <span className="text-gray-900">{manufacturer.contact_phone || "—"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Products Table */}
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-900">Products ({productCount})</h2>
             <button
               onClick={() => router.push(`/products/new?manufacturer=${params.id}`)}
-              className="text-sm text-blue-600 hover:underline"
-              style={{ fontFamily: "var(--font-ibm-plex)" }}
+              className="text-xs text-blue-600 hover:underline"
             >
-              Add Product
+              + Add Product
             </button>
           </div>
           {manufacturer.products?.length > 0 ? (
-            <div className="space-y-2">
-              {manufacturer.products.map((p: any) => (
-                <div
-                  key={p.id}
-                  onClick={() => router.push(`/products/${p.id}`)}
-                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition"
-                >
-                  <div>
-                    <span className="text-sm font-medium text-gray-900" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-                      {p.product_name}
-                    </span>
-                    {p.product_code && (
-                      <span className="ml-2 text-xs text-gray-500">{p.product_code}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">{p.pillar}</span>
-                    {p.needs_review && (
-                      <span className="px-2 py-0.5 text-xs bg-amber-50 text-amber-700 rounded-full">Review</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/50">
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-gray-500">Name</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-gray-500">Code</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-gray-500">Pillar</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-gray-500">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {manufacturer.products.map((p: any) => (
+                  <tr
+                    key={p.id}
+                    onClick={() => router.push(`/products/${p.id}`)}
+                    className="border-b border-gray-50 hover:bg-gray-50/80 cursor-pointer transition"
+                  >
+                    <td className="px-5 py-3 text-sm font-medium text-gray-900">{p.product_name}</td>
+                    <td className="px-5 py-3 text-xs text-gray-500 font-mono">{p.product_code || "—"}</td>
+                    <td className="px-5 py-3">
+                      <span className="text-xs text-gray-600">{PILLAR_LABELS[p.pillar] || p.pillar}</span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                          p.status === "active" ? "bg-green-50 text-green-700"
+                          : p.status === "discontinued" ? "bg-red-50 text-red-600"
+                          : "bg-gray-100 text-gray-600"
+                        }`}>
+                          {p.status || "draft"}
+                        </span>
+                        {p.needs_review && (
+                          <span className="px-2 py-0.5 text-xs bg-amber-50 text-amber-700 rounded-full">Review</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           ) : (
-            <p className="text-sm text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+            <p className="px-5 py-8 text-center text-sm text-gray-400">
               No products yet. Scrape or add manually.
             </p>
           )}
         </div>
 
-        {/* Scrape Jobs */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-            Scrape History
-          </h2>
+        {/* Scrape History */}
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">Scrape History</h2>
           {scrapeJobs.length > 0 ? (
             <div className="space-y-3">
               {scrapeJobs.map((job) => (
@@ -309,7 +366,7 @@ export default function ManufacturerDetailPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+            <p className="text-sm text-gray-400">
               No scrape jobs yet
             </p>
           )}
