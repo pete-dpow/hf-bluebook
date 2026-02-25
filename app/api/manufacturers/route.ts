@@ -25,10 +25,6 @@ export async function GET(req: NextRequest) {
     .order("created_at", { referencedTable: "scrape_jobs", ascending: false })
     .limit(1, { referencedTable: "scrape_jobs" });
 
-  if (!showArchived) {
-    query = query.or("is_archived.eq.false,is_archived.is.null");
-  }
-
   if (search) {
     query = query.ilike("name", `%${search}%`);
   }
@@ -36,7 +32,10 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ manufacturers: data });
+
+  // Filter archived in JS — avoids PostgREST .or() issues with referenced table joins
+  const filtered = showArchived ? data : (data || []).filter((m: any) => m.is_archived !== true);
+  return NextResponse.json({ manufacturers: filtered });
 }
 
 export async function POST(req: NextRequest) {
