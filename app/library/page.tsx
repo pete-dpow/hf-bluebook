@@ -942,7 +942,7 @@ export default function LibraryPage() {
                         csv.push([
                           j.id.slice(0, 8),
                           j.manufacturer_name,
-                          j.completed_at || j.created_at || "",
+                          j.completed_at || j.started_at || "",
                           j.products_created || 0,
                           j.products_updated || 0,
                           j.duration_seconds ? `${j.duration_seconds}s` : "",
@@ -981,7 +981,7 @@ export default function LibraryPage() {
                     </thead>
                     <tbody>
                       {paginatedJobs.map((job) => {
-                        const date = job.completed_at || job.created_at;
+                        const date = job.completed_at || job.started_at;
                         const d = date ? new Date(date) : null;
                         return (
                           <tr key={job.id} className={`border-b border-gray-50 hover:bg-gray-50/80 transition ${job.status === "running" ? "bg-green-50/30" : ""}`}>

@@ -19,10 +19,10 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from("manufacturers")
-    .select("*, products(count), scrape_jobs(id, status, products_created, products_updated, error_log, completed_at, progress, duration_seconds, created_at)")
+    .select("*, products(count), scrape_jobs(id, status, products_created, products_updated, error_log, completed_at, progress, duration_seconds, started_at)")
     .eq("organization_id", auth.organizationId)
     .order("name")
-    .order("created_at", { referencedTable: "scrape_jobs", ascending: false })
+    .order("started_at", { referencedTable: "scrape_jobs", ascending: false })
     .limit(1, { referencedTable: "scrape_jobs" });
 
   if (search) {
