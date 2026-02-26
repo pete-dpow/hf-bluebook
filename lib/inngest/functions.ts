@@ -19,6 +19,7 @@ import { processSurveyScan } from "@/lib/inngest/surveyFunctions";
 import { analyzeFloorPlan } from "@/lib/inngest/autoplanFunctions";
 import { normalizeProductBatch } from "@/lib/inngest/normalizeProducts";
 import { processProductPdfs } from "@/lib/inngest/pdfPipeline";
+import { scrapeManufacturerAI } from "@/lib/inngest/aiScraperFunction";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://odhvxoelxiffhocrgtll.supabase.co",
@@ -992,4 +993,4 @@ const scrapeManufacturerPlaywright = inngest.createFunction(
   }
 );
 
-export const functions = [scrapeManufacturer, generateProductEmbeddings, sendQuoteEmail, ingestBluebookPDFs, scrapeRegulation, generateGoldenThread, parseProductFileJob, processSurveyScan, analyzeFloorPlan, scrapeManufacturerPlaywright, normalizeProductBatch, processProductPdfs];
+export const functions = [scrapeManufacturer, generateProductEmbeddings, sendQuoteEmail, ingestBluebookPDFs, scrapeRegulation, generateGoldenThread, parseProductFileJob, processSurveyScan, analyzeFloorPlan, scrapeManufacturerPlaywright, normalizeProductBatch, processProductPdfs, scrapeManufacturerAI];

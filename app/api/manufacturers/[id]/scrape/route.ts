@@ -223,14 +223,26 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
   }
 
+  // ── AI Scraper: universal fallback when website_url exists but no config ──
+  if (manufacturer.website_url && inngestConfigured) {
+    try {
+      await inngest.send({
+        name: "manufacturer/scrape-ai.requested",
+        data: { manufacturer_id: params.id, job_id: job.id },
+      });
+
+      return NextResponse.json({ job, mode: "ai-scraper" }, { status: 201 });
+    } catch (aiError: any) {
+      console.warn(`[scrape] AI scraper Inngest send failed:`, aiError.message);
+    }
+  }
+
   // No scraper available — provide clear error
   let reason: string;
   if (!manufacturer.website_url) {
-    reason = "No website URL configured for this manufacturer.";
-  } else if (!manufacturer.scraper_config?.type) {
-    reason = "No scraper configured. Click 'Seed Suppliers' to set up scraper configs, or add a scraper_config with type 'shopify' or 'html'.";
+    reason = "No website URL configured. Add a website URL to enable AI-powered scraping.";
   } else if (!inngestConfigured) {
-    reason = `Scraper type "${manufacturer.scraper_config.type}" requires Inngest (not configured). Set INNGEST_EVENT_KEY in environment variables, or switch to 'shopify' or 'html' scraper type.`;
+    reason = "Inngest not configured. Set INNGEST_EVENT_KEY in environment variables to enable background scraping.";
   } else {
     reason = "Scraping failed — no compatible scraper could process this manufacturer.";
   }
