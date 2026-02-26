@@ -180,6 +180,25 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const isHtml = manufacturer.scraper_config?.type === "html";
+  const isPlaywrightSitemap = isHtml && (manufacturer.scraper_config as HtmlScraperConfig).detail?.method === "sitemap-playwright";
+
+  // Route sitemap-playwright to Inngest (needs Playwright browser)
+  if (isPlaywrightSitemap) {
+    const inngestConfigured = !!process.env.INNGEST_EVENT_KEY;
+    if (inngestConfigured) {
+      try {
+        await inngest.send({
+          name: "manufacturer/scrape-playwright.requested",
+          data: { manufacturer_id: params.id, job_id: job.id },
+        });
+        return NextResponse.json({ job, mode: "inngest-playwright" }, { status: 201 });
+      } catch (inngestError: any) {
+        console.warn(`[scrape] Inngest send failed:`, inngestError.message);
+        // Fall through to regular HTML scrape
+      }
+    }
+  }
+
   if (isHtml) {
     const htmlConfig = manufacturer.scraper_config as HtmlScraperConfig;
     return runSyncScrape(job.id, params.id, manufacturer, "html", async () => {
@@ -310,6 +329,16 @@ async function runSyncScrape(
       }
     } catch (embErr: any) {
       console.warn(`[scrape] Embedding generation failed (non-fatal):`, embErr.message);
+    }
+
+    // Trigger auto-normalization via Inngest (non-blocking)
+    try {
+      await inngest.send({
+        name: "products/normalize.requested",
+        data: { manufacturer_id: manufacturerId, organization_id: manufacturer.organization_id },
+      });
+    } catch (normErr: any) {
+      console.warn(`[scrape] Normalize trigger failed (non-fatal):`, normErr.message);
     }
 
     return NextResponse.json({

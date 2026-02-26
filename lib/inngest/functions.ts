@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { scrapeManufacturerProducts } from "@/lib/scrapers/playwrightScraper";
 import { scrapeShopifyProducts, categorizePdf } from "@/lib/scrapers/shopifyScraper";
-import { scrapeWithHtmlConfig, type HtmlScraperConfig } from "@/lib/scrapers/htmlScraper";
+import { scrapeWithHtmlConfig, type HtmlScraperConfig, discoverSitemapUrls, extractProductFromHtml, extractFromSitemapUrls } from "@/lib/scrapers/htmlScraper";
+import { fetchPagesWithPlaywright } from "@/lib/scrapers/playwrightDetailFetcher";
 import { generateQuotePdf } from "@/lib/quoteGenerator";
 import { scrapeAndStoreRegulation } from "@/lib/compliance/regulationScraper";
 import { extractPagesFromPdf, chunkPages } from "@/lib/bluebook/chunker";
@@ -16,6 +17,8 @@ import { generateGoldenThreadJson, generateGoldenThreadCsvs } from "@/lib/golden
 import { uploadGoldenThreadWithFallback } from "@/lib/sharepoint/uploadWithFallback";
 import { processSurveyScan } from "@/lib/inngest/surveyFunctions";
 import { analyzeFloorPlan } from "@/lib/inngest/autoplanFunctions";
+import { normalizeProductBatch } from "@/lib/inngest/normalizeProducts";
+import { processProductPdfs } from "@/lib/inngest/pdfPipeline";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://odhvxoelxiffhocrgtll.supabase.co",
@@ -173,6 +176,18 @@ const scrapeManufacturer = inngest.createFunction(
     // Trigger embedding generation
     await step.sendEvent("trigger-embeddings", {
       name: "products/embeddings.requested",
+      data: { manufacturer_id, organization_id: manufacturer.organization_id },
+    });
+
+    // Trigger auto-normalization
+    await step.sendEvent("trigger-normalize", {
+      name: "products/normalize.requested",
+      data: { manufacturer_id, organization_id: manufacturer.organization_id },
+    });
+
+    // Trigger PDF download + parse pipeline
+    await step.sendEvent("trigger-pdf-parse", {
+      name: "products/pdf-parse.requested",
       data: { manufacturer_id, organization_id: manufacturer.organization_id },
     });
 
@@ -756,4 +771,225 @@ const parseProductFileJob = inngest.createFunction(
   }
 );
 
-export const functions = [scrapeManufacturer, generateProductEmbeddings, sendQuoteEmail, ingestBluebookPDFs, scrapeRegulation, generateGoldenThread, parseProductFileJob, processSurveyScan, analyzeFloorPlan];
+// 8. Scrape manufacturer via Playwright — for Cloudflare-blocked sites
+// Discovers URLs from sitemap (HTTP), fetches detail pages via Playwright, extracts products
+const scrapeManufacturerPlaywright = inngest.createFunction(
+  { id: "scrape-manufacturer-playwright", concurrency: [{ limit: 1 }] },
+  { event: "manufacturer/scrape-playwright.requested" },
+  async ({ event, step }) => {
+    const { manufacturer_id, job_id } = event.data;
+
+    const manufacturer = await step.run("get-manufacturer", async () => {
+      const { data } = await supabaseAdmin
+        .from("manufacturers")
+        .select("*")
+        .eq("id", manufacturer_id)
+        .single();
+      return data;
+    });
+
+    if (!manufacturer?.scraper_config) {
+      await supabaseAdmin.from("scrape_jobs").update({
+        status: "failed",
+        error_log: "No scraper config found",
+        completed_at: new Date().toISOString(),
+      }).eq("id", job_id);
+      return { error: "No scraper config" };
+    }
+
+    const config = manufacturer.scraper_config as HtmlScraperConfig;
+
+    await step.run("mark-running", async () => {
+      await supabaseAdmin.from("scrape_jobs").update({
+        status: "running",
+        started_at: new Date().toISOString(),
+        progress: { stage: "Discovering URLs from sitemap", current: 0, total: 0, found: 0 },
+      }).eq("id", job_id);
+    });
+
+    // Step 1: Discover product URLs from sitemap (HTTP — works even with Cloudflare)
+    const productUrls = await step.run("discover-urls", async () => {
+      const urls = await discoverSitemapUrls(config, async (stage, current, total) => {
+        await supabaseAdmin.from("scrape_jobs").update({
+          progress: { stage, current, total, found: 0 },
+        }).eq("id", job_id);
+      });
+      return urls;
+    });
+
+    if (productUrls.length === 0) {
+      await step.run("mark-no-urls", async () => {
+        await supabaseAdmin.from("scrape_jobs").update({
+          status: "completed",
+          products_created: 0,
+          products_updated: 0,
+          completed_at: new Date().toISOString(),
+          progress: { stage: "No product URLs found in sitemap", current: 0, total: 0, found: 0 },
+        }).eq("id", job_id);
+      });
+      return { created: 0, updated: 0, total: 0 };
+    }
+
+    // Step 2: Fetch pages with Playwright in batches of 50
+    const BATCH_SIZE = 50;
+    const allFetchResults: { url: string; html: string | null }[] = [];
+
+    for (let i = 0; i < productUrls.length; i += BATCH_SIZE) {
+      const batchIndex = Math.floor(i / BATCH_SIZE);
+      const batchUrls = productUrls.slice(i, i + BATCH_SIZE);
+
+      const batchResults = await step.run(`playwright-batch-${batchIndex}`, async () => {
+        await supabaseAdmin.from("scrape_jobs").update({
+          progress: {
+            stage: `Playwright: fetching batch ${batchIndex + 1}/${Math.ceil(productUrls.length / BATCH_SIZE)}`,
+            current: i,
+            total: productUrls.length,
+            found: allFetchResults.filter((r) => r.html).length,
+          },
+        }).eq("id", job_id);
+
+        const results = await fetchPagesWithPlaywright(batchUrls, {
+          concurrency: 3,
+          timeoutMs: 30_000,
+        });
+
+        return results.map((r) => ({ url: r.url, html: r.html }));
+      });
+
+      allFetchResults.push(...batchResults);
+    }
+
+    // Step 3: Extract products from fetched HTML + fallback for failed pages
+    const { products, fetchedCount, fallbackCount } = await step.run("extract-products", async () => {
+      const products: import("@/lib/scrapers/playwrightScraper").ScrapedProduct[] = [];
+      let fetchedCount = 0;
+      const failedUrls: string[] = [];
+
+      for (const result of allFetchResults) {
+        if (result.html) {
+          const product = extractProductFromHtml(result.html, result.url, config);
+          if (product) {
+            products.push(product);
+            fetchedCount++;
+          } else {
+            // HTML fetched but no product extracted — use URL fallback
+            failedUrls.push(result.url);
+          }
+        } else {
+          failedUrls.push(result.url);
+        }
+      }
+
+      // URL-based fallback for pages we couldn't fetch or extract from
+      if (failedUrls.length > 0) {
+        const fallbackProducts = extractFromSitemapUrls(failedUrls, config.base_url);
+        products.push(...fallbackProducts);
+      }
+
+      await supabaseAdmin.from("scrape_jobs").update({
+        progress: {
+          stage: `Extracted ${products.length} products (${fetchedCount} from HTML, ${failedUrls.length} from URL fallback)`,
+          current: products.length,
+          total: productUrls.length,
+          found: products.length,
+        },
+      }).eq("id", job_id);
+
+      return { products, fetchedCount, fallbackCount: failedUrls.length };
+    });
+
+    // Step 4: Upsert products
+    const { created, updated } = await step.run("upsert-products", async () => {
+      let created = 0;
+      let updated = 0;
+      const defaultPillar = config.default_pillar || "fire_stopping";
+
+      for (const p of products) {
+        const productCode = p.product_code || p.product_name.toLowerCase().replace(/\s+/g, "-").slice(0, 50);
+
+        const { data: existing } = await supabaseAdmin
+          .from("products")
+          .select("id")
+          .eq("manufacturer_id", manufacturer_id)
+          .eq("product_code", productCode)
+          .single();
+
+        if (existing) {
+          await supabaseAdmin.from("products").update({
+            product_name: p.product_name,
+            description: p.description,
+            specifications: p.specifications,
+            scraped_data: p,
+            needs_review: true,
+            updated_at: new Date().toISOString(),
+          }).eq("id", existing.id);
+          updated++;
+        } else {
+          await supabaseAdmin.from("products").insert({
+            manufacturer_id,
+            organization_id: manufacturer.organization_id,
+            pillar: defaultPillar,
+            product_code: productCode,
+            product_name: p.product_name,
+            description: p.description,
+            specifications: p.specifications,
+            scraped_data: p,
+            needs_review: true,
+            status: "draft",
+          });
+          created++;
+        }
+      }
+
+      return { created, updated };
+    });
+
+    // Mark complete
+    await step.run("mark-complete", async () => {
+      await supabaseAdmin.from("scrape_jobs").update({
+        status: "completed",
+        products_created: created,
+        products_updated: updated,
+        completed_at: new Date().toISOString(),
+        progress: {
+          stage: "Complete",
+          current: products.length,
+          total: products.length,
+          found: products.length,
+          stats: {
+            totalUrls: productUrls.length,
+            playwrightFetched: fetchedCount,
+            urlFallback: fallbackCount,
+            productsExtracted: products.length,
+          },
+        },
+      }).eq("id", job_id);
+
+      await supabaseAdmin.from("manufacturers").update({
+        last_scraped_at: new Date().toISOString(),
+      }).eq("id", manufacturer_id);
+    });
+
+    // Trigger embedding generation
+    await step.sendEvent("trigger-embeddings", {
+      name: "products/embeddings.requested",
+      data: { manufacturer_id, organization_id: manufacturer.organization_id },
+    });
+
+    // Trigger auto-normalization
+    await step.sendEvent("trigger-normalize-pw", {
+      name: "products/normalize.requested",
+      data: { manufacturer_id, organization_id: manufacturer.organization_id },
+    });
+
+    // Trigger PDF download + parse pipeline
+    await step.sendEvent("trigger-pdf-parse-pw", {
+      name: "products/pdf-parse.requested",
+      data: { manufacturer_id, organization_id: manufacturer.organization_id },
+    });
+
+    return { created, updated, total: products.length, fetchedCount, fallbackCount };
+  }
+);
+
+export const functions = [scrapeManufacturer, generateProductEmbeddings, sendQuoteEmail, ingestBluebookPDFs, scrapeRegulation, generateGoldenThread, parseProductFileJob, processSurveyScan, analyzeFloorPlan, scrapeManufacturerPlaywright, normalizeProductBatch, processProductPdfs];

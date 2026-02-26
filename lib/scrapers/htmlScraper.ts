@@ -23,7 +23,7 @@ export interface HtmlScraperConfig {
     product_link_pattern: string;  // regex string
   };
   detail: {
-    method: "html" | "json-ld" | "listing-only" | "sitemap" | "sitemap-fetch";
+    method: "html" | "json-ld" | "listing-only" | "sitemap" | "sitemap-fetch" | "sitemap-playwright";
     name_pattern?: string;
     description_pattern?: string;
     spec_table_pattern?: string;
@@ -331,7 +331,7 @@ function detectBgRange(slug: string): string | null {
   return null;
 }
 
-function extractFromSitemapUrls(urls: string[], baseUrl: string): ScrapedProduct[] {
+export function extractFromSitemapUrls(urls: string[], baseUrl: string): ScrapedProduct[] {
   const products: ScrapedProduct[] = [];
   const isBG = baseUrl.includes("british-gypsum");
 
@@ -810,6 +810,91 @@ async function fetchFromApi(config: HtmlScraperConfig): Promise<ScrapedProduct[]
   }
 
   return products;
+}
+
+// ---------------------------------------------------------------------------
+// Exported helpers for Playwright pipeline
+// ---------------------------------------------------------------------------
+
+/**
+ * Discover product URLs from sitemap XML.
+ * Fetches listing URLs (sitemaps) via HTTP and extracts product links.
+ * Works without Playwright — sitemaps are typically accessible.
+ */
+export async function discoverSitemapUrls(
+  config: HtmlScraperConfig,
+  onProgress?: (stage: string, current: number, total: number) => void
+): Promise<string[]> {
+  const headers = { ...DEFAULT_HEADERS, ...config.request?.headers };
+  const timeout = config.request?.timeout_ms ?? 10_000;
+  const delay = config.request?.delay_ms ?? 500;
+
+  const listingHtmls: string[] = [];
+  const totalUrls = config.listing.urls.length;
+
+  onProgress?.("Fetching sitemaps", 0, totalUrls);
+
+  for (let idx = 0; idx < config.listing.urls.length; idx++) {
+    const url = config.listing.urls[idx];
+    const html = await safeFetch(url, headers, timeout);
+    if (html) listingHtmls.push(html);
+    onProgress?.("Fetching sitemaps", idx + 1, totalUrls);
+    if (delay > 0) await sleep(delay);
+  }
+
+  const productUrls: string[] = [];
+  const linkRegex = new RegExp(config.listing.product_link_pattern, "gi");
+
+  for (const xml of listingHtmls) {
+    let m;
+    while ((m = linkRegex.exec(xml)) !== null) {
+      const url = resolveUrl(m[1], config.base_url);
+      if (!productUrls.includes(url)) productUrls.push(url);
+    }
+  }
+
+  return productUrls;
+}
+
+/**
+ * Extract product data from raw HTML using the config's regex patterns.
+ * Reusable for both HTTP-fetched and Playwright-fetched pages.
+ */
+export function extractProductFromHtml(
+  html: string,
+  url: string,
+  config: HtmlScraperConfig
+): ScrapedProduct | null {
+  const { detail, base_url } = config;
+
+  // JSON-LD method
+  if (detail.method !== "html" && detail.json_ld_type) {
+    const ld = extractJsonLd(html, detail.json_ld_type);
+    if (ld) {
+      const product = jsonLdToProduct(ld, url);
+      const pdfUrls = allMatches(html, detail.pdf_pattern).map((u) => resolveUrl(u, base_url));
+      product.pdf_urls = pdfUrls;
+      return product;
+    }
+  }
+
+  // Regex method
+  const name = firstMatch(html, detail.name_pattern);
+  if (!name) return null;
+
+  const description = firstMatch(html, detail.description_pattern);
+  const specs = extractSpecTable(html, detail.spec_table_pattern);
+  const pdfUrls = allMatches(html, detail.pdf_pattern).map((u) => resolveUrl(u, base_url));
+  const imageUrls = allMatches(html, detail.image_pattern).map((u) => resolveUrl(u, base_url));
+
+  return {
+    product_name: name,
+    description: description || undefined,
+    specifications: specs,
+    pdf_urls: pdfUrls,
+    image_urls: imageUrls.length > 0 ? imageUrls : undefined,
+    source_url: url,
+  };
 }
 
 // ---------------------------------------------------------------------------

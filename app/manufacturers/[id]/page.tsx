@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Loader2, Play, Globe, Trash2, Pencil, Check, X, Factory, Package, RefreshCw, Mail, Phone, MapPin, ExternalLink, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Loader2, Play, Globe, Trash2, Pencil, Check, X, Factory, Package, RefreshCw, Mail, Phone, MapPin, ExternalLink, Search, ChevronDown, ChevronUp, Upload } from "lucide-react";
 import ScraperProgress from "@/components/ScraperProgress";
+import BulkImportModal from "@/components/BulkImportModal";
 
 const PILLAR_LABELS: Record<string, string> = {
   fire_doors: "Fire Doors",
@@ -29,6 +30,7 @@ export default function ManufacturerDetailPage() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
   const [dryRunResult, setDryRunResult] = useState<any>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     loadManufacturer();
@@ -253,6 +255,13 @@ export default function ManufacturerDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-2 px-3 py-2 text-gray-700 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50 transition"
+            >
+              <Upload size={16} />
+              Import CSV
+            </button>
             <button
               onClick={triggerTestScrape}
               disabled={testing || scraping}
@@ -495,6 +504,15 @@ export default function ManufacturerDetailPage() {
           )}
         </div>
       </div>
+
+      {showImportModal && (
+        <BulkImportModal
+          manufacturerId={params.id as string}
+          manufacturerName={manufacturer.name}
+          onClose={() => setShowImportModal(false)}
+          onComplete={() => loadManufacturer()}
+        />
+      )}
     </div>
   );
 }
