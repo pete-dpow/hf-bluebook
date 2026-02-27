@@ -5,9 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   Loader2, ShieldCheck, AlertCircle, CheckCircle, RefreshCw,
-  Upload, BookOpen, List as ListIcon,
+  Upload, BookOpen, List as ListIcon, Shield,
 } from "lucide-react";
 import RegulationCard from "@/components/RegulationCard";
+
+const fontInter = { fontFamily: "var(--font-inter)" };
 
 const CATEGORIES = [
   { value: "", label: "All Categories" },
@@ -139,7 +141,7 @@ export default function CompliancePage() {
         setError(err.error || "Failed to load regulations");
       }
     } catch {
-      setError("Network error — check your connection and try again");
+      setError("Network error \u2014 check your connection and try again");
     }
     setLoading(false);
   }
@@ -166,7 +168,7 @@ export default function CompliancePage() {
         setError(err.error || "Failed to seed regulations");
       }
     } catch {
-      setError("Network error — check your connection and try again");
+      setError("Network error \u2014 check your connection and try again");
     }
     setSeeding(false);
   }
@@ -204,7 +206,7 @@ export default function CompliancePage() {
             clearInterval(pollInterval);
             setBulkScraping(false);
             setBulkProgress("");
-            setSuccessMsg(`Update started for ${data.total} regulations — sections will appear as processing completes`);
+            setSuccessMsg(`Update started for ${data.total} regulations \u2014 sections will appear as processing completes`);
           }
         }, 10000);
       } else {
@@ -215,7 +217,7 @@ export default function CompliancePage() {
         loadRegulations();
       }
     } catch {
-      setError("Network error — check your connection and try again");
+      setError("Network error \u2014 check your connection and try again");
       setBulkScraping(false);
       setBulkProgress("");
     }
@@ -273,13 +275,13 @@ export default function CompliancePage() {
         setKbError(err.error || "Failed to trigger ingestion");
       }
     } catch {
-      setKbError("Network error — check your connection and try again");
+      setKbError("Network error \u2014 check your connection and try again");
     }
     setIngesting(false);
   }
 
   function formatDate(d: string | null): string {
-    if (!d) return "—";
+    if (!d) return "\u2014";
     return new Date(d).toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
@@ -299,26 +301,29 @@ export default function CompliancePage() {
   };
 
   const totalPages = Math.ceil(total / limit);
-  const selectStyle = { fontFamily: "var(--font-ibm-plex)" };
 
   return (
-    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px" }}>
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px", ...fontInter }}>
+      <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl" style={{ fontFamily: "var(--font-cormorant)", fontWeight: 500, color: "#2A2A2A" }}>
-              Compliance
-            </h1>
-            <p className="text-sm text-gray-500 mt-1" style={selectStyle}>
-              Regulations and knowledge base
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-gray-600" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">
+                Compliance
+              </h1>
+              <p className="text-xs text-gray-500">
+                Regulations and knowledge base
+              </p>
+            </div>
           </div>
           {tab === "regulations" && regulations.length > 0 && (
             <button
               onClick={handleUpdateAll}
               disabled={bulkScraping}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-[#2563EB] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50"
-              style={selectStyle}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition disabled:opacity-50"
             >
               {bulkScraping ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
               {bulkScraping ? bulkProgress || "Updating..." : "Update All"}
@@ -328,7 +333,6 @@ export default function CompliancePage() {
             <button
               onClick={loadKnowledgeStatus}
               className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
-              style={selectStyle}
             >
               <RefreshCw size={14} />
               Refresh
@@ -342,10 +346,9 @@ export default function CompliancePage() {
             onClick={() => switchTab("regulations")}
             className={`px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ${
               tab === "regulations"
-                ? "border-blue-600 text-blue-600"
+                ? "border-gray-900 text-gray-900"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
-            style={selectStyle}
           >
             Regulations {total > 0 && `(${total})`}
           </button>
@@ -353,10 +356,9 @@ export default function CompliancePage() {
             onClick={() => switchTab("knowledge")}
             className={`px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ${
               tab === "knowledge"
-                ? "border-blue-600 text-blue-600"
+                ? "border-gray-900 text-gray-900"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
-            style={selectStyle}
           >
             Knowledge Base
           </button>
@@ -371,7 +373,6 @@ export default function CompliancePage() {
                 value={category}
                 onChange={(e) => { setCategory(e.target.value); setPage(1); }}
                 className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
-                style={selectStyle}
               >
                 {CATEGORIES.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
@@ -381,7 +382,6 @@ export default function CompliancePage() {
                 value={pillar}
                 onChange={(e) => { setPillar(e.target.value); setPage(1); }}
                 className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
-                style={selectStyle}
               >
                 {PILLARS.map((p) => (
                   <option key={p.value} value={p.value}>{p.label}</option>
@@ -391,7 +391,6 @@ export default function CompliancePage() {
                 value={status}
                 onChange={(e) => { setStatus(e.target.value); setPage(1); }}
                 className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
-                style={selectStyle}
               >
                 {REG_STATUSES.map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
@@ -403,7 +402,6 @@ export default function CompliancePage() {
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 placeholder="Search regulations..."
                 className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 w-64"
-                style={selectStyle}
               />
             </div>
 
@@ -413,34 +411,34 @@ export default function CompliancePage() {
                 <div className="bg-white border border-gray-200 rounded-xl p-5">
                   <div className="flex items-center gap-2 mb-2">
                     <ShieldCheck size={16} className="text-blue-600" />
-                    <span className="text-sm text-gray-500" style={selectStyle}>Regulations</span>
+                    <span className="text-sm text-gray-500">Regulations</span>
                   </div>
-                  <p className="text-2xl font-medium text-gray-900" style={selectStyle}>{total}</p>
+                  <p className="text-2xl font-medium text-gray-900">{total}</p>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-xl p-5">
                   <div className="flex items-center gap-2 mb-2">
                     <CheckCircle size={16} className="text-green-600" />
-                    <span className="text-sm text-gray-500" style={selectStyle}>In Force</span>
+                    <span className="text-sm text-gray-500">In Force</span>
                   </div>
-                  <p className="text-2xl font-medium text-gray-900" style={selectStyle}>
+                  <p className="text-2xl font-medium text-gray-900">
                     {regulations.filter((r) => r.status === "in_force").length}
                   </p>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-xl p-5">
                   <div className="flex items-center gap-2 mb-2">
                     <BookOpen size={16} className="text-purple-600" />
-                    <span className="text-sm text-gray-500" style={selectStyle}>Sections Indexed</span>
+                    <span className="text-sm text-gray-500">Sections Indexed</span>
                   </div>
-                  <p className="text-2xl font-medium text-gray-900" style={selectStyle}>
+                  <p className="text-2xl font-medium text-gray-900">
                     {regulations.reduce((sum, r) => sum + (r.regulation_sections?.[0]?.count || 0), 0).toLocaleString()}
                   </p>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-xl p-5">
                   <div className="flex items-center gap-2 mb-2">
                     <ListIcon size={16} className="text-gray-500" />
-                    <span className="text-sm text-gray-500" style={selectStyle}>Categories</span>
+                    <span className="text-sm text-gray-500">Categories</span>
                   </div>
-                  <p className="text-2xl font-medium text-gray-900" style={selectStyle}>
+                  <p className="text-2xl font-medium text-gray-900">
                     {new Set(regulations.map((r) => r.category).filter(Boolean)).size}
                   </p>
                 </div>
@@ -451,13 +449,13 @@ export default function CompliancePage() {
             {error && (
               <div className="mb-6 p-4 rounded-lg flex items-start gap-3" style={{ background: "#FEF2F2", border: "1px solid #FCA5A5" }}>
                 <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm" style={{ ...selectStyle, color: "#991B1B" }}>{error}</p>
+                <p className="text-sm text-red-800">{error}</p>
               </div>
             )}
             {successMsg && (
               <div className="mb-6 p-4 rounded-lg flex items-start gap-3" style={{ background: "#F0FDF4", border: "1px solid #86EFAC" }}>
                 <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm" style={{ ...selectStyle, color: "#166534" }}>{successMsg}</p>
+                <p className="text-sm text-green-800">{successMsg}</p>
               </div>
             )}
 
@@ -468,15 +466,14 @@ export default function CompliancePage() {
             ) : regulations.length === 0 ? (
               <div className="text-center py-16">
                 <ShieldCheck size={32} className="mx-auto text-gray-300 mb-3" />
-                <p className="text-gray-500 mb-2" style={selectStyle}>No regulations found</p>
-                <p className="text-sm text-gray-400 mb-4" style={selectStyle}>
+                <p className="text-gray-500 mb-2">No regulations found</p>
+                <p className="text-sm text-gray-400 mb-4">
                   Regulations will appear here once seeded
                 </p>
                 <button
                   onClick={handleSeed}
                   disabled={seeding}
-                  className="px-4 py-2 text-sm bg-[#2563EB] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50"
-                  style={selectStyle}
+                  className="px-4 py-2 text-sm bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition disabled:opacity-50"
                 >
                   {seeding ? "Seeding..." : "Seed 14 Starting Regulations"}
                 </button>
@@ -500,18 +497,16 @@ export default function CompliancePage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
-                  style={selectStyle}
                 >
                   Previous
                 </button>
-                <span className="text-sm text-gray-500" style={selectStyle}>
+                <span className="text-sm text-gray-500">
                   Page {page} of {totalPages}
                 </span>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition"
-                  style={selectStyle}
                 >
                   Next
                 </button>
@@ -534,27 +529,27 @@ export default function CompliancePage() {
                   <div className="bg-white border border-gray-200 rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-2">
                       <BookOpen size={16} className="text-blue-600" />
-                      <span className="text-sm text-gray-500" style={selectStyle}>Total Chunks</span>
+                      <span className="text-sm text-gray-500">Total Chunks</span>
                     </div>
-                    <p className="text-2xl font-medium text-gray-900" style={selectStyle}>
+                    <p className="text-2xl font-medium text-gray-900">
                       {totalChunks.toLocaleString()}
                     </p>
                   </div>
                   <div className="bg-white border border-gray-200 rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-2">
                       <Upload size={16} className="text-blue-600" />
-                      <span className="text-sm text-gray-500" style={selectStyle}>Source Files</span>
+                      <span className="text-sm text-gray-500">Source Files</span>
                     </div>
-                    <p className="text-2xl font-medium text-gray-900" style={selectStyle}>
+                    <p className="text-2xl font-medium text-gray-900">
                       {totalFiles}
                     </p>
                   </div>
                   <div className="bg-white border border-gray-200 rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-2">
                       <BookOpen size={16} className="text-blue-600" />
-                      <span className="text-sm text-gray-500" style={selectStyle}>Ingestions</span>
+                      <span className="text-sm text-gray-500">Ingestions</span>
                     </div>
-                    <p className="text-2xl font-medium text-gray-900" style={selectStyle}>
+                    <p className="text-2xl font-medium text-gray-900">
                       {logs.length}
                     </p>
                   </div>
@@ -563,16 +558,16 @@ export default function CompliancePage() {
                 {/* Pillar breakdown */}
                 {Object.keys(pillarCounts).length > 0 && (
                   <div className="bg-white border border-gray-200 rounded-xl p-6 mb-8">
-                    <h2 className="text-lg font-medium text-gray-900 mb-4" style={selectStyle}>
+                    <h2 className="text-sm font-semibold text-gray-900 mb-4">
                       Chunks by Pillar
                     </h2>
                     <div className="grid grid-cols-3 gap-3">
                       {Object.entries(pillarCounts).map(([p, count]) => (
                         <div key={p} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <span className="text-sm text-gray-700" style={selectStyle}>
+                          <span className="text-sm text-gray-700">
                             {PILLAR_LABELS[p] || p}
                           </span>
-                          <span className="text-sm font-medium text-gray-900" style={selectStyle}>
+                          <span className="text-sm font-medium text-gray-900">
                             {count.toLocaleString()}
                           </span>
                         </div>
@@ -585,18 +580,18 @@ export default function CompliancePage() {
                 {kbError && (
                   <div className="mb-6 p-4 rounded-lg flex items-start gap-3" style={{ background: "#FEF2F2", border: "1px solid #FCA5A5" }}>
                     <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm" style={{ ...selectStyle, color: "#991B1B" }}>{kbError}</p>
+                    <p className="text-sm text-red-800">{kbError}</p>
                   </div>
                 )}
 
                 {/* Ingest Form */}
                 <div className="bg-white border border-gray-200 rounded-xl p-6 mb-8">
-                  <h2 className="text-lg font-medium text-gray-900 mb-4" style={selectStyle}>
+                  <h2 className="text-sm font-semibold text-gray-900 mb-4">
                     Ingest PDF from OneDrive
                   </h2>
                   <form onSubmit={handleIngest} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1" style={selectStyle}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         Source File Path *
                       </label>
                       <input
@@ -606,11 +601,10 @@ export default function CompliancePage() {
                         required
                         placeholder="e.g. Bluebook/Fire Doors/FD30 Spec.pdf"
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
-                        style={selectStyle}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1" style={selectStyle}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         OneDrive Drive ID
                       </label>
                       <input
@@ -619,14 +613,12 @@ export default function CompliancePage() {
                         onChange={(e) => setDriveId(e.target.value)}
                         placeholder="Drive ID from SharePoint/OneDrive"
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
-                        style={selectStyle}
                       />
                     </div>
                     <button
                       type="submit"
                       disabled={ingesting || !sourceFile.trim()}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white text-sm font-medium rounded-lg hover:opacity-90 transition disabled:opacity-50"
-                      style={selectStyle}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition disabled:opacity-50"
                     >
                       {ingesting ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
                       Start Ingestion
@@ -636,32 +628,32 @@ export default function CompliancePage() {
 
                 {/* Ingestion Logs */}
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                    <h3 className="text-sm font-medium text-gray-700" style={selectStyle}>
+                  <div className="px-4 py-3 border-b border-gray-200 bg-gray-50/50">
+                    <h3 className="text-sm font-semibold text-gray-900">
                       Ingestion History
                     </h3>
                   </div>
                   {logs.length === 0 ? (
                     <div className="text-center py-8">
-                      <p className="text-sm text-gray-400" style={selectStyle}>
+                      <p className="text-sm text-gray-400">
                         No ingestions yet
                       </p>
                     </div>
                   ) : (
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-gray-200 bg-gray-50">
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={selectStyle}>File</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={selectStyle}>Status</th>
-                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase" style={selectStyle}>Pages</th>
-                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase" style={selectStyle}>Chunks</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={selectStyle}>Date</th>
+                        <tr className="border-b border-gray-200 bg-gray-50/50">
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">File</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Pages</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Chunks</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                         </tr>
                       </thead>
                       <tbody>
                         {logs.map((log) => (
                           <tr key={log.id} className="border-b border-gray-100">
-                            <td className="px-4 py-3 text-sm text-gray-900" style={selectStyle}>
+                            <td className="px-4 py-3 text-sm text-gray-900">
                               {log.source_file}
                               {log.error_message && (
                                 <p className="text-xs text-red-500 mt-0.5">{log.error_message}</p>
@@ -672,13 +664,13 @@ export default function CompliancePage() {
                                 {log.status}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-500 text-right" style={selectStyle}>
+                            <td className="px-4 py-3 text-sm text-gray-500 text-right">
                               {log.pages_processed}
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-500 text-right" style={selectStyle}>
+                            <td className="px-4 py-3 text-sm text-gray-500 text-right">
                               {log.chunks_created}
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-500" style={selectStyle}>
+                            <td className="px-4 py-3 text-sm text-gray-500">
                               {formatDate(log.completed_at || log.created_at)}
                             </td>
                           </tr>

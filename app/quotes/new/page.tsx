@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, FileText } from "lucide-react";
+
+const fontInter = { fontFamily: "var(--font-inter)" };
 
 interface ClientSuggestion {
   client_name: string;
@@ -106,33 +108,36 @@ export default function NewQuotePage() {
   }
 
   const inputClass = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400";
-  const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+  const labelClass = "block text-xs font-medium text-gray-500 mb-1";
 
   return (
-    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px" }}>
+    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px", ...fontInter }}>
       <div className="max-w-xl mx-auto">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6"
-          style={{ fontFamily: "var(--font-ibm-plex)" }}
         >
           <ArrowLeft size={16} />
           Back
         </button>
 
-        <h1 className="text-3xl mb-8" style={{ fontFamily: "var(--font-cormorant)", fontWeight: 500, color: "#2A2A2A" }}>
-          New Quote
-        </h1>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
+            <FileText size={18} className="text-gray-600" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">New Quote</h1>
+            <p className="text-xs text-gray-500">Create a new quote for a client</p>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Client Details */}
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              Client Details
-            </h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">Client Details</h2>
             <div className="space-y-4">
-              <div style={{ position: "relative" }}>
-                <label className={labelClass} style={{ fontFamily: "var(--font-ibm-plex)" }}>Client Name *</label>
+              <div className="relative">
+                <label className={labelClass}>Client Name *</label>
                 <input
                   type="text"
                   required
@@ -141,47 +146,21 @@ export default function NewQuotePage() {
                   onFocus={() => { if (clientSuggestions.length > 0) setShowSuggestions(true); }}
                   onBlur={() => { setTimeout(() => setShowSuggestions(false), 200); }}
                   className={inputClass}
-                  style={{ fontFamily: "var(--font-ibm-plex)" }}
                   autoComplete="off"
                 />
                 {showSuggestions && clientSuggestions.length > 0 && (
-                  <div style={{
-                    position: "absolute",
-                    top: "100%",
-                    left: 0,
-                    right: 0,
-                    marginTop: 2,
-                    background: "white",
-                    border: "1px solid #E5E7EB",
-                    borderRadius: 8,
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                    zIndex: 50,
-                    maxHeight: 200,
-                    overflowY: "auto",
-                  }}>
+                  <div className="absolute top-full left-0 right-0 mt-0.5 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-[200px] overflow-y-auto">
                     {clientSuggestions.map((c, idx) => (
                       <button
                         key={idx}
                         type="button"
                         onMouseDown={(e) => { e.preventDefault(); selectClient(c); }}
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          fontSize: 13,
-                          fontFamily: "var(--font-ibm-plex)",
-                          background: "white",
-                          border: "none",
-                          borderBottom: idx < clientSuggestions.length - 1 ? "1px solid #F3F4F6" : "none",
-                          cursor: "pointer",
-                          textAlign: "left",
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = "#F9FAFB"}
-                        onMouseLeave={(e) => e.currentTarget.style.background = "white"}
+                        className="w-full px-4 py-2.5 text-left hover:bg-gray-50 transition border-b border-gray-50 last:border-0"
                       >
-                        <div style={{ fontWeight: 500, color: "#1F2937" }}>{c.client_name}</div>
+                        <div className="text-sm font-medium text-gray-900">{c.client_name}</div>
                         {(c.client_email || c.client_phone) && (
-                          <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>
-                            {[c.client_email, c.client_phone].filter(Boolean).join(" • ")}
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {[c.client_email, c.client_phone].filter(Boolean).join(" \u2022 ")}
                           </div>
                         )}
                       </button>
@@ -191,12 +170,12 @@ export default function NewQuotePage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelClass} style={{ fontFamily: "var(--font-ibm-plex)" }}>Email</label>
-                  <input type="email" value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} className={inputClass} style={{ fontFamily: "var(--font-ibm-plex)" }} />
+                  <label className={labelClass}>Email</label>
+                  <input type="email" value={form.client_email} onChange={(e) => setForm({ ...form, client_email: e.target.value })} className={inputClass} />
                 </div>
                 <div>
-                  <label className={labelClass} style={{ fontFamily: "var(--font-ibm-plex)" }}>Phone</label>
-                  <input type="tel" value={form.client_phone} onChange={(e) => setForm({ ...form, client_phone: e.target.value })} className={inputClass} style={{ fontFamily: "var(--font-ibm-plex)" }} />
+                  <label className={labelClass}>Phone</label>
+                  <input type="tel" value={form.client_phone} onChange={(e) => setForm({ ...form, client_phone: e.target.value })} className={inputClass} />
                 </div>
               </div>
             </div>
@@ -204,48 +183,44 @@ export default function NewQuotePage() {
 
           {/* Project Details */}
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              Project Details
-            </h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">Project Details</h2>
             <div className="space-y-4">
               <div>
-                <label className={labelClass} style={{ fontFamily: "var(--font-ibm-plex)" }}>Project Name</label>
-                <input type="text" value={form.project_name} onChange={(e) => setForm({ ...form, project_name: e.target.value })} className={inputClass} style={{ fontFamily: "var(--font-ibm-plex)" }} />
+                <label className={labelClass}>Project Name</label>
+                <input type="text" value={form.project_name} onChange={(e) => setForm({ ...form, project_name: e.target.value })} className={inputClass} />
               </div>
               <div>
-                <label className={labelClass} style={{ fontFamily: "var(--font-ibm-plex)" }}>Project Address</label>
-                <input type="text" value={form.project_address} onChange={(e) => setForm({ ...form, project_address: e.target.value })} className={inputClass} style={{ fontFamily: "var(--font-ibm-plex)" }} />
+                <label className={labelClass}>Project Address</label>
+                <input type="text" value={form.project_address} onChange={(e) => setForm({ ...form, project_address: e.target.value })} className={inputClass} />
               </div>
             </div>
           </div>
 
           {/* Quote Details */}
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              Quote Details
-            </h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">Quote Details</h2>
             <div className="space-y-4">
               <div>
-                <label className={labelClass} style={{ fontFamily: "var(--font-ibm-plex)" }}>Quote Name</label>
-                <input type="text" value={form.quote_name} onChange={(e) => setForm({ ...form, quote_name: e.target.value })} className={inputClass} style={{ fontFamily: "var(--font-ibm-plex)" }} placeholder="Optional descriptive name" />
+                <label className={labelClass}>Quote Name</label>
+                <input type="text" value={form.quote_name} onChange={(e) => setForm({ ...form, quote_name: e.target.value })} className={inputClass} placeholder="Optional descriptive name" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelClass} style={{ fontFamily: "var(--font-ibm-plex)" }}>Valid Until</label>
-                  <input type="date" value={form.valid_until} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} className={inputClass} style={{ fontFamily: "var(--font-ibm-plex)" }} />
+                  <label className={labelClass}>Valid Until</label>
+                  <input type="date" value={form.valid_until} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} className={inputClass} />
                 </div>
                 <div>
-                  <label className={labelClass} style={{ fontFamily: "var(--font-ibm-plex)" }}>VAT %</label>
-                  <input type="number" value={form.vat_percent} onChange={(e) => setForm({ ...form, vat_percent: e.target.value })} className={inputClass} style={{ fontFamily: "var(--font-ibm-plex)" }} min="0" max="100" step="0.5" />
+                  <label className={labelClass}>VAT %</label>
+                  <input type="number" value={form.vat_percent} onChange={(e) => setForm({ ...form, vat_percent: e.target.value })} className={inputClass} min="0" max="100" step="0.5" />
                 </div>
               </div>
               <div>
-                <label className={labelClass} style={{ fontFamily: "var(--font-ibm-plex)" }}>Notes</label>
-                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className={`${inputClass} resize-none`} style={{ fontFamily: "var(--font-ibm-plex)" }} />
+                <label className={labelClass}>Notes</label>
+                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className={`${inputClass} resize-none`} />
               </div>
               <div>
-                <label className={labelClass} style={{ fontFamily: "var(--font-ibm-plex)" }}>Terms & Conditions</label>
-                <textarea value={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.value })} rows={3} className={`${inputClass} resize-none`} style={{ fontFamily: "var(--font-ibm-plex)" }} />
+                <label className={labelClass}>Terms & Conditions</label>
+                <textarea value={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.value })} rows={3} className={`${inputClass} resize-none`} />
               </div>
             </div>
           </div>
@@ -253,8 +228,7 @@ export default function NewQuotePage() {
           <button
             type="submit"
             disabled={saving || !form.client_name}
-            className="w-full px-4 py-2.5 bg-[#2563EB] text-white text-sm font-medium rounded-lg hover:opacity-90 transition disabled:opacity-50"
-            style={{ fontFamily: "var(--font-ibm-plex)" }}
+            className="w-full px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Create Quote"}
           </button>

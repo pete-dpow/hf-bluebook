@@ -3,8 +3,10 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Shield } from "lucide-react";
 import RegulationDetail from "@/components/RegulationDetail";
+
+const fontInter = { fontFamily: "var(--font-inter)" };
 
 type ScrapeStatus = "idle" | "scraping" | "complete" | "error";
 
@@ -107,7 +109,7 @@ export default function ComplianceDetailPage() {
         timeoutRef.current = setTimeout(() => {
           stopPolling();
           setScrapeStatus("error");
-          setScrapeError("Scraping is taking longer than expected. Check back shortly — sections will appear when processing completes.");
+          setScrapeError("Scraping is taking longer than expected. Check back shortly \u2014 sections will appear when processing completes.");
         }, 180_000);
       } else {
         // Sync path (fetch fallback) — result is already done
@@ -117,7 +119,7 @@ export default function ComplianceDetailPage() {
 
     } catch {
       setScrapeStatus("error");
-      setScrapeError("Network error — check your connection and try again");
+      setScrapeError("Network error \u2014 check your connection and try again");
     }
   }
 
@@ -144,20 +146,27 @@ export default function ComplianceDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px" }}>
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px", ...fontInter }}>
+      <div className="max-w-7xl mx-auto">
         <button
           onClick={() => router.push("/compliance")}
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6"
-          style={{ fontFamily: "var(--font-ibm-plex)" }}
         >
           <ArrowLeft size={16} />
           All Regulations
         </button>
 
-        <h1 className="text-3xl mb-6" style={{ fontFamily: "var(--font-cormorant)", fontWeight: 500, color: "#2A2A2A" }}>
-          {regulation.name}
-        </h1>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
+            <Shield className="w-5 h-5 text-gray-600" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">
+              {regulation.name}
+            </h1>
+            <p className="text-xs text-gray-500">Compliance regulation detail</p>
+          </div>
+        </div>
 
         <RegulationDetail
           regulation={regulation}

@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Loader2 } from "lucide-react";
+import { Loader2, LayoutDashboard } from "lucide-react";
 import UserProfileHeader from "@/components/dashboard/UserProfileHeader";
 import ProjectCompletion from "@/components/dashboard/ProjectCompletion";
 import PlannedVsActual from "@/components/dashboard/PlannedVsActual";
 import DashboardCalendar from "@/components/dashboard/DashboardCalendar";
+
+const fontInter = { fontFamily: "var(--font-inter)" };
 
 interface DashboardData {
   user: {
@@ -78,10 +80,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCFCFA]">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-600" />
-        <p className="ml-3 text-gray-700" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-          Loading dashboard…
-        </p>
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
       </div>
     );
   }
@@ -89,10 +88,19 @@ export default function DashboardPage() {
   if (!data) return null;
 
   return (
-    <div className="min-h-screen bg-[#FCFCFA] pl-[64px]">
-      <div className="max-w-[1100px] mx-auto p-6 flex flex-col gap-5">
-        {/* Seed Demo Data */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px", ...fontInter }}>
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
+              <LayoutDashboard size={18} className="text-gray-600" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
+              <p className="text-xs text-gray-500">Overview of your workspace</p>
+            </div>
+          </div>
           <button
             onClick={async () => {
               setSeeding(true);
@@ -109,29 +117,26 @@ export default function DashboardPage() {
               if (res.ok) window.location.reload();
             }}
             disabled={seeding}
-            style={{
-              padding: "8px 16px", borderRadius: 8, border: "1px solid #E5E7EB",
-              background: seeding ? "#F3F4F6" : "#2563EB", color: seeding ? "#6B7280" : "#fff",
-              fontSize: 13, fontWeight: 500, cursor: seeding ? "not-allowed" : "pointer",
-              fontFamily: "var(--font-ibm-plex)",
-            }}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition ${
+              seeding ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-900 text-white hover:bg-gray-800"
+            }`}
           >
-            {seeding ? "Seeding demo data…" : "Seed Demo Data"}
+            {seeding ? "Seeding..." : "Seed Demo Data"}
           </button>
-          {seedResult && <span style={{ fontSize: 12, color: seedResult.startsWith("Error") ? "#DC2626" : "#059669", fontFamily: "var(--font-ibm-plex)" }}>{seedResult}</span>}
         </div>
 
-        {/* 1. User Profile Header — full-width card matching Figma */}
-        <UserProfileHeader user={data.user} stats={data.stats} />
+        {seedResult && (
+          <div className={`mb-4 p-3 rounded-xl text-sm ${seedResult.startsWith("Error") ? "bg-red-50 text-red-700 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"}`}>
+            {seedResult}
+          </div>
+        )}
 
-        {/* 2. Product Coverage — stacked bars matching Figma "Project Completion" */}
-        <ProjectCompletion pillars={data.pillar_coverage} />
-
-        {/* 3. Planned vs Actual — line chart matching Figma */}
-        <PlannedVsActual />
-
-        {/* 4. Calendar — month grid + event list matching Figma */}
-        <DashboardCalendar events={data.recent_activity} />
+        <div className="flex flex-col gap-5">
+          <UserProfileHeader user={data.user} stats={data.stats} />
+          <ProjectCompletion pillars={data.pillar_coverage} />
+          <PlannedVsActual />
+          <DashboardCalendar events={data.recent_activity} />
+        </div>
       </div>
     </div>
   );

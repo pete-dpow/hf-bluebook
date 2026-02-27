@@ -53,7 +53,7 @@ export default function NewManufacturerPage() {
 
   return (
     <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px", ...fontInter }}>
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6"
@@ -64,7 +64,7 @@ export default function NewManufacturerPage() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
             <Factory size={20} className="text-gray-600" />
           </div>
           <div>

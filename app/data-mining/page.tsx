@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Factory, RefreshCw } from "lucide-react";
+import { Loader2, Factory, RefreshCw, Search } from "lucide-react";
 import ScraperProgress from "@/components/ScraperProgress";
 import RequestSupplierModal from "@/components/RequestSupplierModal";
 import SupplierRequestCard from "@/components/SupplierRequestCard";
+
+const fontInter = { fontFamily: "var(--font-inter)" };
 
 export default function DataMiningPage() {
   const router = useRouter();
@@ -164,26 +166,30 @@ export default function DataMiningPage() {
   const completedJobs = scrapeJobs.filter((j) => j.status === "completed" || j.status === "failed");
 
   return (
-    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px" }}>
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px", ...fontInter }}>
+      <div className="max-w-7xl mx-auto">
         {error && (
-          <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+          <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
             {error}
           </div>
         )}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl" style={{ fontFamily: "var(--font-cormorant)", fontWeight: 500, color: "#2A2A2A" }}>
-              Data Mining
-            </h1>
-            <p className="text-sm text-gray-500 mt-1" style={{ fontFamily: "var(--font-ibm-plex)" }}>
-              Scrape products from manufacturer websites
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
+              <Search className="w-5 h-5 text-gray-600" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">
+                Data Mining
+              </h1>
+              <p className="text-xs text-gray-500">
+                Scrape products from manufacturer websites
+              </p>
+            </div>
           </div>
           <button
             onClick={() => setShowRequestModal(true)}
             className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
-            style={{ fontFamily: "var(--font-ibm-plex)" }}
           >
             Request New Supplier
           </button>
@@ -191,7 +197,7 @@ export default function DataMiningPage() {
 
         {/* Quick Scrape */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">
             Manufacturers
           </h2>
           {manufacturers.length > 0 ? (
@@ -202,7 +208,6 @@ export default function DataMiningPage() {
                     <Factory size={16} className="text-gray-400 flex-shrink-0" />
                     <span
                       className="text-sm font-medium text-gray-900 truncate cursor-pointer hover:text-blue-600"
-                      style={{ fontFamily: "var(--font-ibm-plex)" }}
                       onClick={() => router.push(`/manufacturers/${m.id}`)}
                     >
                       {m.name}
@@ -219,7 +224,7 @@ export default function DataMiningPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+            <p className="text-sm text-gray-400">
               No manufacturers yet.{" "}
               <button onClick={() => router.push("/manufacturers/new")} className="text-blue-600 hover:underline">
                 Add one
@@ -231,14 +236,14 @@ export default function DataMiningPage() {
         {/* Active Jobs */}
         {runningJobs.length > 0 && (
           <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">
               Active Jobs ({runningJobs.length})
             </h2>
             <div className="space-y-3">
               {runningJobs.map((job) => (
                 <div key={job.id}>
                   {job.manufacturers?.name && (
-                    <p className="text-xs text-gray-500 mb-1" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+                    <p className="text-xs text-gray-500 mb-1">
                       {job.manufacturers.name}
                     </p>
                   )}
@@ -251,7 +256,7 @@ export default function DataMiningPage() {
 
         {/* Completed Jobs */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">
             Scrape History
           </h2>
           {completedJobs.length > 0 ? (
@@ -259,7 +264,7 @@ export default function DataMiningPage() {
               {completedJobs.map((job) => (
                 <div key={job.id}>
                   {job.manufacturers?.name && (
-                    <p className="text-xs text-gray-500 mb-1" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+                    <p className="text-xs text-gray-500 mb-1">
                       {job.manufacturers.name}
                     </p>
                   )}
@@ -268,7 +273,7 @@ export default function DataMiningPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+            <p className="text-sm text-gray-400">
               No scrape jobs yet
             </p>
           )}
@@ -276,7 +281,7 @@ export default function DataMiningPage() {
 
         {/* Supplier Requests */}
         <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">
             Supplier Requests
           </h2>
           {supplierRequests.length > 0 ? (
@@ -292,7 +297,7 @@ export default function DataMiningPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400" style={{ fontFamily: "var(--font-ibm-plex)" }}>
+            <p className="text-sm text-gray-400">
               No supplier requests yet
             </p>
           )}

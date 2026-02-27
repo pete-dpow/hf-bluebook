@@ -102,12 +102,12 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px", ...fontInter }}>
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Package size={20} className="text-blue-600" />
+            <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
+              <Package size={20} className="text-gray-600" />
             </div>
             <div>
               <h1 className="text-xl font-semibold text-gray-900">Products</h1>

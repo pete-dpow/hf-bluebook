@@ -4,10 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   CheckCircle, XCircle, Wand2, ChevronDown, ChevronRight,
-  Filter, Loader2, Package, AlertTriangle,
+  Filter, Loader2, Package, AlertTriangle, ClipboardCheck,
 } from "lucide-react";
 
-const fontInter = "var(--font-inter), ui-sans-serif, system-ui, sans-serif";
+const fontInter = { fontFamily: "var(--font-inter)" };
 
 interface Product {
   id: string;
@@ -203,20 +203,25 @@ export default function ReviewPage() {
   const pillarLabel = (p: string) => PILLARS.find((x) => x.value === p)?.label || p;
 
   return (
-    <div className="min-h-screen bg-[#FCFCFA] pl-16" style={{ fontFamily: fontInter }}>
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="min-h-screen bg-[#FCFCFA] p-8" style={{ marginLeft: "64px", ...fontInter }}>
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">Product Review Queue</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              {reviewedCount} of {totalCount} reviewed
-              {totalCount > 0 && (
-                <span className="ml-2 text-xs text-gray-400">
-                  ({Math.round((reviewedCount / totalCount) * 100)}%)
-                </span>
-              )}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
+              <ClipboardCheck className="w-5 h-5 text-gray-600" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Product Review Queue</h1>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {reviewedCount} of {totalCount} reviewed
+                {totalCount > 0 && (
+                  <span className="ml-2 text-xs text-gray-400">
+                    ({Math.round((reviewedCount / totalCount) * 100)}%)
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
 
           {/* Progress bar */}
@@ -233,7 +238,7 @@ export default function ReviewPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white rounded-lg border border-gray-200">
+        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white rounded-xl border border-gray-200">
           <Filter size={14} className="text-gray-400" />
 
           <select
@@ -321,7 +326,7 @@ export default function ReviewPage() {
         {/* Table */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 size={24} className="text-gray-400 animate-spin" />
+            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
           </div>
         ) : products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
@@ -329,10 +334,10 @@ export default function ReviewPage() {
             <p className="text-sm">No products match your filters</p>
           </div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
+                <tr className="bg-gray-50/50 border-b border-gray-200">
                   <th className="px-3 py-2 text-left w-8">
                     <input
                       type="checkbox"
@@ -384,7 +389,7 @@ export default function ReviewPage() {
                         </td>
                         <td className="px-3 py-2 text-xs text-gray-500 font-mono">{p.product_code}</td>
                         <td className="px-3 py-2 text-xs text-gray-600">
-                          {(p.manufacturers as any)?.name || "—"}
+                          {(p.manufacturers as any)?.name || "\u2014"}
                         </td>
                         <td className="px-3 py-2">
                           <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
@@ -393,7 +398,7 @@ export default function ReviewPage() {
                         </td>
                         <td className="px-3 py-2 text-center">
                           <span className={`text-xs font-medium ${confidenceColor(p.normalization_confidence)}`}>
-                            {p.normalization_confidence !== null ? `${p.normalization_confidence}%` : "—"}
+                            {p.normalization_confidence !== null ? `${p.normalization_confidence}%` : "\u2014"}
                           </span>
                         </td>
                         <td className="px-3 py-2 text-center text-xs text-gray-500">{specCount}</td>
