@@ -86,6 +86,8 @@ export const scrapeManufacturerAI = inngest.createFunction(
     });
 
     const productUrls = discovery.product_urls;
+    const discoveryPdfUrls = discovery.pdf_urls || [];
+    const sectionsExplored = discovery.section_urls_explored || [];
 
     if (productUrls.length === 0) {
       await step.run("mark-no-products", async () => {
@@ -97,7 +99,12 @@ export const scrapeManufacturerAI = inngest.createFunction(
           progress: {
             stage: "AI: No product URLs discovered",
             current: 0, total: 0, found: 0,
-            stats: { method: discovery.method, urlsFound: 0 },
+            stats: {
+              method: discovery.method,
+              urlsFound: 0,
+              sectionsExplored: sectionsExplored.length,
+              discoveryPdfs: discoveryPdfUrls.length,
+            },
           },
         }).eq("id", job_id);
       });
@@ -105,9 +112,12 @@ export const scrapeManufacturerAI = inngest.createFunction(
     }
 
     await step.run("update-progress-discovery", async () => {
+      const detail = sectionsExplored.length > 0
+        ? `+ ${sectionsExplored.length} sections explored, ${discoveryPdfUrls.length} PDFs found`
+        : "";
       await supabaseAdmin.from("scrape_jobs").update({
         progress: {
-          stage: `AI: Found ${productUrls.length} product URLs (${discovery.method})`,
+          stage: `AI: Found ${productUrls.length} product URLs (${discovery.method}) ${detail}`,
           current: 0, total: productUrls.length, found: 0,
         },
       }).eq("id", job_id);
@@ -268,6 +278,8 @@ export const scrapeManufacturerAI = inngest.createFunction(
           stats: {
             method: discovery.method,
             urlsDiscovered: productUrls.length,
+            sectionsExplored: sectionsExplored.length,
+            discoveryPdfs: discoveryPdfUrls.length,
             pagesFetched: successfulFetches.length,
             pagesFailed: allFetchResults.length - successfulFetches.length,
             productsExtracted: allProducts.length,
@@ -303,6 +315,8 @@ export const scrapeManufacturerAI = inngest.createFunction(
       total: allProducts.length,
       discovery_method: discovery.method,
       urls_discovered: productUrls.length,
+      sections_explored: sectionsExplored.length,
+      discovery_pdfs: discoveryPdfUrls.length,
       pages_fetched: successfulFetches.length,
     };
   }

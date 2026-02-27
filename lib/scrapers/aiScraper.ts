@@ -13,6 +13,8 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "sk-placeholde
 
 export interface DiscoveryResult {
   product_urls: string[];
+  pdf_urls: string[];
+  section_urls_explored: string[];
   method: "sitemap" | "ai-navigation" | "both";
 }
 
@@ -169,6 +171,8 @@ export async function analyzePageWithAi(
   product_urls: string[];
   next_page_url: string | null;
   catalogue_link: string | null;
+  section_urls: string[];
+  pdf_urls: string[];
   confidence: number;
 }> {
   const sanitized = sanitizeHtml(html);
@@ -184,7 +188,9 @@ Analyze the HTML below and determine:
 2. product_urls: Extract ALL href URLs that link to individual product pages. Return ABSOLUTE URLs only (resolve relative URLs against the page URL).
 3. next_page_url: If this is a listing with pagination, what is the absolute URL for the "next page"? null if none.
 4. catalogue_link: If this is a navigation/homepage, what absolute URL leads to the products catalogue or product listing? null if not applicable.
-5. confidence: 0-100 how confident you are in this classification.
+5. section_urls: Extract URLs to important site sections that may contain product data, documentation, or downloads. Look for links to: resources, documentation, downloads, datasheets, technical data, product literature, brochures, certificates, support pages. Return ABSOLUTE URLs only. Do NOT include links to social media, contact pages, careers, news/blog, or legal pages.
+6. pdf_urls: Extract any direct links to PDF files (.pdf URLs) visible on this page. Return ABSOLUTE URLs only.
+7. confidence: 0-100 how confident you are in this classification.
 
 HTML:
 ${sanitized}
@@ -195,6 +201,8 @@ Return ONLY valid JSON:
   "product_urls": ["https://..."],
   "next_page_url": null,
   "catalogue_link": null,
+  "section_urls": ["https://..."],
+  "pdf_urls": ["https://..."],
   "confidence": 85
 }`;
 
@@ -214,10 +222,12 @@ Return ONLY valid JSON:
       product_urls: Array.isArray(result.product_urls) ? result.product_urls : [],
       next_page_url: result.next_page_url || null,
       catalogue_link: result.catalogue_link || null,
+      section_urls: Array.isArray(result.section_urls) ? result.section_urls : [],
+      pdf_urls: Array.isArray(result.pdf_urls) ? result.pdf_urls : [],
       confidence: result.confidence || 0,
     };
   } catch {
-    return { page_type: "other", product_urls: [], next_page_url: null, catalogue_link: null, confidence: 0 };
+    return { page_type: "other", product_urls: [], next_page_url: null, catalogue_link: null, section_urls: [], pdf_urls: [], confidence: 0 };
   }
 }
 
@@ -317,22 +327,28 @@ export async function discoverProductUrls(
   const sitemapUrls = await discoverViaSitemap(websiteUrl);
   if (sitemapUrls.length >= 5) {
     onProgress?.("Sitemap found", `${sitemapUrls.length} product URLs`);
-    return { product_urls: sitemapUrls, method: "sitemap" };
+    return { product_urls: sitemapUrls, pdf_urls: [], section_urls_explored: [], method: "sitemap" };
   }
 
   // Step 2: AI navigation — use Playwright to visit pages
   onProgress?.("AI navigation", "Analyzing homepage");
   const allProductUrls = [...sitemapUrls];
+  const allPdfUrls: string[] = [];
+  const allSectionUrls: string[] = [];
+  const visitedUrls = new Set<string>([websiteUrl]);
 
   const homepageHtml = await fetchPageHtml(websiteUrl);
   if (!homepageHtml) {
-    return { product_urls: allProductUrls, method: sitemapUrls.length > 0 ? "sitemap" : "ai-navigation" };
+    return { product_urls: allProductUrls, pdf_urls: [], section_urls_explored: [], method: sitemapUrls.length > 0 ? "sitemap" : "ai-navigation" };
   }
 
   const homeAnalysis = await analyzePageWithAi(homepageHtml, websiteUrl, {
     manufacturer_name: manufacturerName,
-    goal: "Find the products/catalogue section of this fire protection manufacturer website",
+    goal: "Find the products/catalogue section AND any resources/documentation/downloads sections of this fire protection manufacturer website",
   });
+
+  // Collect PDFs from homepage
+  allPdfUrls.push(...homeAnalysis.pdf_urls);
 
   // If homepage is a listing, collect URLs directly
   if (homeAnalysis.page_type === "product_listing") {
@@ -342,6 +358,7 @@ export async function discoverProductUrls(
   // If homepage is navigation, follow the catalogue link
   if (homeAnalysis.page_type === "navigation" && homeAnalysis.catalogue_link) {
     onProgress?.("AI navigation", `Following catalogue: ${homeAnalysis.catalogue_link}`);
+    visitedUrls.add(homeAnalysis.catalogue_link);
     const catalogueHtml = await fetchPageHtml(homeAnalysis.catalogue_link);
     if (catalogueHtml) {
       const catAnalysis = await analyzePageWithAi(catalogueHtml, homeAnalysis.catalogue_link, {
@@ -349,6 +366,7 @@ export async function discoverProductUrls(
         goal: "Extract all product page URLs from this product listing or catalogue page",
       });
       allProductUrls.push(...catAnalysis.product_urls);
+      allPdfUrls.push(...catAnalysis.pdf_urls);
 
       // Follow pagination (up to 20 pages)
       let nextUrl = catAnalysis.next_page_url;
@@ -356,6 +374,7 @@ export async function discoverProductUrls(
       while (nextUrl && pageCount < 20) {
         pageCount++;
         onProgress?.("AI navigation", `Page ${pageCount + 1}: ${nextUrl}`);
+        visitedUrls.add(nextUrl);
         const pageHtml = await fetchPageHtml(nextUrl);
         if (!pageHtml) break;
 
@@ -364,6 +383,7 @@ export async function discoverProductUrls(
           goal: "Extract all product page URLs from this product listing page",
         });
         allProductUrls.push(...pageAnalysis.product_urls);
+        allPdfUrls.push(...pageAnalysis.pdf_urls);
         nextUrl = pageAnalysis.next_page_url;
       }
     }
@@ -374,11 +394,65 @@ export async function discoverProductUrls(
     allProductUrls.push(...homeAnalysis.product_urls);
   }
 
+  // Step 3: Explore additional sections (resources, documentation, downloads)
+  // Collect section URLs from homepage analysis
+  const sectionsToExplore = homeAnalysis.section_urls.filter(
+    (url) => !visitedUrls.has(url)
+  );
+
+  if (sectionsToExplore.length > 0) {
+    onProgress?.("Exploring sections", `${sectionsToExplore.length} resource/documentation sections found`);
+  }
+
+  // Visit up to 5 additional sections (resources, docs, downloads, etc.)
+  for (const sectionUrl of sectionsToExplore.slice(0, 5)) {
+    if (visitedUrls.has(sectionUrl)) continue;
+    visitedUrls.add(sectionUrl);
+    allSectionUrls.push(sectionUrl);
+
+    onProgress?.("Exploring section", sectionUrl);
+    const sectionHtml = await fetchPageHtml(sectionUrl);
+    if (!sectionHtml) continue;
+
+    const sectionAnalysis = await analyzePageWithAi(sectionHtml, sectionUrl, {
+      manufacturer_name: manufacturerName,
+      goal: "Extract product page URLs, PDF download links (datasheets, technical data sheets, certificates, installation guides), and any sub-section links from this page",
+    });
+
+    allProductUrls.push(...sectionAnalysis.product_urls);
+    allPdfUrls.push(...sectionAnalysis.pdf_urls);
+
+    // Follow sub-sections one level deep (e.g. resources page → datasheets sub-section)
+    const subSections = sectionAnalysis.section_urls.filter(
+      (url) => !visitedUrls.has(url)
+    );
+    for (const subUrl of subSections.slice(0, 3)) {
+      if (visitedUrls.has(subUrl)) continue;
+      visitedUrls.add(subUrl);
+      allSectionUrls.push(subUrl);
+
+      onProgress?.("Exploring sub-section", subUrl);
+      const subHtml = await fetchPageHtml(subUrl);
+      if (!subHtml) continue;
+
+      const subAnalysis = await analyzePageWithAi(subHtml, subUrl, {
+        manufacturer_name: manufacturerName,
+        goal: "Extract product page URLs and PDF download links from this documentation/resource page",
+      });
+
+      allProductUrls.push(...subAnalysis.product_urls);
+      allPdfUrls.push(...subAnalysis.pdf_urls);
+    }
+  }
+
   // Deduplicate and cap
-  const unique = Array.from(new Set(allProductUrls)).slice(0, 500);
+  const uniqueProducts = Array.from(new Set(allProductUrls)).slice(0, 500);
+  const uniquePdfs = Array.from(new Set(allPdfUrls));
 
   return {
-    product_urls: unique,
+    product_urls: uniqueProducts,
+    pdf_urls: uniquePdfs,
+    section_urls_explored: allSectionUrls,
     method: sitemapUrls.length > 0 ? "both" : "ai-navigation",
   };
 }
