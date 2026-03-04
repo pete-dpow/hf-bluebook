@@ -7,6 +7,7 @@ import HelpDrawer from "@/components/HelpDrawer";
 import AboutDrawer from "@/components/AboutDrawer";
 import ProjectsPanel from "@/components/ProjectsPanel";
 import AuthGuard from "@/components/AuthGuard";
+import ChatDrawerWrapper from "@/components/ChatDrawerWrapper";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
@@ -32,7 +33,7 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "hf.bluebook",
+  title: "bluebook",
   description: "Fire Protection Product Intelligence by Harmony Fire",
   icons: {
     icon: "/hf_logo.svg",
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ProfileDrawer />
         <HelpDrawer />
         <AboutDrawer />
+        <ChatDrawerWrapper />
         <AuthGuard>{children}</AuthGuard>
       </body>
     </html>

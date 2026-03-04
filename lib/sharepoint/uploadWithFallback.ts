@@ -89,7 +89,7 @@ export async function uploadQuoteWithFallback(
     organizationId,
     "quote-files",
     `${organizationId}/quotes`,
-    "hf.bluebook/Quotes",
+    "bluebook/Quotes",
     `${quoteNumber}-${fileName}`,
     content,
     contentType
@@ -113,7 +113,7 @@ export async function uploadProductFileWithFallback(
     if (result) {
       return {
         storage: "sharepoint",
-        path: `hf.bluebook/Products/${manufacturerName}/${fileName}`,
+        path: `bluebook/Products/${manufacturerName}/${fileName}`,
         url: result.webUrl,
         driveId,
         itemId: result.id,
@@ -159,7 +159,7 @@ export async function uploadGoldenThreadWithFallback(
     if (result) {
       return {
         storage: "sharepoint",
-        path: `hf.bluebook/GoldenThread/${packageRef}/${fileName}`,
+        path: `bluebook/GoldenThread/${packageRef}/${fileName}`,
         url: result.webUrl,
         driveId,
         itemId: result.id,

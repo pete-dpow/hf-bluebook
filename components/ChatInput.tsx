@@ -74,7 +74,7 @@ export default function ChatInput({
     const doc = new jsPDF();
     doc.setFont("helvetica", "normal");
     doc.setFontSize(14);
-    doc.text("hf.bluebook — Session Report", 20, 20);
+    doc.text("bluebook — Session Report", 20, 20);
     doc.setFontSize(11);
     doc.text(`Project: ${projectName}`, 20, 30);
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 38);
@@ -107,7 +107,7 @@ export default function ChatInput({
         {
           children: [
             new Paragraph({
-              children: [new TextRun({ text: "hf.bluebook — Session Report", bold: true, size: 28 })],
+              children: [new TextRun({ text: "bluebook — Session Report", bold: true, size: 28 })],
             }),
             ...messages.map(
               (m) =>
@@ -178,7 +178,7 @@ export default function ChatInput({
             ref={textAreaRef}
             className="flex-1 px-4 py-3 focus:outline-none transition-all resize-none"
             style={{ fontFamily: "var(--font-ibm-plex)", minHeight: "44px", maxHeight: "120px" }}
-            placeholder="Ask Melvin anything on life safety, compliance or judgements..."
+            placeholder="Ask bluebook anything on life safety, compliance or judgements..."
             rows={1}
             value={value}
             onChange={(e) => setValue(e.target.value)}

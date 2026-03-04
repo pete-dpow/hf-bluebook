@@ -295,13 +295,13 @@ export async function ensureFolderStructure(
   userId: string,
   driveId: string
 ): Promise<boolean> {
-  // Create root /hf.bluebook folder
-  const root = await createFolder(userId, driveId, "", "hf.bluebook");
+  // Create root /bluebook folder
+  const root = await createFolder(userId, driveId, "", "bluebook");
   if (!root) return false;
 
   // Create subfolders in parallel
   const results = await Promise.all(
-    HF_FOLDERS.map((name) => createFolder(userId, driveId, "hf.bluebook", name))
+    HF_FOLDERS.map((name) => createFolder(userId, driveId, "bluebook", name))
   );
 
   return results.every((r) => r !== null);
@@ -317,7 +317,7 @@ export async function uploadQuoteFile(
   content: Buffer | Uint8Array,
   contentType: string
 ): Promise<UploadResult | null> {
-  return uploadFile(userId, driveId, `hf.bluebook/Quotes`, `${quoteNumber}-${fileName}`, content, contentType);
+  return uploadFile(userId, driveId, `bluebook/Quotes`, `${quoteNumber}-${fileName}`, content, contentType);
 }
 
 export async function uploadProductFile(
@@ -329,8 +329,8 @@ export async function uploadProductFile(
   contentType: string
 ): Promise<UploadResult | null> {
   // Ensure manufacturer subfolder exists
-  await createFolder(userId, driveId, "hf.bluebook/Products", manufacturerName);
-  return uploadFile(userId, driveId, `hf.bluebook/Products/${manufacturerName}`, fileName, content, contentType);
+  await createFolder(userId, driveId, "bluebook/Products", manufacturerName);
+  return uploadFile(userId, driveId, `bluebook/Products/${manufacturerName}`, fileName, content, contentType);
 }
 
 export async function uploadGoldenThreadFile(
@@ -342,8 +342,8 @@ export async function uploadGoldenThreadFile(
   contentType: string
 ): Promise<UploadResult | null> {
   // Ensure package subfolder exists
-  await createFolder(userId, driveId, "hf.bluebook/GoldenThread", packageRef);
-  return uploadFile(userId, driveId, `hf.bluebook/GoldenThread/${packageRef}`, fileName, content, contentType);
+  await createFolder(userId, driveId, "bluebook/GoldenThread", packageRef);
+  return uploadFile(userId, driveId, `bluebook/GoldenThread/${packageRef}`, fileName, content, contentType);
 }
 
 // ─── Helper: Check if SharePoint is Available ──────────────────

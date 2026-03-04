@@ -374,7 +374,7 @@ export default function SettingsDrawer() {
           </nav>
 
           <div style={{ padding: "1rem 1.5rem", borderTop: "1px solid #E5E7EB", fontSize: "11px", color: "#9CA3AF" }}>
-            hf.bluebook v1.0
+            bluebook v1.0
           </div>
         </div>
 
@@ -702,7 +702,7 @@ export default function SettingsDrawer() {
                     Integrations
                   </h1>
                   <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2rem 0" }}>
-                    Connect external services to enhance your hf.bluebook experience.
+                    Connect external services to enhance your bluebook experience.
                   </p>
 
                   <SharePointConfigSection />
@@ -743,7 +743,7 @@ export default function SettingsDrawer() {
                     Preferences
                   </h1>
                   <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2rem 0" }}>
-                    Customise your hf.bluebook experience.
+                    Customise your bluebook experience.
                   </p>
 
                   {/* Default AI Mode */}

@@ -1513,7 +1513,7 @@ export default function Preview() {
                   fontSize: '10px',
                   color: '#4B4B4B'
                 }}>
-                  <span>{reportMeta.project || 'hf.bluebook'}</span>
+                  <span>{reportMeta.project || 'bluebook'}</span>
                   <span>Page 1 of 1</span>
                 </div>
               )}

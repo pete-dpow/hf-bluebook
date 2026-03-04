@@ -68,7 +68,7 @@ export default function AuthCallbackPage() {
             fontWeight: 500,
           }}
         >
-          Return to hf.bluebook
+          Return to bluebook
         </button>
       </div>
     );

@@ -298,7 +298,7 @@ const sendQuoteEmail = inngest.createFunction(
       });
 
       await resend.emails.send({
-        from: "hf.bluebook <noreply@dpow.co.uk>",
+        from: "bluebook <noreply@dpow.co.uk>",
         to: quote.client_email,
         subject: `Quote ${quote.quote_number} from Harmony Fire`,
         html: `
@@ -355,7 +355,7 @@ const sendQuoteEmail = inngest.createFunction(
 
                 <div style="padding: 24px 40px; background: #FCFCFA; border-top: 1px solid #E5E7EB;">
                   <p style="margin: 0; font-size: 12px; color: #9CA3AF;">
-                    Sent via hf.bluebook — Harmony Fire
+                    Sent via bluebook — Harmony Fire
                   </p>
                 </div>
               </div>

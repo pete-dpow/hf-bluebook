@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { generateEmbedding } from "@/lib/embeddingService";
 import { recalculateQuoteTotals } from "@/lib/quoteCalculations";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "sk-placeholder" });
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || "sk-ant-placeholder" });
 
 let _supabaseAdmin: any = null;
 function getSupabaseAdmin() {
@@ -181,7 +179,7 @@ Respond with ONLY the mode name (GENERAL, PROJECT, PRODUCT, KNOWLEDGE, FULL, or 
 
 // === GENERAL MODE — GPT-4o-mini, model knowledge only ===
 async function handleGeneral(question: string, history: any[], memoryContext: string) {
-  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — a sharp, friendly expert for fire protection and construction professionals. You know your stuff and talk like a trusted colleague, not a textbook.
+  const systemPrompt = `You are bluebook, the AI assistant — a sharp, friendly expert for fire protection and construction professionals. You know your stuff and talk like a trusted colleague, not a textbook.
 
 ${memoryContext}
 
@@ -224,7 +222,7 @@ async function handleProject(question: string, history: any[], dataset: any, mem
     });
   }
 
-  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — analyzing the user's project data. You're precise with numbers and help them spot what matters.
+  const systemPrompt = `You are bluebook, the AI assistant — analyzing the user's project data. You're precise with numbers and help them spot what matters.
 
 Dataset: ${dataset.rows.length} rows. Sample: ${JSON.stringify(dataset.rows.slice(0, 10), null, 2)}
 
@@ -300,7 +298,7 @@ async function handleProduct(question: string, history: any[], memoryContext: st
     }
   }
 
-  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — a sharp, friendly expert who helps fire protection professionals find the right products fast.
+  const systemPrompt = `You are bluebook, the AI assistant — a sharp, friendly expert who helps fire protection professionals find the right products fast.
 
 ${productContext}
 ${memoryContext}
@@ -387,7 +385,7 @@ async function handleKnowledge(question: string, history: any[], memoryContext: 
     ? `\nWhen referencing information from the sources, cite them inline like [Source: filename, p.X] or [Reg: BS EN 1366-3 §4.2]. Always cite your sources.`
     : "";
 
-  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — a deep expert in fire protection regulations, British Standards, and building safety compliance. You reason carefully through technical details and explain them clearly.
+  const systemPrompt = `You are bluebook, the AI assistant — a deep expert in fire protection regulations, British Standards, and building safety compliance. You reason carefully through technical details and explain them clearly.
 
 ${knowledgeContext}
 ${memoryContext}
@@ -401,23 +399,18 @@ Rules:
 5. Be thorough but focused (4-8 sentences) — these are professionals who need precise answers
 6. Flag common pitfalls or misinterpretations where relevant`;
 
-  // Use Claude for knowledge mode
-  const claudeMessages: Anthropic.MessageParam[] = [
-    ...history.slice(-6).map((m: any) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    })),
-    { role: "user", content: question },
-  ];
-
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250929",
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o",
+    temperature: 0.7,
     max_tokens: 800,
-    system: systemPrompt,
-    messages: claudeMessages,
+    messages: [
+      { role: "system", content: systemPrompt },
+      ...history.slice(-6).map((m: any) => ({ role: m.role, content: m.content })),
+      { role: "user", content: question },
+    ],
   });
 
-  const answer = response.content[0].type === "text" ? response.content[0].text : "";
+  const answer = completion.choices[0].message.content ?? "";
 
   return NextResponse.json({
     answer,
@@ -521,7 +514,7 @@ async function handleFull(
     ? "\nCite sources inline: [Source: filename, p.X] or [Reg: reference §section]."
     : "";
 
-  const systemPrompt = `You are Melvin, the hf.bluebook AI assistant — your strongest mode. You cross-reference project data, product catalogs, technical documents, and fire safety regulations to give comprehensive answers.
+  const systemPrompt = `You are bluebook, the AI assistant — your strongest mode. You cross-reference project data, product catalogs, technical documents, and fire safety regulations to give comprehensive answers.
 
 ${fullContext}
 ${memoryContext}
@@ -535,22 +528,18 @@ Rules:
 5. Be thorough but not bloated (5-10 sentences or equivalent)
 6. Give actionable recommendations, not just information`;
 
-  const claudeMessages: Anthropic.MessageParam[] = [
-    ...history.slice(-6).map((m: any) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    })),
-    { role: "user", content: question },
-  ];
-
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250929",
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o",
+    temperature: 0.7,
     max_tokens: 1000,
-    system: systemPrompt,
-    messages: claudeMessages,
+    messages: [
+      { role: "system", content: systemPrompt },
+      ...history.slice(-6).map((m: any) => ({ role: m.role, content: m.content })),
+      { role: "user", content: question },
+    ],
   });
 
-  const answer = response.content[0].type === "text" ? response.content[0].text : "";
+  const answer = completion.choices[0].message.content ?? "";
 
   return NextResponse.json({
     answer,
@@ -620,11 +609,33 @@ Respond with ONLY valid JSON:
 
   // Step 2: Handle each action
   if (action === "create_quote") {
+    // Get next quote number from sequence (race-safe)
+    let quoteNumber: string;
+    const { data: seqData, error: seqError } = await supabaseAdmin.rpc("nextval_quote_number");
+    if (seqError) {
+      // Fallback: derive from existing quotes
+      const { data: lastQuote } = await supabaseAdmin
+        .from("quotes")
+        .select("quote_number")
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      let nextNum = 1;
+      if (lastQuote && lastQuote.length > 0) {
+        const match = lastQuote[0].quote_number?.match(/HF-Q-(\d+)/);
+        if (match) nextNum = parseInt(match[1]) + 1;
+      }
+      quoteNumber = `HF-Q-${String(nextNum).padStart(4, "0")}`;
+    } else {
+      const num = typeof seqData === "number" ? seqData : parseInt(String(seqData));
+      quoteNumber = `HF-Q-${String(num).padStart(4, "0")}`;
+    }
+
     const { data: quote, error } = await supabaseAdmin
       .from("quotes")
       .insert({
         organization_id: organizationId,
-        quote_number: `HF-Q-${String(Date.now()).slice(-4)}`,
+        quote_number: quoteNumber,
         client_name: client_name || "Draft",
         project_name: project_name || null,
         status: "draft",
@@ -780,11 +791,20 @@ Respond with ONLY valid JSON:
 
     // Still no quote? Create one
     if (!targetQuote) {
+      let autoQuoteNumber: string;
+      const { data: autoSeq, error: autoSeqErr } = await supabaseAdmin.rpc("nextval_quote_number");
+      if (autoSeqErr) {
+        autoQuoteNumber = `HF-Q-${String(Date.now()).slice(-4)}`;
+      } else {
+        const n = typeof autoSeq === "number" ? autoSeq : parseInt(String(autoSeq));
+        autoQuoteNumber = `HF-Q-${String(n).padStart(4, "0")}`;
+      }
+
       const { data: newQuote, error: qErr } = await supabaseAdmin
         .from("quotes")
         .insert({
           organization_id: organizationId,
-          quote_number: `HF-Q-${String(Date.now()).slice(-4)}`,
+          quote_number: autoQuoteNumber,
           client_name: "Draft",
           project_name: quote_ref || null,
           status: "draft",

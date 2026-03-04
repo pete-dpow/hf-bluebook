@@ -168,7 +168,7 @@ export default function AcceptInvite() {
               color: "#2A2A2A",
             }}
           >
-            hf.bluebook
+            bluebook
           </h1>
           <p
             className="text-sm"
@@ -290,7 +290,7 @@ export default function AcceptInvite() {
                   color: "#6B7280",
                 }}
               >
-                Redirecting to hf.bluebook...
+                Redirecting to bluebook...
               </p>
             </div>
           )}
@@ -344,7 +344,7 @@ export default function AcceptInvite() {
                   fontWeight: 500,
                 }}
               >
-                Go to hf.bluebook
+                Go to bluebook
               </button>
             </div>
           )}

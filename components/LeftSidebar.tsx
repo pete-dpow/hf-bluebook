@@ -272,6 +272,14 @@ export default function LeftSidebar() {
           flexDirection: "column",
           gap: "4px",
         }}>
+          {/* bluebook Chat */}
+          <IconButton
+            icon={<MessageCircle size={20} />}
+            label="bluebook"
+            tooltip="Ask bluebook"
+            onClick={() => window.dispatchEvent(new CustomEvent("openChatDrawer"))}
+          />
+
           {/* ⭐ Task 2: New Upload with Tooltip */}
           <IconButton
             icon={<Upload size={20} />}
@@ -301,7 +309,7 @@ export default function LeftSidebar() {
             />
           )}
 
-          {/* hf.bluebook Nav Items */}
+          {/* bluebook Nav Items */}
           {user && (
             <>
               <IconButton
@@ -591,7 +599,7 @@ export default function LeftSidebar() {
               marginBottom: "8px",
               color: "#2A2A2A"
             }}>
-              Sign in to hf.bluebook
+              Sign in to bluebook
             </h2>
             <p style={{ fontSize: "14px", color: "#6B7280", marginBottom: "24px" }}>
               Enter your email to receive a magic link
@@ -664,7 +672,7 @@ function LogoWithTooltip() {
     >
       <Image
         src="/hf_logo.svg"
-        alt="hf.bluebook"
+        alt="bluebook"
         width={24}
         height={24}
         style={{ flexShrink: 0 }}

@@ -310,7 +310,7 @@ export async function generateQuoteExcel(
   // Dynamic import to avoid bundling exceljs on the client
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "hf.bluebook";
+  workbook.creator = "bluebook";
   workbook.created = new Date();
 
   const sheet = workbook.addWorksheet("Quote");

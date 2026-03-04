@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
 
     // 5️⃣ Prepare prompt
     const systemPrompt = `
-You are Melvin, the hf.bluebook AI assistant — a design-data analyst for fire protection product intelligence.
+You are bluebook, the AI assistant — a design-data analyst for fire protection product intelligence.
 You understand architectural deliverables, document control, and technical schedules.
 The user will ask questions about a dataset containing drawing issue records or deliverables.
 Always reason from the dataset. Never invent data.
@@ -90,7 +90,7 @@ Tone: factual, confident, analytical.
 
     const answer =
       completion.choices?.[0]?.message?.content?.trim() ||
-      "No response from Melvin.";
+      "No response from bluebook.";
 
     // 7️⃣ Store assistant reply
     const { error: insertAssistantErr } = await supabase

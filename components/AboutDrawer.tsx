@@ -116,7 +116,7 @@ export default function AboutDrawer() {
                 margin: 0,
               }}
             >
-              About hf.bluebook
+              About bluebook
             </h3>
             <p style={{ fontSize: "0.875rem", color: "#6B7280", margin: "0.25rem 0 0 0" }}>
               Product overview
@@ -127,7 +127,7 @@ export default function AboutDrawer() {
             <NavItem
               active={activeSection === "what-is-dpow"}
               onClick={() => scrollToSection("what-is-dpow")}
-              label="What is hf.bluebook?"
+              label="What is bluebook?"
             />
             <NavItem
               active={activeSection === "key-features"}
@@ -142,7 +142,7 @@ export default function AboutDrawer() {
             <NavItem
               active={activeSection === "why-choose"}
               onClick={() => scrollToSection("why-choose")}
-              label="Why Choose hf.bluebook?"
+              label="Why Choose bluebook?"
             />
             <NavItem
               active={activeSection === "technology"}
@@ -184,7 +184,7 @@ export default function AboutDrawer() {
                   margin: 0,
                 }}
               >
-                About hf.bluebook
+                About bluebook
               </h2>
               <p style={{ fontSize: "0.875rem", color: "#6B7280", margin: "0.25rem 0 0 0" }}>
                 Structured Intelligence for Project Delivery
@@ -289,10 +289,10 @@ function AboutContent() {
             lineHeight: 1.2,
           }}
         >
-          What is hf.bluebook?
+          What is bluebook?
         </h1>
         <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2rem 0" }}>
-          hf.bluebook is an AI-powered construction project management platform that transforms how construction teams interact with their project data. Upload your Excel files, ask questions in plain English, and get instant, actionable answers powered by Claude AI.
+          bluebook is an AI-powered construction project management platform that transforms how construction teams interact with their project data. Upload your Excel files, ask questions in plain English, and get instant, actionable answers powered by Claude AI.
         </p>
 
         <h2
@@ -313,7 +313,7 @@ function AboutContent() {
         </ul>
 
         <p style={{ fontSize: "1.125rem", color: "#374151", lineHeight: 1.7, margin: "2rem 0 0 0" }}>
-          hf.bluebook is the conversational entry point to the dpow.app platform - a comprehensive 8-app construction intelligence ecosystem. Start with hf.bluebook's freemium offering, experience the power of AI-driven insights, then unlock the full platform.
+          bluebook is the conversational entry point to the dpow.app platform - a comprehensive 8-app construction intelligence ecosystem. Start with bluebook's freemium offering, experience the power of AI-driven insights, then unlock the full platform.
         </p>
       </section>
 
@@ -333,7 +333,7 @@ function AboutContent() {
           Key Features & USP
         </h1>
         <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2.5rem 0" }}>
-          hf.bluebook combines cutting-edge AI with practical construction workflows to deliver unmatched project intelligence.
+          bluebook combines cutting-edge AI with practical construction workflows to deliver unmatched project intelligence.
         </p>
 
         <h2
@@ -348,7 +348,7 @@ function AboutContent() {
           Hybrid Knowledge Mode ⭐
         </h2>
         <p style={{ fontSize: "1.125rem", color: "#374151", lineHeight: 1.7, margin: "0 0 1.5rem 0" }}>
-          <strong>Our breakthrough feature that no other construction software has.</strong> Traditional software forces you to choose between generic industry knowledge OR your specific project data. hf.bluebook intelligently combines both.
+          <strong>Our breakthrough feature that no other construction software has.</strong> Traditional software forces you to choose between generic industry knowledge OR your specific project data. bluebook intelligently combines both.
         </p>
         <ul style={{ lineHeight: 1.8, color: "#374151", margin: "0 0 2rem 0" }}>
           <li><strong>GENERAL:</strong> "What's UK fire door compliance?" → Industry regulations and standards</li>
@@ -439,7 +439,7 @@ function AboutContent() {
           Getting Started
         </h1>
         <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2.5rem 0" }}>
-          hf.bluebook follows a freemium model designed to deliver immediate value while scaling with your needs.
+          bluebook follows a freemium model designed to deliver immediate value while scaling with your needs.
         </p>
 
         <h2
@@ -546,10 +546,10 @@ function AboutContent() {
             margin: "0 0 1rem 0",
           }}
         >
-          Why Choose hf.bluebook?
+          Why Choose bluebook?
         </h1>
         <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2.5rem 0" }}>
-          hf.bluebook isn't just another project management tool. We've built something fundamentally different.
+          bluebook isn't just another project management tool. We've built something fundamentally different.
         </p>
 
         <h2
@@ -564,7 +564,7 @@ function AboutContent() {
           Conversational Interface
         </h2>
         <p style={{ lineHeight: 1.7, color: "#374151", margin: "0 0 1rem 0" }}>
-          Ask questions in plain English, not navigate complex UIs. Traditional workflow requires 6 steps to get an answer. hf.bluebook: Ask question, get answer.
+          Ask questions in plain English, not navigate complex UIs. Traditional workflow requires 6 steps to get an answer. bluebook: Ask question, get answer.
         </p>
 
         <h2
@@ -629,7 +629,7 @@ function AboutContent() {
           Technology
         </h1>
         <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2.5rem 0" }}>
-          hf.bluebook is built with modern, proven technologies chosen for performance, scalability, and developer experience.
+          bluebook is built with modern, proven technologies chosen for performance, scalability, and developer experience.
         </p>
 
         <h2
@@ -687,7 +687,7 @@ function AboutContent() {
           The 8-App Vision
         </h1>
         <p style={{ fontSize: "1.125rem", color: "#6B7280", lineHeight: 1.7, margin: "0 0 2.5rem 0" }}>
-          hf.bluebook is the conversational gateway to the dpow.app platform - a comprehensive construction intelligence ecosystem.
+          bluebook is the conversational gateway to the dpow.app platform - a comprehensive construction intelligence ecosystem.
         </p>
 
         <h2
@@ -702,7 +702,7 @@ function AboutContent() {
           The Complete Platform
         </h2>
         <ol style={{ lineHeight: 1.8, color: "#374151", margin: "0 0 2rem 0" }}>
-          <li><strong>hf.bluebook</strong> - Conversational project hub (Live)</li>
+          <li><strong>bluebook</strong> - Conversational project hub (Live)</li>
           <li><strong>dpow.TIDP</strong> - Core deliverable generator (In Development)</li>
           <li><strong>dpow.scope</strong> - Spatial and visual layer (Planned)</li>
           <li><strong>dpow.report</strong> - Analytical reporting engine (Planned)</li>
@@ -724,7 +724,7 @@ function AboutContent() {
           The Power of Integration
         </h2>
         <p style={{ lineHeight: 1.7, color: "#374151", margin: "0 0 1rem 0" }}>
-          All 8 apps share authentication, organizations, and data. Start a conversation in hf.bluebook, generate reports in dpow.report, track procurement in dpow.procure, and assess carbon in dpow.wlca - all within one unified platform.
+          All 8 apps share authentication, organizations, and data. Start a conversation in bluebook, generate reports in dpow.report, track procurement in dpow.procure, and assess carbon in dpow.wlca - all within one unified platform.
         </p>
       </section>
 
@@ -870,7 +870,7 @@ function AboutContent() {
           onMouseOver={(e) => (e.currentTarget.style.background = "#1D4ED8")}
           onMouseOut={(e) => (e.currentTarget.style.background = "#2563EB")}
         >
-          Try hf.bluebook Free →
+          Try bluebook Free →
         </a>
       </div>
     </div>

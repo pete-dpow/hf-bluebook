@@ -454,16 +454,16 @@ export default function ChatPage() {
 
   // ⭐ Task 10: Export chat as Markdown
   function exportAsMarkdown() {
-    const projectTitle = loadedProjectName || loadedFileName || "hf.bluebook Conversation";
+    const projectTitle = loadedProjectName || loadedFileName || "bluebook Conversation";
     const timestamp = new Date().toISOString().split('T')[0];
-    
+
     let markdown = `# ${projectTitle}\n`;
     markdown += `**Exported**: ${new Date().toLocaleString('en-GB')}\n`;
     if (loadedOrgName) markdown += `**Organization**: ${loadedOrgName}\n`;
     markdown += `\n---\n\n`;
 
     messages.forEach((msg) => {
-      const role = msg.role === "user" ? "**You**" : "**hf.bluebook**";
+      const role = msg.role === "user" ? "**You**" : "**bluebook**";
       const modeTag = msg.mode ? ` \`${msg.mode}\`` : "";
       markdown += `${role}${modeTag}:\n${msg.content}\n\n`;
     });
@@ -484,9 +484,9 @@ export default function ChatPage() {
 
   // ⭐ Task 9: Export chat as PDF
   function exportAsPDF() {
-    const projectTitle = loadedProjectName || loadedFileName || "hf.bluebook Conversation";
+    const projectTitle = loadedProjectName || loadedFileName || "bluebook Conversation";
     const timestamp = new Date().toISOString().split('T')[0];
-    
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 20;
@@ -523,7 +523,7 @@ export default function ChatPage() {
       // Role header
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
-      const roleText = msg.role === "user" ? "You" : "hf.bluebook";
+      const roleText = msg.role === "user" ? "You" : "bluebook";
       const modeText = msg.mode ? ` [${msg.mode}]` : "";
       doc.setTextColor(msg.role === "user" ? 37 : 16, msg.role === "user" ? 99 : 185, msg.role === "user" ? 235 : 129);
       doc.text(`${roleText}${modeText}:`, margin, yPosition);
@@ -552,7 +552,7 @@ export default function ChatPage() {
 
   // ⭐ Task 11: Export chat as Word
   async function exportAsWord() {
-    const projectTitle = loadedProjectName || loadedFileName || "hf.bluebook Conversation";
+    const projectTitle = loadedProjectName || loadedFileName || "bluebook Conversation";
     const timestamp = new Date().toISOString().split('T')[0];
 
     const children: any[] = [];
@@ -588,9 +588,9 @@ export default function ChatPage() {
 
     // Messages
     messages.forEach((msg) => {
-      const roleText = msg.role === "user" ? "You" : "hf.bluebook";
+      const roleText = msg.role === "user" ? "You" : "bluebook";
       const modeText = msg.mode ? ` [${msg.mode}]` : "";
-      
+
       children.push(
         new Paragraph({
           children: [
@@ -789,7 +789,7 @@ export default function ChatPage() {
         headers,
         body: JSON.stringify({
           client_name: "Draft",
-          quote_name: "From Melvin Chat",
+          quote_name: "From bluebook Chat",
         }),
       });
       if (!qRes.ok) {
